@@ -60,6 +60,11 @@ export async function main([edition = 'selfhost', action = 'dev', ...args] = pro
   const port = portFlag >= 0 ? args[portFlag + 1] : process.env.CONDUCTOR_PORT || process.env.PORT || '3001';
   const { runtime, core, application } = await prepareRuntime(edition, { testing: process.env.LASTFIND_TESTING === 'true', port });
   const bin = name => resolve(root, 'node_modules/.bin', name);
+  if (action === 'dev' || action === 'db') {
+    const state = resolve(runtime, '.wrangler', process.env.LASTFIND_TESTING === 'true' ? 'test-state' : 'state');
+    run(bin('wrangler'), ['d1', 'migrations', 'apply', 'DB', '--local', '--config', 'wrangler.local.json', '--persist-to', state], { cwd: runtime, stdio: ['ignore', 'inherit', 'inherit'] });
+    if (action === 'db') return runtime;
+  }
   if (action === 'dev' || action === 'build') {
     run(bin('vinext'), [action, ...args], { cwd: runtime, env: { ...process.env, CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false', WRANGLER_SEND_METRICS: 'false' } });
   } else if (action === 'typecheck') {
@@ -67,8 +72,6 @@ export async function main([edition = 'selfhost', action = 'dev', ...args] = pro
   } else if (action === 'test') {
     const tests = [resolve(core, 'tests'), resolve(application, 'tests')].flatMap(dir => files(dir).filter(path => path.endsWith('.test.ts') || path.endsWith('.test.mjs')).map(path => resolve(dir, path)));
     run(process.execPath, ['--experimental-strip-types', '--test', ...tests]);
-  } else if (action === 'db') {
-    run(bin('wrangler'), ['d1', 'migrations', 'apply', 'DB', '--local', '--config', 'wrangler.local.json'], { cwd: runtime });
   } else if (action === 'integration') {
     run(process.execPath, [resolve(root, 'scripts/integration.mjs'), edition]);
   } else throw new Error(`Unknown command: ${action}`);
