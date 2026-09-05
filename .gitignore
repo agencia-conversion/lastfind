@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.lastfind/
+.runtime/
+.wrangler/
+dist/
+wrangler.selfhost.json
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
+.vinext/
+.next/
+next-env.d.ts
+.conductor/settings.local.toml

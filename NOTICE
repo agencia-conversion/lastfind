@@ -1,0 +1,15 @@
+Lastfind
+Copyright 2026 Lastfind contributors
+
+Licensed under the Apache License, Version 2.0.
+This distribution includes dependencies under their own licenses.
+Lastfind is an independent project and is not affiliated with Peec, Profound,
+DataForSEO, OpenAI, Google, Cloudflare.
+
+Platform icons: Lobe Icons (@lobehub/icons-static-svg 1.91.0),
+Copyright (c) 2023 LobeHub, MIT License.
+Full notice and license: packages/core/public/icons/ai/LICENSE.
+Third-party logos identify their respective platforms.
+
+Sidebar composition: adapted from shadcn/ui sidebar-07 (MIT).
+Full notice and license: packages/core/licenses/shadcn-ui.txt.
