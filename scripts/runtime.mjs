@@ -15,6 +15,15 @@ export function run(binary, args, options = {}) {
   if (result.status !== 0) throw new Error(`${binary} failed (${result.status ?? result.signal})`);
   return result;
 }
+export function runTestFiles(tests, execute = run) {
+  // The discovery suite builds large stress fixtures, so it runs alone to keep
+  // its memory and CPU spikes from slowing the rest of the suite. Its own
+  // assertions bound decoder work, not elapsed time, and do not depend on this.
+  const exclusiveTests = tests.filter(path => path.endsWith('/competitor-discovery.test.ts'));
+  const concurrentTests = tests.filter(path => !exclusiveTests.includes(path));
+  if (exclusiveTests.length) execute(process.execPath, ['--experimental-strip-types', '--test', ...exclusiveTests]);
+  if (concurrentTests.length) execute(process.execPath, ['--experimental-strip-types', '--test', ...concurrentTests]);
+}
 export async function prepareRuntime(edition, { testing = false, port = process.env.CONDUCTOR_PORT || '3001' } = {}) {
   if (!/^[a-z][a-z0-9-]*$/.test(edition)) throw new Error('Invalid application name');
   const application = resolve(root, 'apps', edition);
@@ -35,6 +44,13 @@ export async function prepareRuntime(edition, { testing = false, port = process.
       symlinkSync(resolve(source, path), destination);
     }
   }
+  // Vinext discovers proxy.ts at the generated project root, outside app/.
+  // Keep edition-specific request behavior canonical in apps/<edition> and
+  // expose it to the generated runtime without copying source.
+  const runtimeProxy = resolve(runtime, 'proxy.ts');
+  rmSync(runtimeProxy, { force: true });
+  const applicationProxy = resolve(application, 'proxy.ts');
+  if (existsSync(applicationProxy)) symlinkSync(applicationProxy, runtimeProxy);
   const publicDir = resolve(runtime, 'public');
   rmSync(publicDir, { recursive: true, force: true });
   for (const source of [resolve(core, 'public'), resolve(application, 'public')]) {
@@ -71,7 +87,7 @@ export async function main([edition = 'selfhost', action = 'dev', ...args] = pro
     run(bin('tsc'), ['--noEmit', '--project', resolve(runtime, 'tsconfig.json')]);
   } else if (action === 'test') {
     const tests = [resolve(core, 'tests'), resolve(application, 'tests')].flatMap(dir => files(dir).filter(path => path.endsWith('.test.ts') || path.endsWith('.test.mjs')).map(path => resolve(dir, path)));
-    run(process.execPath, ['--experimental-strip-types', '--test', ...tests]);
+    runTestFiles(tests);
   } else if (action === 'integration') {
     run(process.execPath, [resolve(root, 'scripts/integration.mjs'), edition]);
   } else throw new Error(`Unknown command: ${action}`);

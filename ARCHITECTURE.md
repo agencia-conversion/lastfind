@@ -6,6 +6,8 @@ Control D1 holds the owner, project registry, canonical prompt configuration, du
 
 The generated owner key authenticates the personal instance. Sessions bind the configured origin and key. All data routes enforce ownership; missing required storage fails closed. The installer provisions required resources and validates R2 availability before changes, without activating paid infrastructure subscriptions.
 
+The current frontend review uses a session-only demonstration shell. `/app` still requires owner authentication; `/app/preview` is a public, noindex preview. Workspace/project routes and filters have canonical URLs. Onboarding, profile, members and Semantic Branding changes remain in browser memory, and new projects start with no collected answers. This shell does not call the existing analytics APIs or provider endpoints; connecting it to the backend is a separate implementation step. The storage and API contracts below remain available.
+
 A native five-minute scheduled handler targets 04:00 America/Sao_Paulo each day. Durable reservations, leases and conservative budget holds prevent duplicate submissions after uncertain provider outcomes. Providers with standard endpoints use normal-priority batch; Live-only endpoints retain their actual behavior. Results are archived, normalized, staged through a temporary outbox and published idempotently into project SQLite. The browser never starts monitoring on page refresh.
 
 Reports query bounded server-side views; response bodies, source details and history load on demand. Private authenticated APIs are not cached publicly. Export streams bounded pages. Backup/restore validates identity, row counts and checksums in an isolated generation before switching; raw R2 objects require their own backup.

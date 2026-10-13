@@ -3,11 +3,20 @@ import type { Engine } from './engines';
 export { ENGINE_LABELS } from './engines';
 export type { Engine } from './engines';
 export type Topic = { id: string; project_id: string; name: string };
-export type BrandTarget = { name: string; domain: string };
+export type BrandTarget = {
+  name: string;
+  domain: string;
+  /** Variantes captured with a run; never retroactively rewrite history. */
+  aliases?: string[];
+  /** The primary domain plus verified additional domains for this snapshot. */
+  domains?: string[];
+};
 export type Project = {
   id: string;
   name: string;
   domain: string;
+  aliases: string[];
+  additional_domains: string[];
   competitors: BrandTarget[];
   location_code: number;
   language_code: string;
@@ -45,6 +54,8 @@ export type Run = {
     | 'unknown';
   mentions: Record<string, boolean>;
   brand_name: string;
+  /** Collection snapshot, present only when a full answer is loaded. */
+  targets?: BrandTarget[];
   sources: Citation[];
   consulted_sources?: Citation[] | null;
   search_queries?: string[];

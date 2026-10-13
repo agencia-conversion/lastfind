@@ -3,6 +3,9 @@ import type { Capabilities } from '@/lib/types';
 import { positiveLimit } from '@/lib/scheduling';
 import { setting } from '@/lib/server/env';
 export const providerSettings = true;
+export const semanticEvaluationAvailable = false;
+export async function processSemanticJobs() { return 0; }
+export function semanticBudgetCondition(_month: string, _reservedUsd: number) { return { sql: '1=1', params: [] as (string | number)[] }; }
 export async function accountCapabilities(_owner: string): Promise<Capabilities> { return {engines: [...ENGINES], promptLimit: null, topicLimit: null}; }
 export function capacityGuards(_owner: string): D1PreparedStatement[] { return []; }
 export async function allowedPromptIds(_owner: string): Promise<Set<string> | null> { return null; }

@@ -2,7 +2,7 @@ import { reserveCredits, settledCredits } from '@/lib/credits';
 import { nextPollTime, boundedBatch } from '@/lib/collection-policy';
 import { withLease } from './leases';
 import type { BrandTarget, Engine } from '@/lib/types';
-import { nextRunTime, positiveLimit, scheduleWindow } from '@/lib/scheduling';
+import { nextRunTime, nextWeeklyRunTime, weeklyWindow, positiveLimit, scheduleWindow } from '@/lib/scheduling';
 import { ENGINES } from '@/lib/engines';
 import { reservationSql } from '@/lib/reservations';
 import {
@@ -31,6 +31,8 @@ import { rawResponsesBucket } from './raw-responses';
 import { ownedProject } from './workspace';
 import { flushProjectStores, registerProjectStore } from './project-store';
 import { requireMonitoringStorage } from './monitoring-storage';
+import { buildTargetSnapshot } from '@/lib/target-snapshot.mjs';
+import { processSemanticJobs } from './capabilities';
 type RunRow = {
   id: string;
   owner_id: string;
@@ -65,6 +67,15 @@ export async function reserveRuns(
   const p = await ownedProject(projectId, userId),
     database = db();
   const capabilities = await accountCapabilities(userId);
+  const free = capabilities.promptLimit === 10;
+  const current = now();
+  if (free) {
+    // Move legacy daily Free schedules to Monday before selecting due prompts.
+    await database.prepare(`UPDATE prompts SET next_run_at=? WHERE active=1 AND archived=0 AND next_run_at<=?
+      AND (strftime('%w',next_run_at)<>'1' OR strftime('%H:%M',next_run_at)<>'07:00')
+      AND project_id IN (SELECT id FROM projects WHERE owner_id=? AND archived=0)`)
+      .bind(nextWeeklyRunTime(current), current, userId).run();
+  }
   const allowed = await allowedPromptIds(userId);
   const prompts = (
     await database
@@ -89,13 +100,19 @@ export async function reserveRuns(
   const stamp = now(),
     month = stamp.slice(0, 7) + '-01T00:00:00.000Z',
     limit = monthlyRunLimit();
-  const targets = JSON.stringify([
-    { name: p.name, domain: p.domain },
-    ...JSON.parse(String(p.competitors_json)),
-  ]);
+  const targets = JSON.stringify(
+    buildTargetSnapshot({
+      name: String(p.name),
+      domain: String(p.domain),
+      aliases_json: String(p.aliases_json || '[]'),
+      additional_domains_json: String(p.additional_domains_json || '[]'),
+      competitors_json: String(p.competitors_json || '[]'),
+    }),
+  );
   // Conditional inserts execute inside one D1 transaction. Reservations count against
   // the monthly cap even on failure; archiving a project cannot reset the quota.
-  const next = nextRunTime(stamp, Number(p.interval_hours));
+  const next = free ? nextWeeklyRunTime(stamp) : nextRunTime(stamp, Number(p.interval_hours));
+  const week = weeklyWindow(stamp);
   const globalLimit = positiveLimit(setting('GLOBAL_DAILY_RUN_LIMIT'), 1000);
   const day = stamp.slice(0, 10) + 'T00:00:00.000Z';
   await database.batch(
@@ -128,6 +145,9 @@ export async function reserveRuns(
             limit,
             day,
             globalLimit,
+            Number(free),
+            userId,
+            week,
             ...budget.params,
             prompt.id,
             prompt.id,
@@ -141,6 +161,13 @@ export async function reserveRuns(
       ];
     }),
   );
+  if (free) {
+    // Existing daily schedules must stop retrying once this account has used its weekly quota.
+    await database.prepare(`UPDATE prompts SET next_run_at=? WHERE active=1 AND archived=0 AND next_run_at<=?
+      AND project_id IN (SELECT id FROM projects WHERE owner_id=? AND archived=0)
+      AND (SELECT COUNT(*) FROM runs WHERE owner_id=? AND created_at>=?)>=10`)
+      .bind(next, stamp, userId, userId, week).run();
+  }
   const rows = (
     await database
       .prepare(
@@ -156,28 +183,60 @@ export async function reserveRuns(
     );
   return rows;
 }
-export async function submitQueued(userId?: string) {
+function runScope(userId?: string, runIds?: readonly string[]) {
+  if (
+    runIds !== undefined &&
+    (!runIds.length ||
+      new Set(runIds).size !== runIds.length ||
+      runIds.some((id) => typeof id !== 'string' || !id))
+  )
+    throw new ApiError(
+      400,
+      'A monitoring run allowlist must contain unique run IDs.',
+    );
+  const clauses: string[] = [];
+  const params: string[] = [];
+  if (userId) {
+    clauses.push('owner_id=?');
+    params.push(userId);
+  }
+  if (runIds) {
+    clauses.push(`id IN (${runIds.map(() => '?').join(',')})`);
+    params.push(...runIds);
+  }
+  return { sql: clauses.length ? ` AND ${clauses.join(' AND ')}` : '', params };
+}
+
+// A caller which supplies runIds is asking for a closed, paid-operation
+// surface: stale recovery, validation failures, claims and submission all
+// remain inside that allowlist. The normal scheduler keeps its old global
+// behavior by omitting it.
+export async function submitQueued(
+  userId?: string,
+  runIds?: readonly string[],
+) {
   requireMonitoringStorage();
   const database = db();
+  const scope = runScope(userId, runIds);
   const stale = new Date(Date.now() - 5 * 60000).toISOString();
   await database
     .prepare(
-      "UPDATE runs SET status='unknown',error='Submission unconfirmed. The operator must reconcile the provider task before retrying.',completed_at=? WHERE status='submitting' AND claimed_at<?",
+      `UPDATE runs SET status='unknown',error='Submission unconfirmed. The operator must reconcile the provider task before retrying.',completed_at=? WHERE status='submitting' AND claimed_at<?${scope.sql}`,
     )
-    .bind(now(), stale)
+    .bind(now(), stale, ...scope.params)
     .run();
   await database
     .prepare(
-      "UPDATE runs SET status='failed',error='Project or prompt was archived before submission.',completed_at=? WHERE status='queued' AND (EXISTS(SELECT 1 FROM projects WHERE projects.id=runs.project_id AND (projects.archived=1 OR projects.daily_enabled=0)) OR EXISTS(SELECT 1 FROM prompts WHERE prompts.id=runs.prompt_id AND (prompts.archived=1 OR prompts.active=0)))",
+      `UPDATE runs SET status='failed',error='Project or prompt was archived before submission.',completed_at=? WHERE status='queued'${scope.sql} AND (EXISTS(SELECT 1 FROM projects WHERE projects.id=runs.project_id AND (${runIds ? 'projects.archived=1' : 'projects.archived=1 OR projects.daily_enabled=0'})) OR EXISTS(SELECT 1 FROM prompts WHERE prompts.id=runs.prompt_id AND (${runIds ? 'prompts.archived=1' : 'prompts.archived=1 OR prompts.active=0'})))`,
     )
-    .bind(now())
+    .bind(now(), ...scope.params)
     .run();
   const candidates = (
     await database
       .prepare(
-        `SELECT ${RUN_JOB_COLUMNS} FROM runs WHERE status='queued'${userId ? ' AND owner_id=?' : ''} AND (engine<>'perplexity' OR id IN (SELECT id FROM runs WHERE status='queued' AND engine='perplexity'${userId ? ' AND owner_id=?' : ''} ORDER BY created_at LIMIT 3)) ORDER BY created_at LIMIT ${boundedBatch(setting('MONITOR_SUBMIT_BATCH'), 40, 100)}`,
+        `SELECT ${RUN_JOB_COLUMNS} FROM runs WHERE status='queued'${scope.sql} AND (engine<>'perplexity' OR id IN (SELECT id FROM runs WHERE status='queued' AND engine='perplexity'${scope.sql} ORDER BY created_at LIMIT 3)) ORDER BY created_at LIMIT ${boundedBatch(setting('MONITOR_SUBMIT_BATCH'), 40, 100)}`,
       )
-      .bind(...(userId ? [userId, userId] : []))
+      .bind(...scope.params, ...scope.params)
       .all<RunRow>()
   ).results;
   const permissions = new Map<string, Set<string> | null>();
@@ -490,13 +549,17 @@ export async function collectRun(row: RunRow, notified = false) {
         .run();
   }
 }
-export async function collectPending(userId?: string) {
+export async function collectPending(
+  userId?: string,
+  runIds?: readonly string[],
+) {
+  const scope = runScope(userId, runIds);
   const rows = (
     await db()
       .prepare(
-        `SELECT ${RUN_JOB_COLUMNS} FROM runs WHERE status='pending' AND next_poll_at<=?${userId ? ' AND owner_id=?' : ''} ORDER BY next_poll_at LIMIT ${boundedBatch(setting('MONITOR_COLLECT_BATCH'), 15, 50)}`,
+        `SELECT ${RUN_JOB_COLUMNS} FROM runs WHERE status='pending' AND next_poll_at<=?${scope.sql} ORDER BY next_poll_at LIMIT ${boundedBatch(setting('MONITOR_COLLECT_BATCH'), 15, 50)}`,
       )
-      .bind(now(), ...(userId ? [userId] : []))
+      .bind(now(), ...scope.params)
       .all<RunRow>()
   ).results;
   for (let i = 0; i < rows.length; i += 5)
@@ -562,6 +625,13 @@ async function runTick() {
   }
   const submitted = await submitQueued(),
     collected = await collectPending();
+  let semanticJobs: number | { retry: true };
+  try {
+    semanticJobs = await processSemanticJobs();
+  } catch {
+    semanticJobs = { retry: true };
+    console.error('Semantic evaluation will retry on the next tick.');
+  }
   // Analytics publication is retryable and cannot undo a collected provider
   // response or cause another paid submission when a project store is down.
   let projectStorage: unknown;
@@ -578,5 +648,5 @@ async function runTick() {
     )
     .bind(stamp)
     .run();
-  return { ok: true, submitted, collected, projectStorage, heartbeat: stamp };
+  return { ok: true, submitted, collected, semanticJobs, projectStorage, heartbeat: stamp };
 }

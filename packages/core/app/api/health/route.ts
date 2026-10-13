@@ -1,4 +1,4 @@
-import { db } from '@/lib/server/env';
+import { db, setting } from '@/lib/server/env';
 import { json } from '@/lib/server/http';
 import { monitoringStorageStatus } from '@/lib/server/monitoring-storage';
 export async function GET() {
@@ -11,6 +11,7 @@ export async function GET() {
     // Health describes capabilities without exposing database errors or secrets.
   }
   const ok = database && storage.ready;
+  const preview = setting('PREVIEW_MODE') === 'true';
   return json(
     {
       ok,
@@ -18,6 +19,7 @@ export async function GET() {
       database,
       rawArchive: storage.rawArchive,
       projectStorage: storage.projectStorage,
+      ...(preview ? { previewSha: setting('PREVIEW_SHA') || null } : {}),
     },
     ok ? 200 : 503,
   );

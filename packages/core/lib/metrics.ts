@@ -1,4 +1,54 @@
 import type { BrandTarget, Citation, Run } from './types.ts';
+
+function escapeExpression(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Finds a selected brand's textual rank in an answer snapshot. URLs and
+ * source-list lines never count as mentions; absent names stay unavailable.
+ */
+export function firstMentionPosition(
+  answer: string | null | undefined,
+  selectedNames: string[],
+  targets: BrandTarget[],
+): number | null {
+  const prose = (answer || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(
+      /^\s*(?:#{1,6}\s*)?(sources?|fontes?|references?|referências?)\s*:?[\s\S]*$/gimu,
+      ' ',
+    )
+    .replace(/^\s*[-*+]\s+.*https?:.*$/gimu, ' ')
+    .replace(/(?:https?:\/\/|www\.)[^\s)\]}>,]+/giu, ' ');
+  const normalizedProse = normalizeText(prose);
+  const first = (names: string[]) => {
+    const positions = [
+      ...new Set(names.map((name) => normalizeText(name.trim())).filter(Boolean)),
+    ]
+      .map((name) => {
+        const match = new RegExp(
+          `(^|[^\\p{L}\\p{N}])${escapeExpression(name)}(?=$|[^\\p{L}\\p{N}])`,
+          'iu',
+        ).exec(normalizedProse);
+        return match ? match.index + match[1].length : -1;
+      })
+      .filter((index) => index >= 0);
+    return positions.length ? Math.min(...positions) : null;
+  };
+  const selected = first(selectedNames);
+  if (selected == null) return null;
+  const selectedKeys = new Set(
+    selectedNames.map((name) => normalizeText(name)),
+  );
+  const earlier = targets.filter((target) => {
+    if (selectedKeys.has(normalizeText(target.name)))
+      return false;
+    const position = first([target.name, ...(target.aliases || [])]);
+    return position != null && position < selected;
+  });
+  return earlier.length + 1;
+}
 export function normalizeText(text: string) {
   return text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
 }
@@ -34,14 +84,13 @@ export function safeUrl(value: unknown): string | null {
 }
 export function matchesBrand(answer: string, target: BrandTarget) {
   const clean = normalizeText(answer.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1'));
-  const name = normalizeText(target.name).replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&',
-  );
-  return (
-    !!name &&
-    new RegExp(`(^|[^\\p{L}\\p{N}])${name}($|[^\\p{L}\\p{N}])`, 'u').test(clean)
-  );
+  return [target.name, ...(target.aliases || [])].some((candidate) => {
+    const name = normalizeText(candidate).replace(
+      /[.*+?^${}()|[\]\\]/g,
+      '\\$&',
+    );
+    return !!name && new RegExp(`(^|[^\\p{L}\\p{N}])${name}($|[^\\p{L}\\p{N}])`, 'u').test(clean);
+  });
 }
 export function extractResponse(
   result: Record<string, unknown>,
@@ -119,24 +168,56 @@ export function extractResponse(
           : engine,
   };
 }
-export function summarize(runs: Run[], _brandName: string) {
+/**
+ * Every truthy `mentions` entry across a set of runs: the brands monitored
+ * in each supplied run's effective interpretation (the active analytical
+ * overlay when valid, otherwise its original collection snapshot), including
+ * ones outside the current display roster — never untracked names merely
+ * present in the answer. This is the
+ * share-of-voice denominator both the period KPI (`summarize`) and the daily
+ * chart series use; keeping it in one place avoids the two drifting apart.
+ */
+export function countAllMentions(runs: Run[]) {
+  return runs.reduce(
+    (sum, r) => sum + Object.values(r.mentions).filter(Boolean).length,
+    0,
+  );
+}
+export function summarize(runs: Run[], brandName: string, brandDomain = '') {
   const complete = runs.filter(
     (r) => r.status === 'complete' && r.response_available !== false,
   );
   const mentioned = complete.filter((r) => r.mentions[r.brand_name]).length;
-  const totalMentions = complete.reduce(
-    (sum, r) => sum + Object.values(r.mentions).filter(Boolean).length,
-    0,
-  );
+  const totalMentions = countAllMentions(complete);
   const citations = new Set(
     complete.flatMap((r) => r.sources.map((s) => s.domain)),
   );
+  const citedBrand = complete.filter((r) =>
+    r.sources.some((source) => source.domain === brandDomain),
+  ).length;
+  const positions = complete.flatMap((r) => {
+    if (!r.mentions[r.brand_name]) return [];
+    const position = firstMentionPosition(
+      r.answer,
+      [r.brand_name, brandName],
+      Object.keys(r.mentions).map((name) => ({ name, domain: '' })),
+    );
+    return position == null ? [] : [position];
+  });
   return {
     responses: complete.length,
     visibility: complete.length ? (mentioned / complete.length) * 100 : 0,
     shareOfVoice: totalMentions ? (mentioned / totalMentions) * 100 : 0,
+    citationPresence: complete.length
+      ? (citedBrand / complete.length) * 100
+      : 0,
+    mentionPosition: positions.length
+      ? positions.reduce((sum, position) => sum + position, 0) /
+        positions.length
+      : 0,
     citedDomains: citations.size,
     mentions: mentioned,
+    totalMentions,
     cost: runs.reduce((a, r) => a + r.cost, 0),
   };
 }

@@ -9,6 +9,20 @@ export function nextRunTime(from: string, _hours = 24): string {
   if (next.getTime() <= date.getTime()) next.setUTCDate(next.getUTCDate() + 1);
   return next.toISOString();
 }
+export function nextWeeklyRunTime(from: string): string {
+  const next = new Date(from);
+  next.setUTCHours(7, 0, 0, 0);
+  next.setUTCDate(next.getUTCDate() + ((8 - next.getUTCDay()) % 7));
+  if (next.getTime() <= Date.parse(from)) next.setUTCDate(next.getUTCDate() + 7);
+  return next.toISOString();
+}
+export function weeklyWindow(from: string): string {
+  const start = new Date(from);
+  start.setUTCHours(7, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+  if (start.getTime() > Date.parse(from)) start.setUTCDate(start.getUTCDate() - 7);
+  return start.toISOString();
+}
 export function scheduleWindow(from: string): string {
   const current = new Date(from);
   current.setUTCHours(7, 0, 0, 0);

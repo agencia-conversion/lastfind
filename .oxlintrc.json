@@ -31,7 +31,8 @@
     "packages/core/components/ui/**",
     "packages/core/hooks/use-mobile.ts",
     ".runtime/**",
-    ".build/**"
+    ".build/**",
+    "**/.astro/**"
   ],
   "rules": {
     "no-array-constructor": "error",

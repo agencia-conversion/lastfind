@@ -4,11 +4,16 @@ import { build } from 'esbuild';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import type {
+  DemoFilters,
+  DemoResponse,
+} from '../components/analytics/demo-data.ts';
+
 const coreRoot = fileURLToPath(new URL('../', import.meta.url));
 
-await test('real sources and competitor trends use complete reports when workspace summaries omit evidence', async () => {
+await test('the analytics prototype renders its mock workspace without importing or contacting the live engine', async () => {
   mkdirSync(resolve('.wrangler'), { recursive: true });
-  const directory = mkdtempSync(resolve('.wrangler/analytics-surface-'));
+  const directory = mkdtempSync(resolve('.wrangler/analytics-prototype-'));
   try {
     const bundled = await build({
       stdin: {
@@ -16,100 +21,504 @@ await test('real sources and competitor trends use complete reports when workspa
           import React from 'react';
           import { renderToPipeableStream } from 'react-dom/server';
           import { PassThrough } from 'node:stream';
-          import { WorkspaceApp } from './components/lastfind/workspace-app.tsx';
-          import { workspaceFixture } from './tests/fixtures/workspace.ts';
-          const workspace=workspaceFixture();
-          workspace.runs=workspace.runs.slice(0,25).map(run=>({...run,sources:[],consulted_sources:null,evidence_loaded:false,source_count:12}));
-          export const projectId=workspace.selectedProjectId;
-          export async function render(tab,extension=false){
-            return new Promise((resolve,reject)=>{
-              const stream=new PassThrough();let html='';
-              stream.on('data',chunk=>{html+=chunk.toString()});stream.on('end',()=>resolve(html));stream.on('error',reject);
-              const controller=renderToPipeableStream(React.createElement(WorkspaceApp,{initialData:extension?{...workspace,projects:[],selectedProjectId:null}:workspace,initialTab:tab,extensions:extension?[{id:'account-tools',label:'Account tools',icon:()=>null,render:()=>React.createElement('p',{'data-extension':'ready'},'Edition tools')}]:[]}),{
-                onAllReady(){controller.pipe(stream)},onShellError:reject,onError:reject
-              });
+          import { AnalyticsApp } from './components/analytics/analytics-app.tsx';
+          import { Overview, getTrendPoints, getTrendScale, formatPositionTick } from './components/analytics/overview.tsx';
+          import { parseDemoPromptImport } from './components/analytics/prompts-view.tsx';
+          import { SemanticBrandingView, SemanticEvidenceView, SemanticReportDocument } from './components/analytics/semantic-branding.tsx';
+          import { createSemanticSnapshot, initialBrandEntities } from './components/analytics/semantic-data.ts';
+          import { defaultFilters } from './components/analytics/demo-data.ts';
+          import { brandMetrics, demoBrands, demoPrompts, getDemoReport } from './components/analytics/demo-data.ts';
+          import { LocaleProvider } from './lib/i18n.tsx';
+          async function renderNode(element) {
+            return new Promise((resolve,reject) => {
+              const stream=new PassThrough(); let html='';
+              stream.on('data',chunk => { html+=chunk.toString() });
+              stream.on('end',() => resolve(html));
+              stream.on('error',reject);
+              const controller=renderToPipeableStream(
+                element,
+                {onAllReady(){controller.pipe(stream)},onShellError:reject,onError:reject}
+              );
             });
+          }
+          export function render(tab,locale='en',authenticatedUser) {
+            return renderNode(React.createElement(LocaleProvider,{initialLocale:locale},
+              React.createElement(AnalyticsApp,{initialTab:tab,initialSidebarOpen:true,authenticatedUser})));
+          }
+          export function renderRoute(path,search='') {
+            return renderNode(React.createElement(LocaleProvider,{initialLocale:'en'},
+              React.createElement(AnalyticsApp,{initialPath:path,initialSearch:search,initialSidebarOpen:true})));
+          }
+          export { getTrendPoints, getTrendScale, formatPositionTick, parseDemoPromptImport };
+          function renderSemanticView(View, locale, section) {
+            const project = {id:'conversion-web',name:'Conversion',domain:'conversion.com.br',prompts:demoPrompts};
+            return renderNode(React.createElement(LocaleProvider,{initialLocale:locale}, React.createElement(View,{
+              project, report:getDemoReport(demoPrompts,defaultFilters), filters:defaultFilters, section,
+              onSectionChange(){}, onOpenChat(){}, onOpenSource(){}, onSaveState(){}, onConfigure(){return true}
+            })));
+          }
+          export function renderSemanticBranding(locale, section='associations') {
+            return renderSemanticView(SemanticBrandingView, locale, section);
+          }
+          export function renderSemanticEvidence(locale, section='associations') {
+            return renderSemanticView(SemanticEvidenceView, locale, section);
+          }
+          export function renderSemanticReport(locale, filters=defaultFilters) {
+            const snapshot = createSemanticSnapshot({ id: 'snapshot', date: '2026-09-10T12:00:00Z', title: 'Example report', project: { id: 'sample', name: 'Sample company', domain: 'example.com' }, from: '2026-09-09', to: '2026-09-09', filters, entities: initialBrandEntities(), prompts: [{ id: 'p1', text: 'A new question with no data?' }], responses: [] });
+            return renderNode(React.createElement(LocaleProvider,{initialLocale:locale}, React.createElement(SemanticReportDocument,{snapshot})));
+          }
+          export function renderOverview(responses) {
+            const report={responses,previous:[],trend:[],brands:demoBrands.map(brand=>({...brand,...brandMetrics(responses,brand.id),change:0}))};
+            return renderNode(React.createElement(Overview,{report,prompts:demoPrompts,onNavigate(){},onBrand(){},onOpenChat(){}}));
           }
         `,
         resolveDir: coreRoot,
         loader: 'tsx',
       },
-      plugins: [
-        {
-          name: 'external-boundaries',
-          setup(plugin) {
-            plugin.onResolve({ filter: /^next\/image$/ }, () => ({
-              path: 'image',
-              namespace: 'surface-fixture',
-            }));
-            plugin.onResolve({ filter: /^@\/hooks\/use-report$/ }, () => ({
-              path: 'report',
-              namespace: 'surface-fixture',
-            }));
-            plugin.onResolve({ filter: /^\.\/remote-sources$/ }, () => ({
-              path: 'sources',
-              namespace: 'surface-fixture',
-            }));
-            plugin.onResolve({ filter: /^\.\/visibility-chart$/ }, () => ({
-              path: 'chart',
-              namespace: 'surface-fixture',
-            }));
-            plugin.onLoad(
-              { filter: /.*/, namespace: 'surface-fixture' },
-              ({ path }) => ({
-                loader: 'tsx',
-                resolveDir: coreRoot,
-                contents:
-                  path === 'report'
-                    ? `export function useReport(url){return {loading:false,error:undefined,data:url?{metrics:{responses:1000,mentions:100,citedDomains:15,visibility:10,shareOfVoice:20,cost:1.2},leaderboard:[],daily:[{date:'2026-09-01',brand:10},{date:'2026-09-02',brand:20}]}:undefined}}`
-                    : path === 'sources'
-                      ? `import React from 'react';export function RemoteSources({reportBase,refresh}){return <div data-source-report={reportBase} data-refresh={refresh}>Server citations</div>}`
-                      : path === 'chart'
-                        ? `import React from 'react';export function VisibilityChart({points}){return <div data-report-days={points?.length??0}>Server daily series</div>}`
-                        : `import React from 'react';export default function Image({fill,priority,unoptimized,...props}){return <img {...props}/>}`,
-              }),
-            );
-          },
-        },
-      ],
       bundle: true,
       platform: 'node',
       format: 'esm',
       packages: 'external',
+      loader: { '.css': 'empty' },
       jsx: 'automatic',
+      metafile: true,
       write: false,
     });
-    const filename = join(directory, 'surface.mjs');
-    writeFileSync(filename, bundled.outputFiles[0].text);
-    const fixture = (await import(pathToFileURL(filename).href)) as {
-      projectId: string;
-      render: (tab: string, extension?: boolean) => Promise<string>;
-    };
-    const sources = await fixture.render('sources');
+    const code = bundled.outputFiles[0].text;
     assert.ok(
-      !sources.includes('Plan &amp; usage'),
-      'Core navigation must not contain commercial account menus',
+      !code.replaceAll('/api/auth/logout', '').includes('/api/'),
+      'Only the signed-in account logout may call an API; the prototype must not submit provider tasks, load private reports, or mutate live projects',
     );
+    const dependencies = Object.keys(bundled.metafile.inputs);
     assert.ok(
-      !bundled.outputFiles[0].text.includes('/api/billing'),
-      'Shared UI must not bundle commercial API calls',
+      dependencies.some((path) => path.endsWith('/analytics/demo-data.ts')),
     );
-    const extension = await fixture.render('account-tools', true);
-    assert.ok(
-      extension.includes('data-extension="ready"'),
-      'Edition tools stay accessible before creating the first project',
+    assert.deepEqual(
+      dependencies.filter((path) => /\/(?:lib\/server|db|worker)\//.test(path)),
+      [],
+      'Server implementations stay outside the client bundle',
     );
-    assert.ok(
-      sources.includes(
-        'data-source-report="/api/reports?project=' + fixture.projectId,
+    assert.deepEqual(
+      dependencies.filter((path) =>
+        /\/(?:components\/lastfind|hooks\/use-report)\b/.test(path),
       ),
+      [],
+      'The prototype must not retain the former connected shell',
     );
-    assert.ok(sources.includes('Server citations'));
-    assert.ok(!sources.includes('No citations in this period'));
-    const competitors = await fixture.render('competitors');
+
+    const filename = join(directory, 'surface.mjs');
+    writeFileSync(filename, code);
+    const fixture = (await import(pathToFileURL(filename).href)) as {
+      render: (
+        tab: string,
+        locale?: string,
+        authenticatedUser?: { id: string; name: string; email: string },
+      ) => Promise<string>;
+      renderRoute: (path: string, search?: string) => Promise<string>;
+      renderOverview: (responses: DemoResponse[]) => Promise<string>;
+      renderSemanticReport: (
+        locale: string,
+        filters?: DemoFilters,
+      ) => Promise<string>;
+      renderSemanticBranding: (
+        locale: string,
+        section?: string,
+      ) => Promise<string>;
+      renderSemanticEvidence: (
+        locale: string,
+        section?: string,
+      ) => Promise<string>;
+      parseDemoPromptImport: (
+        input: string,
+      ) => { text: string; topic: string; country: string; tags: string[] }[];
+      formatPositionTick: (value: number, locale: string) => string;
+      getTrendScale: (
+        points: unknown[],
+        brands: string[],
+        metric: string,
+      ) => { domain: number[]; ticks: number[] };
+      getTrendPoints: (
+        report: unknown,
+        metric: string,
+      ) => Record<string, number | string | null>[];
+    };
+    const accountHtml = await fixture.render('overview', 'en', {
+      id: 'signed-in-user',
+      name: 'Signed in name',
+      email: 'signed-in@example.test',
+    });
+    assert.match(accountHtml, /Signed in name/);
+    assert.match(accountHtml, /signed-in@example.test/);
+    assert.doesNotMatch(accountHtml, /diego@example.com/);
+    const sections = [
+      ['overview', 'Overview', 'Brand ranking'],
+      ['prompts', 'Prompts', 'What are the best SEO agencies in Brazil?'],
+      ['sources', 'Sources', 'Sources used by AI'],
+      ['competitors', 'Brands', 'Tracked brands'],
+      ['models', 'AI models', 'Compare AI models'],
+      ['chats', 'Chats', 'AI responses'],
+      ['semantic-branding', 'Semantic Branding', 'Loading brand attributes…'],
+      ['settings', 'Settings', 'Workspace name'],
+    ];
+    for (const [tab, title, content] of sections) {
+      const html = await fixture.render(tab);
+      assert.match(html, new RegExp(`<h1(?:\\s[^>]*)?>${title}</h1>`));
+      assert.ok(
+        html.includes(content),
+        `${tab} renders its own working surface`,
+      );
+      assert.match(html, /Conversion/);
+      assert.match(html, /src="\/lastfind\/brand\/icon-3d\.png"/);
+      assert.doesNotMatch(html, /\/brand\/lastfind-icon|\/favicon\.svg/);
+      assert.doesNotMatch(
+        html,
+        /Workspace de demonstração|Demo workspace|Sobre esta prévia|About this preview/,
+      );
+      assert.ok(
+        !html.includes('NaN') && !html.includes('Infinity'),
+        `${tab} must render finite analytics`,
+      );
+    }
+    for (const [locale, loading] of [
+      ['en', 'Loading brand attributes…'],
+      ['pt-BR', 'Carregando atributos da marca…'],
+    ]) {
+      const html = await fixture.render('semantic-branding', locale);
+      assert.match(
+        html,
+        new RegExp(`<output(?:\\s[^>]*)?>${loading}</output>`),
+        'SSR exposes an accessible status until browser tab settings can be restored',
+      );
+      assert.doesNotMatch(
+        html,
+        /id="semantic-association-summary"|id="semantic-config-name-/,
+        'SSR must not render report defaults or mount the attribute editor before restoration',
+      );
+    }
+    const attributeSettings = await fixture.renderRoute(
+      '/app/preview/workspaces/conversion/projects/conversion/semantic-branding',
+      '?view=attributes',
+    );
+    assert.match(attributeSettings, /<h1(?:\s[^>]*)?>Brand attributes<\/h1>/);
+    assert.match(
+      attributeSettings,
+      /<output(?:\s[^>]*)?>Loading brand attributes…<\/output>/,
+    );
+    assert.doesNotMatch(
+      attributeSettings,
+      /role="dialog"|id="semantic-config-name-/,
+    );
+    for (const tab of ['overview', 'competitors', 'sources']) {
+      for (const locale of ['en', 'pt-BR']) {
+        const html = await fixture.render(tab, locale);
+        assert.doesNotMatch(
+          html,
+          /Sentiment|Sentimento|Lastfind score|Confidence|Confiança|Sources by type|Fontes por tipo/,
+          `${tab} only exposes initial extraction capabilities`,
+        );
+      }
+    }
+    for (const [locale, heading, settingsHeading] of [
+      [
+        'en',
+        'Explore your brand in context',
+        'The attributes you want to be known for',
+      ],
+      [
+        'pt-BR',
+        'Explore sua marca no contexto',
+        'Os atributos pelos quais quer ser reconhecido',
+      ],
+    ]) {
+      const initial = await fixture.renderSemanticEvidence(locale);
+      assert.ok(initial.includes(heading));
+      assert.doesNotMatch(
+        initial,
+        /semantic-radar|Lastfind presence index|Índice de presença Lastfind|role="dialog"/,
+      );
+      const settings = await fixture.renderSemanticEvidence(
+        locale,
+        'attributes',
+      );
+      assert.ok(settings.includes(settingsHeading));
+      assert.match(settings, /semantic-config-name-technical/);
+      assert.doesNotMatch(settings, /role="dialog"/);
+    }
+    // Render the canonical entry with a restored project separately from the
+    // app's SSR loading guard. The real route still needs browser hydration QA.
+    for (const [locale, heading, settingsHeading, reportTab] of [
+      [
+        'en',
+        'How AI connects your brand to its attributes',
+        'The attributes you want to be known for',
+        'Reports',
+      ],
+      [
+        'pt-BR',
+        'Como a IA conecta sua marca aos seus atributos',
+        'Os atributos pelos quais quer ser reconhecido',
+        'Relatórios',
+      ],
+    ]) {
+      const report = await fixture.renderSemanticBranding(locale);
+      assert.ok(report.includes(heading));
+      assert.match(report, /class="semantic-radar"/);
+      for (const section of [
+        'summary',
+        'score',
+        'radar',
+        'top',
+        'heatmap',
+        'explanations',
+      ]) {
+        assert.ok(report.includes(`href="#semantic-association-${section}"`));
+        assert.ok(report.includes(`id="semantic-association-${section}"`));
+      }
+      assert.match(
+        report,
+        new RegExp(`role="tab"[^>]*>.*?${reportTab}</button>`),
+      );
+      assert.doesNotMatch(report, /semantic-evidence-view|role="dialog"/);
+      const settings = await fixture.renderSemanticBranding(
+        locale,
+        'attributes',
+      );
+      assert.ok(settings.includes(settingsHeading));
+      assert.match(settings, /semantic-config-name-technical/);
+      assert.doesNotMatch(settings, /role="dialog"|class="semantic-radar"/);
+    }
+    const scale = fixture.getTrendScale(
+      [
+        { date: '2026-09-09', own: 12, other: 18 },
+        { date: '2026-09-10', own: 14, other: 22 },
+      ],
+      ['own', 'other'],
+      'visibility',
+    );
+    assert.ok(scale.domain[0] <= 12 && scale.domain[1] >= 22);
     assert.ok(
-      competitors.includes('data-report-days="2"'),
-      'Competitor charts must receive the server series, not derive trends from 25 summaries',
+      scale.domain[1] - scale.domain[0] < 100,
+      'clustered series use the vertical space',
+    );
+    const extremes = fixture.getTrendScale(
+      [{ date: '2026-09-09', own: 0, other: 100 }],
+      ['own', 'other'],
+      'visibility',
+    );
+    assert.deepEqual(extremes.domain, [0, 100]);
+    const positionScale = fixture.getTrendScale(
+      [{ date: '2026-09-09', own: 1.5, other: 3 }],
+      ['own', 'other'],
+      'position',
+    );
+    assert.deepEqual(positionScale.ticks, [1, 1.5, 2, 2.5, 3, 3.5]);
+    assert.deepEqual(
+      positionScale.ticks.map((tick) =>
+        fixture.formatPositionTick(tick, 'en-US'),
+      ),
+      ['1', '1.5', '2', '2.5', '3', '3.5'],
+    );
+    assert.deepEqual(
+      positionScale.ticks.map((tick) =>
+        fixture.formatPositionTick(tick, 'pt-BR'),
+      ),
+      ['1', '1,5', '2', '2,5', '3', '3,5'],
+    );
+    const translated = await fixture.render('overview', 'pt-BR');
+    assert.match(translated, /Visibilidade|Visão geral|visibilidade/);
+    assert.match(
+      translated,
+      /62,6%/,
+      'Portuguese metrics use the decimal comma',
+    );
+    assert.match(
+      translated,
+      /1\.400/,
+      'Portuguese counts use the thousands dot',
+    );
+    const english = await fixture.render('overview', 'en');
+    assert.match(english, /62\.6%/, 'US metrics use the decimal point');
+    assert.match(english, /1,400/, 'US counts use the thousands comma');
+    assert.match(
+      await fixture.render('unknown-page'),
+      /<h1(?:\s[^>]*)?>Overview<\/h1>/,
+      'An unknown legacy initialTab falls back to the overview',
+    );
+
+    for (const base of ['/app', '/app/preview']) {
+      const lab = await fixture.renderRoute(
+        `${base}/workspaces/seo-lab/projects/seo-lab/overview`,
+      );
+      assert.match(lab, /<h1(?:\s[^>]*)?>Overview<\/h1>/);
+      assert.match(
+        lab,
+        /SEO Lab/,
+        'The route selects its workspace and project during SSR',
+      );
+      assert.ok(
+        !lab.includes('62.6%') && !lab.includes('1,400'),
+        'A direct link to an empty project must not render another project’s analytics',
+      );
+
+      const profile = await fixture.renderRoute(`${base}/account/profile`);
+      assert.match(profile, /id="profile-name"/);
+      assert.match(profile, /Profile photo/);
+      assert.ok(
+        !profile.includes('id="workspace-name"'),
+        'An account profile link opens profile settings directly',
+      );
+
+      const missing = await fixture.renderRoute(
+        `${base}/workspaces/missing-team/projects/conversion/overview`,
+      );
+      assert.match(missing, /This destination is unavailable/);
+      assert.ok(
+        !missing.includes('Brand ranking') && !missing.includes('62.6%'),
+        'Unknown workspace links must not silently expose another workspace’s report',
+      );
+    }
+
+    for (const [locale, sections] of [
+      [
+        'en',
+        [
+          'Report scope',
+          'Brand presence and competitors',
+          'Associations and priorities',
+          'Coverage by engine',
+          'Sources and formats',
+          'Score method and limits',
+          'Questions and evidence appendix',
+        ],
+      ],
+      [
+        'pt-BR',
+        [
+          'Escopo do relatório',
+          'Presença da marca e concorrentes',
+          'Método do score e limites',
+          'Apêndice de perguntas e evidências',
+        ],
+      ],
+    ] as const) {
+      const html = await fixture.renderSemanticReport(locale);
+      for (const section of sections)
+        assert.ok(html.includes(section), section);
+      assert.ok(html.includes('A new question with no data?'));
+      assert.ok(!html.includes('NaN') && !html.includes('Infinity'));
+    }
+    const multiFilterReport = await fixture.renderSemanticReport('pt-BR', {
+      days: '28',
+      models: ['ChatGPT'],
+      country: ['Brazil', 'United States'],
+      topic: [],
+      tag: ['Discovery', 'Comparison'],
+      tagMode: 'all',
+    });
+    assert.match(
+      multiFilterReport,
+      /Brasil · Estados Unidos \/ Nenhum selecionado \/ Discovery · Comparison/,
+    );
+    assert.match(multiFilterReport, /Todas as tags selecionadas/);
+    const imported = fixture.parseDemoPromptImport(
+      'prompt,topic,country,tags\n"Which agencies, for SEO?",SEO,Brazil,Discovery|Buying\n"What is ""quality"" SEO?",SEO,United States,Research',
+    );
+    assert.equal(imported.length, 2);
+    assert.equal(imported[0].text, 'Which agencies, for SEO?');
+    assert.deepEqual(imported[0].tags, ['Discovery', 'Buying']);
+    assert.throws(
+      () =>
+        fixture.parseDemoPromptImport('prompt,country\nValid question?,Spain'),
+      /country/,
+    );
+    assert.throws(
+      () => fixture.parseDemoPromptImport('prompt\n"Unclosed question?'),
+      /quotes/,
+    );
+    assert.throws(
+      () =>
+        fixture.parseDemoPromptImport(
+          'prompt\n' +
+            Array.from({ length: 101 }, () => 'Valid question?').join('\n'),
+        ),
+      /rows/,
+    );
+
+    const trendReport = {
+      brands: [{ id: 'conversion' }, { id: 'mestre' }],
+      trend: [{ date: '2026-09-08' }, { date: '2026-09-09' }],
+      responses: [
+        {
+          id: 'sample',
+          promptId: 'p1',
+          date: '2026-09-09T07:00:00Z',
+          model: 'ChatGPT',
+          brandIds: ['mestre'],
+          sentiment: 80,
+          sourceIds: [],
+          consultedSourceIds: null,
+        },
+      ],
+    };
+    assert.equal(
+      fixture.getTrendPoints(trendReport, 'shareOfVoice')[0].conversion,
+      null,
+    );
+    assert.equal(
+      fixture.getTrendPoints(trendReport, 'shareOfVoice')[1].conversion,
+      0,
+    );
+    assert.equal(
+      fixture.getTrendPoints(trendReport, 'shareOfVoice')[1].mestre,
+      100,
+    );
+    assert.equal(
+      fixture.getTrendPoints(trendReport, 'position')[1].conversion,
+      null,
+    );
+    assert.equal(fixture.getTrendPoints(trendReport, 'position')[1].mestre, 1);
+
+    const base = {
+      promptId: 'p1',
+      date: '2026-09-09T07:00:00.000Z',
+      model: 'ChatGPT' as const,
+      sentiment: 80,
+      consultedSourceIds: null,
+    };
+    const overview = await fixture.renderOverview([
+      {
+        ...base,
+        id: 'one',
+        brandIds: ['conversion', 'mestre'],
+        sourceIds: ['s1', 's2'],
+      },
+      {
+        ...base,
+        id: 'two',
+        brandIds: ['mestre', 'conversion'],
+        sourceIds: ['s1'],
+      },
+      { ...base, id: 'three', brandIds: ['mestre'], sourceIds: ['s3'] },
+    ]);
+    const cards = overview.split('class="metric-summary"').slice(1);
+    assert.match(
+      cards[0],
+      /66\.7%/,
+      'Visibility divides brand mentions by the three responses',
+    );
+    assert.match(
+      cards[1],
+      /40\.0%/,
+      'Share of voice divides two mentions by five total brand mentions',
+    );
+    const clutchRow = overview.match(
+      /<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*clutch\.co(?:(?!<\/tr>)[\s\S])*<\/tr>/,
+    )?.[0];
+    assert.ok(clutchRow, 'The cited source appears in the evidence table');
+    assert.match(
+      clutchRow.replace(/<!--[\s\S]*?-->/g, ''),
+      /66\.7%/,
+      'Source citation rate divides by responses, not total citation count',
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });

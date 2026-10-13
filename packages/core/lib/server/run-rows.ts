@@ -1,6 +1,8 @@
 import type { Run } from '@/lib/types';
 import type { RawArchiveRecord } from '@/lib/raw-responses';
 export function runFromRow(r: Record<string, unknown>): Run {
+  const targetsJson = String(r.effective_targets_json ?? r.targets_json);
+  const mentionsJson = String(r.effective_mentions_json ?? r.mentions_json);
   return {
     id: String(r.id),
     project_id: String(r.project_id),
@@ -8,8 +10,8 @@ export function runFromRow(r: Record<string, unknown>): Run {
     prompt_text: String(r.prompt_text),
     engine: r.engine as Run['engine'],
     status: r.status as Run['status'],
-    mentions: JSON.parse(String(r.mentions_json)),
-    brand_name: JSON.parse(String(r.targets_json))[0].name,
+    mentions: JSON.parse(mentionsJson),
+    brand_name: JSON.parse(targetsJson)[0].name,
     sources: JSON.parse(String(r.sources_json)),
     consulted_sources:
       typeof r.consulted_sources_json === 'string'
@@ -38,12 +40,19 @@ export function runFromRow(r: Record<string, unknown>): Run {
         }
       : {}),
     ...('answer' in r
-      ? { answer: r.answer as string, model: r.model as string }
+      ? {
+          answer: r.answer as string,
+          model: r.model as string,
+          targets: JSON.parse(targetsJson),
+        }
       : {}),
   };
 }
 
-export const RUN_SUMMARY_COLUMNS = `r.id,r.project_id,r.prompt_id,r.prompt_text,r.engine,r.status,r.targets_json,r.mentions_json,r.response_available,r.cost,r.error,r.created_at,r.completed_at,
+export const EFFECTIVE_TARGETS_SQL = `CASE WHEN r.analysis_revision=(SELECT value FROM store_meta WHERE key='analysis_revision') THEN r.analysis_targets_json ELSE r.targets_json END`;
+export const EFFECTIVE_MENTIONS_SQL = `CASE WHEN r.analysis_revision=(SELECT value FROM store_meta WHERE key='analysis_revision') THEN r.analysis_mentions_json ELSE r.mentions_json END`;
+
+export const RUN_SUMMARY_COLUMNS = `r.id,r.project_id,r.prompt_id,r.prompt_text,r.engine,r.status,${EFFECTIVE_TARGETS_SQL} AS targets_json,${EFFECTIVE_MENTIONS_SQL} AS mentions_json,r.response_available,r.cost,r.error,r.created_at,r.completed_at,
   json_array_length(r.sources_json) AS source_count, CASE WHEN r.consulted_sources_json IS NULL THEN NULL ELSE json_array_length(r.consulted_sources_json) END AS consulted_source_count`;
 export function runSummary(row: Record<string, unknown>) {
   return {

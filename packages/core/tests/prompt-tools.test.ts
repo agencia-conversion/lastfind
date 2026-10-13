@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePromptCsv, suggestPrompts } from '../lib/prompt-tools.ts';
-import { nextRunTime, positiveLimit } from '../lib/scheduling.ts';
+import { nextRunTime, nextWeeklyRunTime, weeklyWindow, positiveLimit } from '../lib/scheduling.ts';
 void test('CSV accepts quoted commas, escaped quotes, multiline fields and UTF-8 BOM', () => {
   const rows = parsePromptCsv(
     '\uFEFFprompt,engine,topic,tags\r\n"Compare CRM, analytics and ""sales"" tools",chatgpt,Compra,CRM|Decisão\r\n"Which tools\nwork for remote teams?",gemini,Discovery,Remote',
@@ -59,4 +59,11 @@ void test('next runs use the next 4AM Brasilia window across boundaries', () => 
   );
   for (const value of ['', 'NaN', '-1', 'Infinity', '1.2'])
     assert.equal(positiveLimit(value, 1500), 1500);
+});
+void test('Free runs use Monday 4AM Brasília and a stable account week', () => {
+  assert.equal(nextWeeklyRunTime('2026-10-12T06:59:59.000Z'), '2026-10-12T07:00:00.000Z');
+  assert.equal(nextWeeklyRunTime('2026-10-12T07:00:00.000Z'), '2026-10-19T07:00:00.000Z');
+  assert.equal(nextWeeklyRunTime('2026-10-13T12:00:00.000Z'), '2026-10-19T07:00:00.000Z');
+  assert.equal(weeklyWindow('2026-10-12T06:59:59.000Z'), '2026-10-05T07:00:00.000Z');
+  assert.equal(weeklyWindow('2026-10-13T12:00:00.000Z'), '2026-10-12T07:00:00.000Z');
 });

@@ -1,1 +1,6 @@
-export function withRequestContext<T>(_request: Request, action: () => T): T { return action(); }
+export function withRequestContext<T>(
+  request: Request,
+  action: (contextRequest: Request) => T,
+): T {
+  return action(request);
+}

@@ -1,7 +1,12 @@
 import { env } from 'cloudflare:workers';
 export function setting(key: string): string {
   const value = (env as unknown as Record<string, unknown>)[key];
-  return typeof value === 'string' ? value : (process.env[key] ?? '');
+  if (typeof value === 'string') return value;
+  // `process` is not present in a Worker without the Node compatibility flag.
+  // Keep the local-process fallback without making an absent binding a 500.
+  const processEnv =
+    typeof process === 'undefined' ? undefined : process.env;
+  return processEnv?.[key] ?? '';
 }
 export function db(): D1Database {
   if (!env.DB) throw new Error('Database binding DB is unavailable');

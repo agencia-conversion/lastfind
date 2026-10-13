@@ -10,13 +10,15 @@ export async function POST(request: Request) {
       id = crypto.randomUUID();
     const result = await db()
       .prepare(
-        'INSERT INTO projects (id,owner_id,name,domain,competitors_json,location_code,language_code,category,audience,daily_enabled,created_at) SELECT ?,?,?,?,?,?,?,?,?,1,?',
+        'INSERT INTO projects (id,owner_id,name,domain,aliases_json,additional_domains_json,competitors_json,location_code,language_code,category,audience,daily_enabled,created_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,1,?',
       )
       .bind(
         id,
         u.id,
         data.name,
         data.domain,
+        JSON.stringify(data.aliases),
+        JSON.stringify(data.additionalDomains),
         JSON.stringify(data.competitors),
         data.location,
         data.language,

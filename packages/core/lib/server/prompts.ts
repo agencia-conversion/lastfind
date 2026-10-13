@@ -4,7 +4,7 @@ import { ApiError, textField } from './http';
 import { isEngine, ENGINE_META, ENGINE_LABELS } from '@/lib/engines';
 import { accountCapabilities, capacityGuards } from './capabilities';
 import { syncTopics } from './topics';
-import { nextRunTime } from '@/lib/scheduling';
+import { nextRunTime, nextWeeklyRunTime } from '@/lib/scheduling';
 import { startMonitoring } from './monitor';
 export function promptInput(data: Record<string, unknown>, language: string) {
   const text = textField(data.text, 'Prompt', 5, 1000);
@@ -37,6 +37,7 @@ export async function addPrompts(
   if (!inputs.length || inputs.length > 100)
     throw new ApiError(400, 'Adicione entre 1 e 100 prompts por vez.');
   const capabilities = await accountCapabilities(owner);
+  const next = capabilities.promptLimit === 10 ? nextWeeklyRunTime(now()) : nextRunTime(now());
   const prompts = inputs.map((p) => ({
     ...promptInput(p, String(project.language_code)),
     id: crypto.randomUUID(),
@@ -60,7 +61,7 @@ export async function addPrompts(
           p.engine,
           p.tag,
           JSON.stringify(p.tags),
-          nextRunTime(now()),
+          next,
           now(),
           projectId,
           p.text,
@@ -108,6 +109,7 @@ export async function updatePrompt(
     { ...p, tags: JSON.parse(String(p.tags_json)), ...data },
     String(p.language_code),
   );
+  const capabilities = await accountCapabilities(owner);
   for (const key of ['active', 'archived'])
     if (key in data && typeof data[key] !== 'boolean')
       throw new ApiError(400, 'Estado inválido.');
@@ -135,7 +137,7 @@ export async function updatePrompt(
         JSON.stringify(input.tags),
         active,
         archived,
-        changed ? nextRunTime(now()) : p.next_run_at,
+        changed ? (capabilities.promptLimit === 10 ? nextWeeklyRunTime(now()) : nextRunTime(now())) : p.next_run_at,
         id,
         archived,
         p.project_id,

@@ -1,5 +1,5 @@
 'use client';
-import { Aperture } from 'lucide-react';
+import { LASTFIND_APP_ICON } from '@/lib/lastfind-brand';
 import { LanguageSwitcher, useI18n } from '@/lib/i18n';
 import { OwnerLogin } from './owner-login';
 export function OwnerWelcome() {
@@ -9,7 +9,8 @@ export function OwnerWelcome() {
     <main className="mx-auto max-w-lg px-6 py-16">
       <div className="flex items-center justify-between gap-4">
         <a href="/" className="flex items-center gap-2 text-xl font-semibold">
-          <Aperture className="text-primary" />
+          {/* eslint-disable-next-line next/no-img-element */}
+          <img src={LASTFIND_APP_ICON.src} alt="" width={40} height={40} />
           lastfind.
         </a>
         <LanguageSwitcher compact />
@@ -35,6 +36,15 @@ export function OwnerWelcome() {
         )}
       </p>
       <OwnerLogin />
+      <a
+        href="/app/preview"
+        className="mt-6 block rounded-lg border border-border px-4 py-3 text-center text-sm font-medium text-primary hover:bg-sidebar-accent"
+      >
+        {l(
+          'Explore the new interface with sample data',
+          'Explorar a nova interface com dados de exemplo',
+        )}
+      </a>
       <a href="/docs" className="mt-6 inline-block text-primary">
         {l('Installation guide', 'Guia de instalação')}
       </a>

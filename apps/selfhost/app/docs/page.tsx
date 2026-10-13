@@ -53,6 +53,17 @@ export default function Documentation() {
           )}
         </p>
       </section>
+      <section id="competitors" className="mt-8">
+        <h2 className="text-xl font-semibold">
+          {l('Competitor suggestions', 'Sugestões de concorrentes')}
+        </h2>
+        <p className="mt-3">
+          {l(
+            'The competitors screen suggests names found in contexts comparable to your brand and known players. You review the saved answer evidence and confirm the domain before adding one. Changes reinterpret up to the 10,000 newest eligible answers from the last 90 days without another provider request.',
+            'A tela de concorrentes sugere nomes encontrados em contextos comparáveis aos da sua marca e dos players conhecidos. Você revisa as evidências nas respostas salvas e confirma o domínio antes de adicionar. As alterações reinterpretam até as 10.000 respostas elegíveis mais recentes dos últimos 90 dias sem uma nova consulta ao provedor.',
+          )}
+        </p>
+      </section>
     </main>
   );
 }

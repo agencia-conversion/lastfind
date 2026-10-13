@@ -12,7 +12,7 @@ const entities = ['prompts', 'runs'];
 function identity(manifest) {
   if (
     !manifest ||
-    manifest.schema !== 1 ||
+    ![1, 2].includes(manifest.schema) ||
     !['projectId', 'ownerId', 'generation'].every(
       (key) =>
         typeof manifest[key] === 'string' &&
@@ -20,7 +20,13 @@ function identity(manifest) {
         manifest[key].length <= 200,
     ) ||
     !Number.isSafeInteger(manifest.revision) ||
-    manifest.revision < 0
+    manifest.revision < 0 ||
+    (manifest.schema === 2 &&
+      ((manifest.analysisRevision !== null &&
+        (typeof manifest.analysisRevision !== 'string' ||
+          manifest.analysisRevision.length > 200)) ||
+        !Number.isSafeInteger(manifest.analysisMutationRevision) ||
+        manifest.analysisMutationRevision < 0))
   )
     throw new Error('Invalid project backup identity.');
   return JSON.stringify([
@@ -29,6 +35,9 @@ function identity(manifest) {
     manifest.ownerId,
     manifest.generation,
     manifest.revision,
+    ...(manifest.schema === 2
+      ? [manifest.analysisRevision, manifest.analysisMutationRevision]
+      : []),
   ]);
 }
 
@@ -101,11 +110,16 @@ export async function inspectBackup(
           throw new Error(
             'Project backup rows are unordered or belong to another owner/project.',
           );
-        canonicalStoreRow(entity, row);
+        canonicalStoreRow(entity, row, header.schema);
         lastIds[entity] = row.id;
       }
       counts[entity] += rows.length;
-      digests[entity] = await extendStoreDigest(digests[entity], entity, rows);
+      digests[entity] = await extendStoreDigest(
+        digests[entity],
+        entity,
+        rows,
+        header.schema,
+      );
       if (onChunk) await onChunk(entity, rows);
     } else if (record.type === 'footer') {
       const manifest = record.manifest;

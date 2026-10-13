@@ -1,0 +1,534 @@
+{
+  "schemaVersion": 6,
+  "modelType": "sklearn.linear_model.LogisticRegression",
+  "classOrder": [
+    0,
+    1
+  ],
+  "scoreMeaning": "Ranking score from an uncalibrated logistic model; do not present as probability.",
+  "featureOrder": [
+    "context_similarity",
+    "primary_context_similarity",
+    "seed_proximity",
+    "structure_similarity",
+    "list_table_role",
+    "comparison_language",
+    "repeated_mention",
+    "name_quality",
+    "direct_domain",
+    "source_only",
+    "heading_only",
+    "generic_entity",
+    "publisher_citation",
+    "answer_support",
+    "distinct_link_domains_per_surface",
+    "link_label_only",
+    "mwis_primary_fraction",
+    "entity_role"
+  ],
+  "intercept": -3.924220910465,
+  "coefficients": [
+    2.988355766497,
+    1.025978670317,
+    0.081080014682,
+    -0.261785959815,
+    0.290706733731,
+    0.719679231241,
+    1.542831010992,
+    -1.050838520265,
+    1.805417973781,
+    -0.549509596481,
+    -0.243470899001,
+    -3.045968889368,
+    -0.549509596481,
+    -0.759441173489,
+    -0.079106232845,
+    -1.039812931947,
+    1.986765874313,
+    2.051522712132
+  ],
+  "decisionThreshold": 0.768539058031,
+  "provenance": {
+    "datasetVersion": "r8-final-known-plus-private-replacement-v2",
+    "trainingScript": "packages/core/scripts/train-competitor-discovery.py",
+    "featureGenerator": "packages/core/scripts/generate-competitor-discovery-r6-training.ts",
+    "sourceCorpus": "packages/core/scripts/competitor-discovery-training-corpus.json",
+    "trainingVectors": "packages/core/scripts/competitor-discovery-training-vectors.json",
+    "trainingVectorsSha256": "38e9ea0d5b7dadbbf78b723101eb25f814a91ab2724cb65388338a91b79b51b4",
+    "sourceCorpusSha256": "827366b5820a5fcf72324aa786e3edbe00ffa3798eaa0d5c513d893c38327db1",
+    "featureSource": "packages/core/lib/competitor-discovery-features.ts",
+    "featureSourceSha256": "0a366acd2e10fea789a64d9a7872fb3f352b91028b88423a8f6bc2b36414d339",
+    "identityImplementation": "packages/core/lib/competitor-identity.ts",
+    "identityImplementationSha256": "c8e497bb5d1d31dd119f0089229f10060bd8d802c701cf6396ad6e9079300d4c",
+    "primitiveImplementation": "packages/core/lib/competitor-discovery-primitives.ts",
+    "primitiveImplementationSha256": "1091b0102a88774f0b25d9d2863dd72d7a7f2f67e65baf30896489cb2ec7a21f",
+    "candidateFeedPolicy": {
+      "schemaVersion": 1,
+      "name": "mwis-primary-plus-zone-recovery",
+      "primary": "MWIS over roleLogit minus the trained segment penalty; primary spans are capped first by descending contribution with code-point tie breaks.",
+      "recovery": "The highest-logit span from each zone without a retained primary is ordered by raw role logit, then longer span, lower UTF-16 start, and normalized-name code points. Non-overlapping spans fill only the capacity left by primaries.",
+      "oneRecoveryPerZone": true,
+      "recoveredSpansMustNotOverlapRetainedSpans": true,
+      "rankerFeedCutoff": false,
+      "implicitPrimaryFloor": "MWIS excludes a span when roleLogit minus segmentPenalty is negative; with zero penalty this is a roleLogit floor of zero.",
+      "maxSelectedPerAnswer": 256,
+      "maxAnswersPerExtraction": 20
+    },
+    "candidateFeedAudit": {
+      "train": {
+        "inputAnswers": 298,
+        "processedAnswers": 249,
+        "answersDroppedByCap": 30,
+        "answersSkippedEmpty": 0,
+        "answersSkippedNoSeedContext": 19,
+        "decoder": {
+          "scoredSpans": 4275,
+          "zones": 1514,
+          "mwisPrimaryBeforeCutoff": 485,
+          "primaryDroppedByCutoff": 0,
+          "primaryDroppedByCap": 0,
+          "selectedPrimary": 485,
+          "zonesWithoutPrimary": 1029,
+          "recoveryZoneCandidates": 1029,
+          "recoveryDroppedByCutoff": 0,
+          "recoveryBlockedByOverlap": 13,
+          "recoveryDroppedByCap": 0,
+          "selectedRecovery": 1016
+        },
+        "selectedSpanLabels": {
+          "mwisPrimary": {
+            "positive": 383,
+            "negative": 102,
+            "ambiguous": 0,
+            "sealed": 0
+          },
+          "zoneRecovery": {
+            "positive": 89,
+            "negative": 927,
+            "ambiguous": 0,
+            "sealed": 0
+          }
+        },
+        "rankerRows": {
+          "positive": 259,
+          "negative": 935,
+          "sealed": 0
+        }
+      },
+      "validation": {
+        "inputAnswers": 49,
+        "processedAnswers": 44,
+        "answersDroppedByCap": 0,
+        "answersSkippedEmpty": 0,
+        "answersSkippedNoSeedContext": 5,
+        "decoder": {
+          "scoredSpans": 1061,
+          "zones": 384,
+          "mwisPrimaryBeforeCutoff": 128,
+          "primaryDroppedByCutoff": 0,
+          "primaryDroppedByCap": 0,
+          "selectedPrimary": 128,
+          "zonesWithoutPrimary": 256,
+          "recoveryZoneCandidates": 256,
+          "recoveryDroppedByCutoff": 0,
+          "recoveryBlockedByOverlap": 2,
+          "recoveryDroppedByCap": 0,
+          "selectedRecovery": 254
+        },
+        "selectedSpanLabels": {
+          "mwisPrimary": {
+            "positive": 110,
+            "negative": 18,
+            "ambiguous": 0,
+            "sealed": 0
+          },
+          "zoneRecovery": {
+            "positive": 16,
+            "negative": 238,
+            "ambiguous": 0,
+            "sealed": 0
+          }
+        },
+        "rankerRows": {
+          "positive": 64,
+          "negative": 241,
+          "sealed": 0
+        }
+      },
+      "test": {
+        "inputAnswers": 48,
+        "processedAnswers": 44,
+        "answersDroppedByCap": 0,
+        "answersSkippedEmpty": 0,
+        "answersSkippedNoSeedContext": 4,
+        "decoder": {
+          "scoredSpans": 1318,
+          "zones": 541,
+          "mwisPrimaryBeforeCutoff": 107,
+          "primaryDroppedByCutoff": 0,
+          "primaryDroppedByCap": 0,
+          "selectedPrimary": 107,
+          "zonesWithoutPrimary": 434,
+          "recoveryZoneCandidates": 434,
+          "recoveryDroppedByCutoff": 0,
+          "recoveryBlockedByOverlap": 2,
+          "recoveryDroppedByCap": 0,
+          "selectedRecovery": 432
+        },
+        "selectedSpanLabels": {
+          "mwisPrimary": {
+            "positive": 0,
+            "negative": 0,
+            "ambiguous": 0,
+            "sealed": 107
+          },
+          "zoneRecovery": {
+            "positive": 0,
+            "negative": 0,
+            "ambiguous": 0,
+            "sealed": 432
+          }
+        },
+        "rankerRows": {
+          "positive": 0,
+          "negative": 0,
+          "sealed": 452
+        }
+      }
+    },
+    "primitiveVectorsSha256": "f354bcf4ca2193fe71c8b2b56bba4c72b9071b7cd69b503ca3d5cd3eb42fd049",
+    "entityRoleScoresSha256": "c3342a91ed7deb553162c0e113587feca0d5c3d49780a7ab2e9764148645e33c",
+    "entityRoleModelParametersSha256": "08b1423069548734095a2b420ddc66f46eaa6f742de29f033360af94a09889a3",
+    "entityRoleTransform": {
+      "schemaVersion": 1,
+      "name": "clipped-affine-logit-percentile",
+      "source": "oof-train",
+      "percentileMethod": "numpy.percentile(method=linear)",
+      "lowerPercentile": 1,
+      "upperPercentile": 99,
+      "roundingDecimals": 6,
+      "zLo": -11.366828,
+      "zHi": 3.849201,
+      "formula": "clip((z-zLo)/(zHi-zLo),0,1)",
+      "selectedRows": 4907,
+      "inputSha256": "c42ae8e6c8900e5a16d971dde2eeebb8250c7becea771eb70824e6159e6fa29d"
+    },
+    "testSealSha256": "c4b71e60eb160b56b7dd731e09a6b348aeb36fde3ec5d78e8ad488e801557915",
+    "testEvaluationCount": 0,
+    "testEvaluationScope": "active-ranker-formal-sealed-evaluation",
+    "splitPolicy": "Same connected-component partitions as the entity-role primitive corpus; train entity_role values are out-of-fold and validation/test use the final train-only span model.",
+    "datasetRows": 1951,
+    "fitPositiveRows": 323,
+    "fitNegativeRows": 1176,
+    "customerDataUsed": false,
+    "humanAnnotationUsed": false,
+    "randomState": 37,
+    "fitAccounting": {
+      "selectedCandidateFits": 1,
+      "diagnosticAblationFits": 1,
+      "computationalFits": 2,
+      "matchedRowsWeightsRandomStateAndThresholdPolicy": true
+    },
+    "pythonVersion": "3.14.6",
+    "scikitLearnVersion": "1.7.2"
+  },
+  "metrics": {
+    "evaluation": "Train/validation fit only; sealed test labels were not evaluated in this phase.",
+    "thresholdSelection": {
+      "rows": 305,
+      "positives": 64,
+      "accuracy": 0.983607,
+      "precision": 0.940299,
+      "recall": 0.984375,
+      "f1": 0.961832,
+      "rocAuc": 0.997212
+    },
+    "thresholdSelectionPolicy": "Validation F1, precision, recall; lower edge of an identical-prediction plateau.",
+    "slices": {
+      "train": {
+        "en": {
+          "rows": 593,
+          "positives": 135,
+          "accuracy": 0.940978,
+          "precision": 0.878788,
+          "recall": 0.859259,
+          "f1": 0.868914,
+          "rocAuc": 0.969626
+        },
+        "pt-BR": {
+          "rows": 601,
+          "positives": 124,
+          "accuracy": 0.948419,
+          "precision": 0.890756,
+          "recall": 0.854839,
+          "f1": 0.872428,
+          "rocAuc": 0.979002
+        },
+        "oneToken": {
+          "rows": 634,
+          "positives": 27,
+          "accuracy": 0.970032,
+          "precision": 0.722222,
+          "recall": 0.481481,
+          "f1": 0.577778,
+          "rocAuc": 0.955092
+        },
+        "prose": {
+          "rows": 1017,
+          "positives": 229,
+          "accuracy": 0.941986,
+          "precision": 0.876106,
+          "recall": 0.864629,
+          "f1": 0.87033,
+          "rocAuc": 0.97478
+        },
+        "structured": {
+          "rows": 177,
+          "positives": 30,
+          "accuracy": 0.960452,
+          "precision": 0.96,
+          "recall": 0.8,
+          "f1": 0.872727,
+          "rocAuc": 0.970295
+        },
+        "publisher": {
+          "rows": 22,
+          "positives": 0,
+          "accuracy": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "generic": {
+          "rows": 216,
+          "positives": 0,
+          "accuracy": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "validation": {
+        "en": {
+          "rows": 137,
+          "positives": 32,
+          "accuracy": 0.985401,
+          "precision": 0.96875,
+          "recall": 0.96875,
+          "f1": 0.96875,
+          "rocAuc": 0.995536
+        },
+        "pt-BR": {
+          "rows": 168,
+          "positives": 32,
+          "accuracy": 0.982143,
+          "precision": 0.914286,
+          "recall": 1.0,
+          "f1": 0.955224,
+          "rocAuc": 0.999311
+        },
+        "oneToken": {
+          "rows": 151,
+          "positives": 2,
+          "accuracy": 0.993377,
+          "precision": 0.666667,
+          "recall": 1.0,
+          "f1": 0.8,
+          "rocAuc": 1.0
+        },
+        "prose": {
+          "rows": 285,
+          "positives": 62,
+          "accuracy": 0.982456,
+          "precision": 0.938462,
+          "recall": 0.983871,
+          "f1": 0.96063,
+          "rocAuc": 0.997324
+        },
+        "structured": {
+          "rows": 20,
+          "positives": 2,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "rocAuc": 1.0
+        },
+        "publisher": {
+          "rows": 6,
+          "positives": 0,
+          "accuracy": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "generic": {
+          "rows": 45,
+          "positives": 0,
+          "accuracy": 1.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      }
+    },
+    "signalAblation": {
+      "representation": {
+        "schemaVersion": 1,
+        "name": "primary-context-interaction",
+        "removedFeature": "primary_context_similarity",
+        "matchedCandidateFeed": true
+      },
+      "matchedRowsWeightsRandomStateAndThresholdPolicy": true,
+      "validation": {
+        "rows": 305,
+        "positives": 64,
+        "accuracy": 0.986885,
+        "precision": 0.954545,
+        "recall": 0.984375,
+        "f1": 0.969231,
+        "rocAuc": 0.996953
+      },
+      "decisionThreshold": 0.806676821668
+    },
+    "maxSourceOnlyScore": 0.211394778456,
+    "maxSourceOnlyScoreScope": "validation",
+    "limitation": "The corpus is synthetic and agent-labeled; it is not human annotation or a field-performance claim. In the current train/validation matrix, source_only and publisher_citation are collinear, so their separate coefficient values are not independently identified."
+  },
+  "parityVectors": [
+    {
+      "id": "r6-en-001:as",
+      "features": {
+        "context_similarity": 0.9999999999999998,
+        "primary_context_similarity": 0,
+        "seed_proximity": 0.917594231220151,
+        "structure_similarity": 1,
+        "list_table_role": 0,
+        "comparison_language": 1,
+        "repeated_mention": 0,
+        "name_quality": 0.78,
+        "direct_domain": 0,
+        "source_only": 0,
+        "heading_only": 0,
+        "generic_entity": 1,
+        "publisher_citation": 0,
+        "answer_support": 0,
+        "distinct_link_domains_per_surface": 0,
+        "link_label_only": 0,
+        "mwis_primary_fraction": 0,
+        "entity_role": 0.4471047765997292
+      },
+      "candidateFeed": [
+        {
+          "primitiveId": "r6-en-001-a1:347:349:as",
+          "runId": "r6-en-001-a1",
+          "start": 347,
+          "end": 349,
+          "surface": "As",
+          "selectionOrigin": "zone-recovery",
+          "roleLogit": -4.56366875322,
+          "roleScore": 0.010316212964
+        }
+      ],
+      "score": 0.033831345666
+    },
+    {
+      "id": "r6-pt-br-024:suporte",
+      "features": {
+        "context_similarity": 0.28564369540172857,
+        "primary_context_similarity": 0,
+        "seed_proximity": 0.7788007830714049,
+        "structure_similarity": 1,
+        "list_table_role": 0,
+        "comparison_language": 0,
+        "repeated_mention": 0,
+        "name_quality": 0.78,
+        "direct_domain": 0,
+        "source_only": 0,
+        "heading_only": 0,
+        "generic_entity": 0,
+        "publisher_citation": 0,
+        "answer_support": 0,
+        "distinct_link_domains_per_surface": 0,
+        "link_label_only": 0,
+        "mwis_primary_fraction": 0,
+        "entity_role": 0.6227194533837311
+      },
+      "candidateFeed": [
+        {
+          "primitiveId": "r6-pt-br-024-a1:389:396:suporte",
+          "runId": "r6-pt-br-024-a1",
+          "start": 389,
+          "end": 396,
+          "surface": "Suporte",
+          "selectionOrigin": "zone-recovery",
+          "roleLogit": -1.891510738449,
+          "roleScore": 0.13107231195
+        }
+      ],
+      "score": 0.056711901824
+    },
+    {
+      "id": "r6-pt-br-058:indice pratico",
+      "features": {
+        "context_similarity": 0.326033995706936,
+        "primary_context_similarity": 0,
+        "seed_proximity": 0,
+        "structure_similarity": 1,
+        "list_table_role": 0,
+        "comparison_language": 0,
+        "repeated_mention": 0,
+        "name_quality": 0.92,
+        "direct_domain": 1,
+        "source_only": 0,
+        "heading_only": 0,
+        "generic_entity": 0,
+        "publisher_citation": 0,
+        "answer_support": 0,
+        "distinct_link_domains_per_surface": 0,
+        "link_label_only": 0,
+        "mwis_primary_fraction": 0,
+        "entity_role": 0.5745660221101708
+      },
+      "candidateFeed": [
+        {
+          "primitiveId": "r6-pt-br-058-a2:248:262:índice prático",
+          "runId": "r6-pt-br-058-a2",
+          "start": 248,
+          "end": 262,
+          "surface": "Índice Prático",
+          "selectionOrigin": "zone-recovery",
+          "roleLogit": -2.624214745157,
+          "roleScore": 0.067596166536
+        }
+      ],
+      "score": 0.232487283344
+    }
+  ],
+  "schemaContractParityVectors": [
+    {
+      "id": "schema-contract:mixed-publisher-citation",
+      "features": {
+        "context_similarity": 0.9999999999999998,
+        "primary_context_similarity": 0,
+        "seed_proximity": 0.917594231220151,
+        "structure_similarity": 1,
+        "list_table_role": 0,
+        "comparison_language": 1,
+        "repeated_mention": 0,
+        "name_quality": 0.78,
+        "direct_domain": 0,
+        "source_only": 0.0,
+        "heading_only": 0,
+        "generic_entity": 1,
+        "publisher_citation": 0.5,
+        "answer_support": 0,
+        "distinct_link_domains_per_surface": 0,
+        "link_label_only": 0,
+        "mwis_primary_fraction": 0,
+        "entity_role": 0.4471047765997292
+      },
+      "score": 0.025914272214
+    }
+  ]
+}

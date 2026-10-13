@@ -8,6 +8,13 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { Check, ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { translations } from './i18n-catalog';
 
 export type Locale = 'en' | 'pt-BR';
@@ -45,8 +52,14 @@ export function translate(
 const LocaleContext = createContext<{
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  setLocaleInContext: (locale: Locale) => void;
   messages: Record<string, string>;
-}>({ locale: 'en', setLocale: () => undefined, messages: {} });
+}>({
+  locale: 'en',
+  setLocale: () => undefined,
+  setLocaleInContext: () => undefined,
+  messages: {},
+});
 export function LocaleProvider({
   initialLocale = 'en',
   messages = {},
@@ -57,15 +70,18 @@ export function LocaleProvider({
   children: ReactNode;
 }) {
   const [locale, setLocaleState] = useState(initialLocale);
+  const setLocaleInContext = (next: Locale) => setLocaleState(next);
   const setLocale = (next: Locale) => {
-    setLocaleState(next);
+    setLocaleInContext(next);
     document.cookie = `lastfind_locale=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
   };
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
   return (
-    <LocaleContext.Provider value={{ locale, setLocale, messages }}>
+    <LocaleContext.Provider
+      value={{ locale, setLocale, setLocaleInContext, messages }}
+    >
       {children}
     </LocaleContext.Provider>
   );
@@ -100,21 +116,43 @@ export function useI18n() {
 }
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale } = useI18n();
+  const interfaceLanguageLabel =
+    locale === 'en' ? 'Interface language' : 'Idioma da interface';
+  const visibleLabel = compact
+    ? locale === 'en'
+      ? 'EN'
+      : 'PT'
+    : locale === 'en'
+      ? 'English'
+      : 'Português (BR)';
   return (
-    <label className={`language-switcher ${compact ? 'compact' : ''}`}>
-      <span className="sr-only">
-        {locale === 'en' ? 'Interface language' : 'Idioma da interface'}
-      </span>
-      <select
-        aria-label={
-          locale === 'en' ? 'Interface language' : 'Idioma da interface'
-        }
-        value={locale}
-        onChange={(event) => setLocale(event.target.value as Locale)}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={`${interfaceLanguageLabel}: ${visibleLabel}`}
+        className={`language-switcher-trigger ${compact ? 'compact' : ''}`}
       >
-        <option value="en">{compact ? 'EN' : 'English'}</option>
-        <option value="pt-BR">{compact ? 'PT' : 'Português (BR)'}</option>
-      </select>
-    </label>
+        {visibleLabel}
+        <ChevronDown className="size-3.5" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        className="analytics-menu w-56 min-w-56 ring-0"
+      >
+        <DropdownMenuItem onClick={() => setLocale('en')}>
+          English
+          {locale === 'en' && (
+            <Check className="ml-auto text-primary" aria-hidden="true" />
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLocale('pt-BR')}>
+          Português (BR)
+          {locale === 'pt-BR' && (
+            <Check className="ml-auto text-primary" aria-hidden="true" />
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

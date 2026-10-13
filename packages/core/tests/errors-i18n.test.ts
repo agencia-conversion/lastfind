@@ -39,6 +39,17 @@ void test('API errors translate both old Portuguese and new English copy without
     'Brand: use between 2 and 80 characters.',
   );
   assert.equal(
+    localizeApiError('Marca: use pelo menos uma letra ou número.', 'en'),
+    'Brand: use at least one letter or number.',
+  );
+  assert.equal(
+    localizeApiError(
+      'Name variation: use at least one letter or number.',
+      'pt-BR',
+    ),
+    'Variação de nome: use pelo menos uma letra ou número.',
+  );
+  assert.equal(
     localizeApiError('Claude aceita até 500 caracteres por prompt.', 'en'),
     'Claude accepts up to 500 characters per prompt.',
   );

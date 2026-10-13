@@ -53,3 +53,29 @@ export async function requestJson<T = Record<string, unknown>>(
     );
   return result;
 }
+
+// Session notifications contain only a nonce. Receivers revalidate with the
+// server; this transport never carries identity, credentials or permissions.
+export const PUBLIC_SESSION_CHANNEL = 'lastfind-public-session';
+export const PUBLIC_SESSION_CHANGE_KEY = 'lastfind.session.changed';
+export function announceSessionChange() {
+  if (typeof window === 'undefined') return;
+  let nonce: string;
+  try {
+    nonce = window.crypto.randomUUID();
+  } catch {
+    return;
+  }
+  try {
+    window.localStorage.setItem(PUBLIC_SESSION_CHANGE_KEY, nonce);
+  } catch {
+    // Restricted storage still permits channel or foreground revalidation.
+  }
+  try {
+    const channel = new BroadcastChannel(PUBLIC_SESSION_CHANNEL);
+    channel.postMessage(nonce);
+    channel.close();
+  } catch {
+    // Storage and foreground revalidation remain independent fallbacks.
+  }
+}

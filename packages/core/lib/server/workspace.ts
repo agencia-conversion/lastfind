@@ -29,6 +29,8 @@ export function projectFromRow(p: Record<string, unknown>): Project {
     id: String(p.id),
     name: String(p.name),
     domain: String(p.domain),
+    aliases: JSON.parse(String(p.aliases_json || '[]')),
+    additional_domains: JSON.parse(String(p.additional_domains_json || '[]')),
     competitors: JSON.parse(String(p.competitors_json)),
     location_code: Number(p.location_code),
     language_code: String(p.language_code),

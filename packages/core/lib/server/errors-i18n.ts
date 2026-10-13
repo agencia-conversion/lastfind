@@ -11,6 +11,17 @@ export function errorLocale(cookie: string | null): ApiLocale {
   return value === 'pt-BR' ? 'pt-BR' : 'en';
 }
 const messages: readonly (readonly [string, string, ...string[]])[] = [
+  ['Semantic configuration not found.', 'Configuração semântica não encontrada.'],
+  ['Invalid semantic revision.', 'Revisão semântica inválida.'],
+  ['Semantic settings changed. Reload before saving.', 'As configurações semânticas mudaram. Recarregue antes de salvar.'],
+  ['Invalid semantic filter.', 'Filtro semântico inválido.'],
+  ['Invalid semantic cursor.', 'Cursor semântico inválido.'],
+  ['Invalid semantic configuration.', 'Configuração semântica inválida.'],
+  ['Choose one to ten semantic attributes.', 'Escolha de um a dez atributos semânticos.'],
+  ['Invalid semantic attribute.', 'Atributo semântico inválido.'],
+  ['Semantic attributes must be unique.', 'Os atributos semânticos devem ser únicos.'],
+  ['The source search query is too long.', 'A busca de fontes é muito longa.'],
+  ['Invalid cursor.', 'Cursor inválido.'],
   [
     'Restore verification has started. Upload to a new restore generation.',
     'A verificação da restauração começou. Envie para uma nova geração de restauração.',
@@ -26,6 +37,10 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
   [
     'Invalid project storage operation.',
     'Operação de armazenamento do projeto inválida.',
+  ],
+  [
+    'Invalid competitor analysis operation.',
+    'Operação de análise de concorrentes inválida.',
   ],
   ['Send JSON.', 'Envie JSON.'],
   ['Storage batch is too large.', 'O lote de armazenamento é muito grande.'],
@@ -60,6 +75,10 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
     'O projeto mudou durante a restauração. Exporte um snapshot atual e tente novamente.',
   ],
   [
+    'Project targets changed during restore. Export a current snapshot and try again.',
+    'As marcas monitoradas mudaram durante a restauração. Exporte um snapshot atual e tente novamente.',
+  ],
+  [
     'Project changed before restore activation.',
     'O projeto mudou antes da ativação da restauração.',
   ],
@@ -84,6 +103,10 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
     'O monitoramento aguarda respostas pendentes ou a renovação dos créditos mensais.',
   ],
   [
+    'A monitoring run allowlist must contain unique run IDs.',
+    'A lista autorizada de execuções de monitoramento deve conter IDs únicos.',
+  ],
+  [
     'Monitoring provider is unavailable.',
     'O provedor de monitoramento está indisponível.',
   ],
@@ -96,6 +119,21 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
     'Gemini está disponível em projetos com idioma inglês.',
   ],
   ['Use up to 8 tags per prompt.', 'Use até 8 tags por prompt.'],
+  ['Use up to 10 name variations.', 'Use no máximo 10 variações de nome.'],
+  [
+    'Brand: use at least one letter or number.',
+    'Marca: use pelo menos uma letra ou número.',
+  ],
+  [
+    'Competitor: use at least one letter or number.',
+    'Concorrente: use pelo menos uma letra ou número.',
+  ],
+  [
+    'Name variation: use at least one letter or number.',
+    'Variação de nome: use pelo menos uma letra ou número.',
+  ],
+  ['Use up to 10 additional domains.', 'Use no máximo 10 domínios adicionais.'],
+  ['Do not repeat competitor domains.', 'Não repita os domínios dos concorrentes.'],
   [
     'Add between 1 and 100 prompts at a time.',
     'Adicione entre 1 e 100 prompts por vez.',
@@ -116,6 +154,13 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
   ['Invalid mention filter.', 'Filtro de menção inválido.'],
   ['Invalid opportunity filter.', 'Filtro de oportunidade inválido.'],
   ['Invalid source filter.', 'Filtro de fonte inválido.'],
+  ['Invalid citation filter.', 'Filtro de citação inválido.'],
+  ['Invalid report date.', 'Data do relatório inválida.'],
+  [
+    'Choose both dates for a custom period.',
+    'Escolha as duas datas para um período personalizado.',
+  ],
+  ['Invalid tag filter.', 'Filtro de tag inválido.'],
   ['Select a project.', 'Selecione um projeto.'],
   ['Choose a tracked brand.', 'Escolha uma marca monitorada.'],
   ['The search query is too long.', 'O texto da busca é muito longo.'],
@@ -130,6 +175,10 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
   ['Invalid market.', 'Mercado inválido.'],
   ['Invalid language.', 'Idioma inválido.'],
   ['Add up to 5 competitors.', 'Adicione no máximo 5 concorrentes.'],
+  ['Do not repeat the brand name in aliases.', 'Não repita o nome da marca nas variações.'],
+  ['Do not repeat the primary domain in additional domains.', 'Não repita o domínio principal nos domínios adicionais.'],
+  ['Do not use a competitor name as an alias.', 'Não use o nome de um concorrente como variação.'],
+  ['Do not use a competitor domain as an additional domain.', 'Não use o domínio de um concorrente como domínio adicional.'],
   ['Invalid competitor.', 'Concorrente inválido.', 'Concorrente inválido'],
   [
     'Use distinct names for your brand and competitors.',

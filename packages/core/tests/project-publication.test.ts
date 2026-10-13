@@ -21,7 +21,7 @@ await test('native migrations create publication triggers once; polling and no-o
           "SELECT COUNT(*) n FROM sqlite_master WHERE type='trigger' AND (name LIKE 'project_publication_%' OR name='project_storage_project_insert')",
         )
         .get()?.n,
-      7,
+      8,
     );
     database.exec(`
       INSERT INTO accounts(id,email,name,created_at) VALUES('a','a@example.test','A','2026-09-05'),('b','b@example.test','B','2026-09-05');

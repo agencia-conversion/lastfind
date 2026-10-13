@@ -21,5 +21,11 @@ export const usageWindow: (
   limit: number | null;
 }> = edition.usageWindow;
 export const providerSettings: boolean = edition.providerSettings;
+export const semanticEvaluationAvailable: boolean = edition.semanticEvaluationAvailable;
+export const processSemanticJobs: () => Promise<number> = edition.processSemanticJobs;
 export const policyError: (message: string) => string | null =
   edition.policyError;
+export const semanticBudgetCondition: (
+  month: string,
+  reservedUsd: number,
+) => { sql: string; params: (string | number)[] } = edition.semanticBudgetCondition;

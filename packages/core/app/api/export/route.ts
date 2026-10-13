@@ -3,6 +3,10 @@ import { reportContext } from '@/lib/server/reports';
 import { runFromRow } from '@/lib/server/run-rows';
 import { runsCsv } from '@/lib/metrics';
 import { fail } from '@/lib/server/http';
+import {
+  EFFECTIVE_MENTIONS_SQL,
+  EFFECTIVE_TARGETS_SQL,
+} from '@/lib/server/run-rows';
 export async function GET(request: Request) {
   try {
     const user = await requireUser(),
@@ -24,7 +28,7 @@ export async function GET(request: Request) {
           const after = cursor;
           const rows = (
             await database
-              .prepare(`${ctx.withClause} SELECT r.id,r.project_id,r.prompt_id,r.prompt_text,r.engine,r.status,r.targets_json,r.mentions_json,r.sources_json,r.consulted_sources_json,r.search_queries_json,r.response_available,r.cost,r.error,r.created_at,r.completed_at
+              .prepare(`${ctx.withClause} SELECT r.id,r.project_id,r.prompt_id,r.prompt_text,r.engine,r.status,${EFFECTIVE_TARGETS_SQL} AS targets_json,${EFFECTIVE_MENTIONS_SQL} AS mentions_json,r.sources_json,r.consulted_sources_json,r.search_queries_json,r.response_available,r.cost,r.error,r.created_at,r.completed_at
             FROM runs r WHERE ${ctx.where} AND r.created_at<=? ${after ? 'AND (r.created_at<? OR (r.created_at=? AND r.id<?))' : ''} ORDER BY r.created_at DESC,r.id DESC LIMIT 100`)
               .bind(
                 ctx.brandBinding,

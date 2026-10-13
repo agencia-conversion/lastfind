@@ -4,6 +4,8 @@ export function workspaceFixture(): Workspace {
     id: 'test-project',
     name: 'Example',
     domain: 'example.test',
+    aliases: [],
+    additional_domains: [],
     competitors: [{ name: 'Other', domain: 'other.test' }],
     location_code: 2840,
     language_code: 'en',

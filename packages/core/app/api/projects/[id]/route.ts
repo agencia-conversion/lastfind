@@ -1,13 +1,16 @@
 import { requireUser } from '@/lib/server/auth';
-import { INTERVALS, nextRunTime } from '@/lib/scheduling';
+import { INTERVALS, nextRunTime, nextWeeklyRunTime } from '@/lib/scheduling';
+import { accountCapabilities } from '@/lib/server/capabilities';
 import { startMonitoring } from '@/lib/server/monitor';
 import { db, now } from '@/lib/server/env';
 import { ownedProject } from '@/lib/server/workspace';
 import { projectInput } from '@/lib/server/validation';
 import { body, sameOrigin, json, fail, ApiError } from '@/lib/server/http';
+import { ensureCompetitorAnalysis } from '@/lib/server/competitor-analysis';
 type Context = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, { params }: Context) {
   try {
+    let analysisScheduled = false;
     sameOrigin(request);
     const u = await requireUser(),
       { id } = await params;
@@ -18,8 +21,9 @@ export async function PATCH(request: Request, { params }: Context) {
         'interval_hours' in data &&
         !INTERVALS.includes(data.interval_hours as 24)
       )
-        throw new ApiError(400, 'O monitoramento é diário, às 4h de Brasília.');
+        throw new ApiError(400, 'Frequência inválida.');
       if ('interval_hours' in data) {
+        const free = (await accountCapabilities(u.id)).promptLimit === 10;
         await db().batch([
           db()
             .prepare(
@@ -28,9 +32,9 @@ export async function PATCH(request: Request, { params }: Context) {
             .bind(data.interval_hours, id, u.id),
           db()
             .prepare(
-              'UPDATE prompts SET next_run_at=MIN(next_run_at,?) WHERE project_id=? AND archived=0',
+              `UPDATE prompts SET next_run_at=${free ? 'MAX' : 'MIN'}(next_run_at,?) WHERE project_id=? AND archived=0`,
             )
-            .bind(nextRunTime(now(), Number(data.interval_hours)), id),
+            .bind(free ? nextWeeklyRunTime(now()) : nextRunTime(now(), Number(data.interval_hours)), id),
         ]);
       }
       if ('daily_enabled' in data) {
@@ -61,11 +65,13 @@ export async function PATCH(request: Request, { params }: Context) {
         );
       await db()
         .prepare(
-          'UPDATE projects SET name=?,domain=?,competitors_json=?,location_code=?,language_code=?,category=?,audience=? WHERE id=? AND owner_id=?',
+          'UPDATE projects SET name=?,domain=?,aliases_json=?,additional_domains_json=?,competitors_json=?,location_code=?,language_code=?,category=?,audience=?,competitor_targets_revision=competitor_targets_revision+1 WHERE id=? AND owner_id=?',
         )
         .bind(
           p.name,
           p.domain,
+          JSON.stringify(p.aliases),
+          JSON.stringify(p.additionalDomains),
           JSON.stringify(p.competitors),
           p.location,
           p.language,
@@ -75,8 +81,18 @@ export async function PATCH(request: Request, { params }: Context) {
           u.id,
         )
         .run();
+      // The saved target revision is the durable request. A temporary storage
+      // transport failure must not turn a committed settings change into an
+      // apparent failure; the competitors screen repairs the derived job through POST ensure.
+      try {
+        await ensureCompetitorAnalysis(id, u.id);
+        analysisScheduled = true;
+      } catch {
+        // Recovered by the origin-checked competitors ensure endpoint.
+        analysisScheduled = false;
+      }
     }
-    return json({ ok: true });
+    return json({ ok: true, analysisScheduled });
   } catch (e) {
     return fail(e);
   }

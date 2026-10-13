@@ -17,10 +17,13 @@ The guided setup connects your Cloudflare account, checks that R2 is available, 
 
 The native Worker monitors prompts daily at 04:00 Brasília and completes provider work asynchronously. DataForSEO and Cloudflare usage belong to your own accounts. Configurable budget limits help control spending. Original responses remain private in R2; normalized evidence and reports live in project SQLite.
 
-For local development use `npm run dev`; check changes with `npm run verify` and `npm run build:selfhost`. See [ARCHITECTURE.md](ARCHITECTURE.md), [REQUIREMENTS.md](REQUIREMENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
-
-For local development, run `npm ci` and `npm run dev`. Use the owner key in `.lastfind/development/selfhost-access-key.txt`; the session and SQLite state are isolated to this checkout. Provider credentials for local use belong in `.env.dev.selfhost`. Production credentials in `.env` are only used by the installer.
+For local development, run `npm run dev` and use the owner key in `.lastfind/development/selfhost-access-key.txt`; the session and SQLite state are isolated to this checkout. Provider credentials for local use belong in `.env.dev.selfhost`. Production credentials in `.env` are only used by the installer. Check changes with `npm run verify` and `npm run build:selfhost`. See [ARCHITECTURE.md](ARCHITECTURE.md), [REQUIREMENTS.md](REQUIREMENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Updating an existing installation
 
 Keep the old checkout until the update is verified. Clone this repository into a new directory, run `npm ci`, and copy your private `.env`, `wrangler.selfhost.json`, and `.lastfind/secrets.json` plus `.lastfind/access-key.txt` from the existing installation. Do not commit these files. Run `npm run deploy:selfhost`: it retains your Worker, D1, project namespace, R2 bucket, owner identity and access key. The independent baseline preserves existing records and can be reapplied safely. Verify `/api/health` and your projects before retiring the old checkout.
+
+
+### Interface
+
+`/app` requires the owner session and reads persisted projects, prompts and collected reports. `/app/preview` is a public, noindex demonstration with deterministic sample data. Automatic Semantic Branding scoring is not available in the independent edition yet; its settings and report can be viewed, but enabling it will not create scores.

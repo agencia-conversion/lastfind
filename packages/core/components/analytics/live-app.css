@@ -1,0 +1,419 @@
+.live-app .live-content {
+  padding-bottom: 60px;
+}
+.live-app .live-form input,
+.live-app .live-form select,
+.live-app .live-form textarea,
+.live-app .live-inline input,
+.live-app .live-period select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.live-app .live-nav-icon {
+  width: 16px;
+  text-align: center;
+}
+.live-app .live-muted,
+.live-app .live-form small,
+.live-app .live-list small {
+  color: var(--muted-foreground);
+}
+.live-app .live-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.live-app .live-heading h1 {
+  font-size: 26px;
+  font-weight: 600;
+  margin: 4px 0 22px;
+  line-height: 1.3;
+}
+.live-app .live-heading > span {
+  color: var(--muted-foreground);
+  padding-bottom: 24px;
+}
+.live-app .live-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.live-app .live-content h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 26px 0 16px;
+}
+.live-app .live-card,
+.live-app .live-list li,
+.live-app .live-metrics article {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.live-app .live-form {
+  display: grid;
+  gap: 16px;
+  max-width: 580px;
+}
+.live-app .live-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.live-app .live-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.live-app .live-form > button,
+.live-app .live-inline > button,
+.live-app .live-card > button:not([data-slot='button']) {
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 9px 14px;
+}
+.live-app button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.live-app .live-inline {
+  display: flex;
+  gap: 12px;
+  max-width: 580px;
+}
+.live-app .live-inline input {
+  flex: 1;
+}
+.live-app .live-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.live-app .live-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.live-app .live-list small {
+  display: block;
+  margin-top: 5px;
+}
+.live-app .live-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.live-app .live-metrics article {
+  display: grid;
+}
+.live-app .live-metrics strong {
+  font-size: 28px;
+}
+.live-app .live-error {
+  margin: 20px 28px;
+  background: #fff2f2;
+  border: 1px solid #f5b7b7;
+  padding: 14px;
+  border-radius: 8px;
+}
+.live-app .live-state {
+  padding: 50px;
+}
+.live-app .live-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.live-app .live-period {
+  display: none;
+}
+.live-app .live-heading-actions,
+.live-app .live-section-head,
+.live-app .live-row-actions,
+.live-app .live-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.live-app .live-heading-actions {
+  justify-content: flex-end;
+}
+.live-app .live-export,
+.live-app .live-demo-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.live-app .live-menu-usage {
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.live-app .live-demo-disclosure {
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  background: var(--card);
+}
+.live-app .live-demo-disclosure p {
+  margin: 6px 0;
+  max-width: 80ch;
+  color: var(--muted-foreground);
+}
+.live-app .live-demo-disclosure small {
+  color: var(--muted-foreground);
+}
+.live-app .live-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.live-app .live-metrics article {
+  gap: 8px;
+}
+.live-app .live-metrics small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.live-app .live-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.live-app .live-ranking {
+  padding: 0;
+  list-style: none;
+}
+.live-app .live-ranking li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.live-app .live-ranking li span:nth-child(2) {
+  flex: 1;
+}
+.live-app .live-trend {
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  height: 140px;
+  padding-top: 10px;
+}
+.live-app .live-trend span {
+  flex: 1;
+  min-width: 2px;
+  background: var(--primary);
+  border-radius: 2px 2px 0 0;
+}
+.live-app .live-prompt-toolbar {
+  position: sticky;
+  top: var(--live-header-height, 56px);
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 0;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+.live-app .live-status-tabs {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+.live-app .live-prompt-toolbar .analytics-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 420px;
+}
+.live-app .live-prompt-toolbar > [data-slot='button'] {
+  flex: none;
+  white-space: nowrap;
+}
+.live-app .live-prompts-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 18px;
+}
+.live-app .live-topics-aside {
+  position: sticky;
+  top: calc(var(--live-header-height, 56px) + var(--live-toolbar-height, 70px) + 8px);
+  align-self: start;
+  display: grid;
+  gap: 3px;
+  padding-top: 8px;
+}
+.live-app .live-topics-aside h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.live-app .live-topics-aside [data-slot='button'] {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 32px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.live-app .live-demo-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.live-app .live-demo-channels [data-slot='button'] {
+  white-space: normal;
+  height: auto;
+  min-height: 32px;
+}
+.live-app .live-semantic-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.live-app .live-semantic-evidence {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-left: 3px solid var(--primary);
+  margin: 10px 0;
+  padding-left: 12px;
+}
+.live-app .live-prompts-main {
+  min-width: 0;
+}
+.live-app .live-prompt-tools {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+.live-app .live-prompt-tools select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  padding: 8px;
+}
+.live-app .analytics-topbar .filter-main > [data-slot='button'] {
+  height: 36px;
+  min-height: 36px;
+  white-space: nowrap;
+}
+.live-date-form {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  min-width: 230px;
+}
+.live-date-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.live-date-form input {
+  height: 36px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.live-app .live-import-label input {
+  display: none;
+}
+.live-app :focus-visible {
+  outline: 3px solid #80a0ff;
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .live-app .topbar-filters {
+    overflow: visible;
+    width: 100%;
+  }
+  .live-app .topbar-filters .analytics-filters {
+    width: 100%;
+  }
+  .live-app .topbar-filters .filter-main {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .live-app .topbar-filters .filter-main > * {
+    min-width: 0;
+  }
+  .live-app .topbar-filters .filter-main [data-slot='button'] {
+    max-width: calc(50vw - 26px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .live-app .live-content {
+    padding: 25px 18px 60px;
+  }
+  .live-app .live-heading h1 {
+    font-size: 24px;
+  }
+  .live-app .live-heading > span {
+    display: none;
+  }
+  .live-app .live-metrics {
+    grid-template-columns: 1fr;
+  }
+  .live-app .live-semantic-metrics {
+    grid-template-columns: 1fr;
+  }
+  .live-app .live-analysis-grid,
+  .live-app .live-prompts-layout {
+    grid-template-columns: 1fr;
+  }
+  .live-app .live-topics-aside {
+    position: sticky;
+    top: calc(var(--live-header-height, 56px) + var(--live-toolbar-height, 94px) + 8px);
+    display: flex;
+    overflow-x: auto;
+    gap: 4px;
+    background: var(--background);
+    padding: 8px 0;
+  }
+  .live-app .live-topics-aside h3 {
+    display: none;
+  }
+  .live-app .live-prompt-toolbar {
+    top: var(--live-header-height, 56px);
+    flex-wrap: wrap;
+  }
+  .live-app .live-prompt-toolbar .analytics-search {
+    order: 2;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .live-app .live-status-tabs {
+    min-width: 0;
+    flex: 1;
+    overflow-x: auto;
+  }
+  .live-app .live-inline {
+    display: grid;
+  }
+  .live-app .live-list li {
+    align-items: start;
+    flex-direction: column;
+  }
+}

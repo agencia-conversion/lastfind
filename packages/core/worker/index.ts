@@ -18,11 +18,12 @@ const worker = {
         },
       );
     }
-    const response = await withRequestContext(request, () =>
-      handler.fetch(request, env, ctx),
+    const response = await withRequestContext(request, (contextRequest) =>
+      handler.fetch(contextRequest, env, ctx),
     );
     if (
       new URL(request.url).pathname === '/app' ||
+      new URL(request.url).pathname.startsWith('/app/') ||
       new URL(request.url).pathname.startsWith('/api/')
     ) {
       const secured = new Response(response.body, response);

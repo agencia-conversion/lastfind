@@ -37,6 +37,8 @@ For another personal instance, append `--url https://your-instance.example --key
 
 ## Export a verified project snapshot
 
+Current exports use snapshot schema 2, which includes the active competitor-analysis overlay and aborts if that analysis changes while the file is streaming. Schema 1 snapshots remain accepted with their original checksum definition; after activation, current competitor settings are analyzed again when the competitors screen is opened.
+
 ```sh
 npm run storage -- export --project PROJECT_ID --output ./backups/project.ndjson
 ```
@@ -71,7 +73,7 @@ The command prints a new generation ID and the next command to run. The current 
 npm run storage -- restore-commit --project PROJECT_ID --generation GENERATION_ID --batches 100
 ```
 
-If the result is `done: false`, repeat the same `restore-commit` command. Each call performs bounded work; the server changes the active generation only after validating the uploaded snapshot. If it reports an error, inspect `status` and resolve the cause before retrying. A damaged backup cannot replace the active project.
+If the result is `done: false`, repeat the same `restore-commit` command. Each call performs bounded work; the server changes the active generation only after validating the uploaded snapshot. If it reports an error, inspect `status` and resolve the cause before retrying. A damaged backup cannot replace the active project. If activation is rejected because the project changed, the server can retire the inactive candidate and cancel its background analysis; start a fresh `restore` from the complete backup. This does not delete the stored snapshot or change the active project. After an ambiguous response, inspect the active generation before restarting: a completed activation retains its reconstruction job.
 
 Restored R2 references work only when the referenced private objects remain available under their original keys. Restoring normalized answers does not recreate missing provider JSON. Lastfind does not automatically delete prior generations or raw archives; define your retention policy only after testing recovery.
 

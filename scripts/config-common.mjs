@@ -12,7 +12,7 @@ export function applicationConfig(options) {
     process.env.WRANGLER_WRITE_LOGS ??= 'false';
     process.env.WRANGLER_LOG_PATH = resolve(runtime, '.wrangler/logs');
     process.env.MINIFLARE_REGISTRY_PATH = resolve(runtime, '.wrangler/registry');
-    const { configuration } = await import(pathToFileURL(resolve(application, 'runtime.config.mjs')).href);
+    const { configuration, configureVite } = await import(pathToFileURL(resolve(application, 'runtime.config.mjs')).href);
     const config = await configuration({ root, testing, port, production: command === 'build' });
     config.main = resolve(core, 'worker/index.ts');
     config.d1_databases = config.d1_databases.map(database => ({ ...database, migrations_dir: resolve(application, 'drizzle') }));
@@ -24,11 +24,17 @@ export function applicationConfig(options) {
       config.vars = { ...config.vars, ...parseEnv(readFileSync(devVars, 'utf8')) };
     }
     const { cloudflare } = await import('@cloudflare/vite-plugin');
+    // Edition-owned frontend tooling may add plugins/aliases, never override
+    // the shared Worker entrypoint or the Cloudflare configuration above.
+    const frontend = configureVite
+      ? await configureVite({ root, application, runtime, testing, command })
+      : {};
     return {
-      resolve: { alias: { '@': core, '@edition': application } },
+      resolve: { alias: { ...frontend.aliases, '@': core, '@edition': application } },
+      optimizeDeps: { exclude: ['next/link'] },
       css: { postcss: { plugins: [tailwindcss({base: application})] } },
       server: { port, fs: { allow: [root] }, ...(process.env.CODEX_SANDBOX === 'seatbelt' ? { watch: { useFsEvents: false, usePolling: true } } : {}) },
-      plugins: [vinext(), cloudflare({ viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] }, persistState: { path: resolve(runtime, '.wrangler', testing ? 'test-state' : 'state') }, config })],
+      plugins: [...(frontend.plugins ?? []), vinext(), cloudflare({ viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] }, persistState: { path: resolve(runtime, '.wrangler', testing ? 'test-state' : 'state') }, config })],
     };
   });
 }

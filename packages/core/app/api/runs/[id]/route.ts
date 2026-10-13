@@ -2,6 +2,10 @@ import { requireUser } from '@/lib/server/auth';
 import { db } from '@/lib/server/env';
 import { projectReadDatabase } from '@/lib/server/project-store-read';
 import { runFromRow } from '@/lib/server/workspace';
+import {
+  EFFECTIVE_MENTIONS_SQL,
+  EFFECTIVE_TARGETS_SQL,
+} from '@/lib/server/run-rows';
 import { json, fail, ApiError } from '@/lib/server/http';
 export async function GET(
   _request: Request,
@@ -19,7 +23,11 @@ export async function GET(
     if (!project) throw new ApiError(404, 'Response not found.');
     const database = await projectReadDatabase(project.project_id, u.id);
     const row = await database
-      .prepare('SELECT * FROM runs WHERE id=? AND project_id=? AND owner_id=?')
+      .prepare(
+        `SELECT r.*,${EFFECTIVE_TARGETS_SQL} AS effective_targets_json,
+         ${EFFECTIVE_MENTIONS_SQL} AS effective_mentions_json
+         FROM runs r WHERE id=? AND project_id=? AND owner_id=?`,
+      )
       .bind(id, project.project_id, u.id)
       .first<Record<string, unknown>>();
     if (!row) throw new ApiError(404, 'Response not found.');

@@ -8,11 +8,11 @@ import {
   textField,
 } from '@/lib/server/http';
 import { ownedProject } from '@/lib/server/workspace';
-import { nextRunTime } from '@/lib/scheduling';
+import { nextRunTime, nextWeeklyRunTime } from '@/lib/scheduling';
 import { db, now } from '@/lib/server/env';
 import { promptInput } from '@/lib/server/prompts';
 import { startMonitoring } from '@/lib/server/monitor';
-import { capacityGuards } from '@/lib/server/capabilities';
+import { accountCapabilities, capacityGuards } from '@/lib/server/capabilities';
 import { syncTopics } from '@/lib/server/topics';
 export async function PATCH(request: Request) {
   try {
@@ -21,6 +21,7 @@ export async function PATCH(request: Request) {
       data = await body(request),
       projectId = textField(data.project_id, 'Projeto', 1, 100);
     const project = await ownedProject(projectId, u.id);
+    const free = (await accountCapabilities(u.id)).promptLimit === 10;
     if (
       !Array.isArray(data.ids) ||
       !data.ids.length ||
@@ -77,7 +78,7 @@ export async function PATCH(request: Request) {
               .prepare(`UPDATE prompts SET active=1,archived=0,next_run_at=CASE WHEN active=0 OR archived=1 THEN ? ELSE next_run_at END
         WHERE ${selected} AND NOT EXISTS(SELECT 1 FROM prompts other WHERE other.project_id=prompts.project_id AND other.id<>prompts.id AND other.archived=0 AND other.text=prompts.text COLLATE NOCASE AND other.engine=prompts.engine)
         AND (engine<>'gemini' OR ?='en')`)
-              .bind(nextRunTime(now()), ...selection, project.language_code);
+              .bind(free ? nextWeeklyRunTime(now()) : nextRunTime(now()), ...selection, project.language_code);
     const results = await db().batch([
       change,
       syncTopics(projectId, u.id),

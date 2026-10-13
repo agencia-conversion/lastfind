@@ -8,16 +8,14 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 export const accountColumns = {
-    id: text('id').primaryKey(),
-    email: text('email').notNull(),
-    name: text('name').notNull(),
-    createdAt: text('created_at').notNull(),
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  name: text('name').notNull(),
+  createdAt: text('created_at').notNull(),
 };
-export const accounts = sqliteTable(
-  'accounts',
-  accountColumns,
-  (t) => [index('idx_accounts_email_lower').on(sql`lower(${t.email})`)],
-);
+export const accounts = sqliteTable('accounts', accountColumns, (t) => [
+  index('idx_accounts_email_lower').on(sql`lower(${t.email})`),
+]);
 export const projects = sqliteTable(
   'projects',
   {
@@ -27,7 +25,14 @@ export const projects = sqliteTable(
       .references(() => accounts.id),
     name: text('name').notNull(),
     domain: text('domain').notNull(),
+    aliasesJson: text('aliases_json').notNull().default('[]'),
+    additionalDomainsJson: text('additional_domains_json')
+      .notNull()
+      .default('[]'),
     competitorsJson: text('competitors_json').notNull().default('[]'),
+    competitorTargetsRevision: integer('competitor_targets_revision')
+      .notNull()
+      .default(0),
     locationCode: integer('location_code').notNull().default(2840),
     languageCode: text('language_code').notNull().default('en'),
     dailyEnabled: integer('daily_enabled').notNull().default(0),
@@ -184,3 +189,42 @@ export const projectStoreOutbox = sqliteTable(
     index('idx_project_outbox_revision').on(t.projectId, t.revision),
   ],
 );
+
+export const semanticConfigurations = sqliteTable('semantic_configurations', {
+  projectId: text('project_id').notNull().references(() => projects.id),
+  ownerId: text('owner_id').notNull().references(() => accounts.id),
+  revision: integer('revision').notNull(),
+  configurationJson: text('configuration_json').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const semanticJobs = sqliteTable('semantic_jobs', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull().references(() => accounts.id),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  runId: text('run_id').notNull().references(() => runs.id),
+  configRevision: integer('config_revision').notNull(),
+  status: text('status').notNull(),
+  reservedUsd: real('reserved_usd').notNull(),
+  costUsd: real('cost_usd').notNull().default(0),
+  inputJson: text('input_json').notNull(),
+  answerSha256: text('answer_sha256').notNull(),
+  requestedAt: text('requested_at').notNull(),
+  completedAt: text('completed_at'),
+  error: text('error'),
+});
+
+export const semanticEvaluations = sqliteTable('semantic_evaluations', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull().references(() => accounts.id),
+  projectId: text('project_id').notNull().references(() => projects.id),
+  runId: text('run_id').notNull().references(() => runs.id),
+  configRevision: integer('config_revision').notNull(),
+  assessmentJson: text('assessment_json').notNull(),
+  answerSha256: text('answer_sha256').notNull(),
+  rubric: text('rubric').notNull(),
+  model: text('model').notNull(),
+  coverage: text('coverage').notNull(),
+  costUsd: real('cost_usd').notNull(),
+  createdAt: text('created_at').notNull(),
+});

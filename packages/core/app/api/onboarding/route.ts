@@ -11,8 +11,8 @@ import { projectInput } from '@/lib/server/validation';
 import { promptInput } from '@/lib/server/prompts';
 import { db, now } from '@/lib/server/env';
 import { startMonitoring } from '@/lib/server/monitor';
-import { INTERVALS, nextRunTime } from '@/lib/scheduling';
-import { capacityGuards } from '@/lib/server/capabilities';
+import { INTERVALS, nextRunTime, nextWeeklyRunTime } from '@/lib/scheduling';
+import { accountCapabilities, capacityGuards } from '@/lib/server/capabilities';
 import { syncTopics } from '@/lib/server/topics';
 export async function POST(request: Request) {
   try {
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       throw new ApiError(400, 'Identificador inválido.');
     const p = projectInput(data),
       interval = Number(data.interval_hours ?? 24);
+    const free = (await accountCapabilities(u.id)).promptLimit === 10;
     if (!INTERVALS.includes(interval as 24))
       throw new ApiError(400, 'Frequência inválida.');
     if (
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
               x.engine,
               x.tag,
               JSON.stringify(x.tags),
-              nextRunTime(now()),
+              free ? nextWeeklyRunTime(now()) : nextRunTime(now()),
               now(),
               id,
               u.id,
