@@ -9,6 +9,7 @@ import {
   normalizeDomain,
   safeUrl,
   firstMentionPosition,
+  mentionPositions,
 } from '../lib/metrics.ts';
 import type { Run } from '../lib/types.ts';
 await test('brand matching respects Unicode, case, accents and word boundaries', () => {
@@ -218,4 +219,11 @@ await test('domains normalize and URL protocols are restricted', () => {
   assert.equal(safeUrl('data:text/html,test'), null);
   assert.equal(safeUrl('https://user:secret@example.com'), null);
   assert.equal(safeUrl('https://example.com'), 'https://example.com/');
+});
+
+await test('all snapshot ranks equal selected rank extraction, with aliases, ties and URL/source exclusions', () => {
+  const targets = [{name:'Own',domain:'own.example',aliases:['Former Own']},{name:'Rival',domain:'rival.example'},{name:'Absent',domain:'absent.example'}];
+  for (const answer of ['Rival then Former Own.', 'Own and Rival.', 'https://own.example Rival.\nSources: Absent', '```Own``` Rival.', 'No brands here.']) {
+    assert.deepEqual(mentionPositions(answer, targets), targets.map(target => firstMentionPosition(answer,[target.name,...(target.aliases ?? [])],targets)));
+  }
 });

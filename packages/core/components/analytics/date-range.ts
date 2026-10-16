@@ -3,7 +3,8 @@ export const DEMO_LAST_DATE = '2026-09-09';
 export const DEMO_FIRST_DATE = '2026-07-16';
 
 const DAY_MS = 86_400_000;
-const PRESET_DAYS = ['1', '7', '14', '28', '30'];
+export type DateRangeBounds = { lastDate: string; firstDate: string; maxDays: number };
+const demoBounds: DateRangeBounds = { lastDate: DEMO_LAST_DATE, firstDate: '2000-01-01', maxDays: 366 };
 
 /** Parses an actual calendar date at midnight UTC, without rollover. */
 export function parseISODate(
@@ -23,13 +24,14 @@ export function dateKey(date: Date): string {
 export function isValidDateRange(
   from: string | null | undefined,
   to: string | null | undefined,
+  bounds: DateRangeBounds = demoBounds,
 ): boolean {
   const start = parseISODate(from);
   const end = parseISODate(to);
   if (!start || !end || !from || !to) return false;
   const span = (end.getTime() - start.getTime()) / DAY_MS + 1;
   return (
-    from >= '2000-01-01' && to <= DEMO_LAST_DATE && span >= 1 && span <= 366
+    from >= bounds.firstDate && to <= bounds.lastDate && span >= 1 && span <= bounds.maxDays
   );
 }
 
@@ -37,8 +39,8 @@ export function getDateRange(filters: {
   days: string;
   from?: string;
   to?: string;
-}): { from: string; to: string; start: number; end: number; days: number } {
-  if (isValidDateRange(filters.from, filters.to)) {
+}, bounds: DateRangeBounds = demoBounds): { from: string; to: string; start: number; end: number; days: number } {
+  if (isValidDateRange(filters.from, filters.to, bounds)) {
     const start = parseISODate(filters.from)!.getTime();
     const end = parseISODate(filters.to)!.getTime() + DAY_MS;
     return {
@@ -49,12 +51,13 @@ export function getDateRange(filters: {
       days: (end - start) / DAY_MS,
     };
   }
-  const days = PRESET_DAYS.includes(filters.days) ? Number(filters.days) : 28;
-  const end = parseISODate(DEMO_TODAY)!.getTime();
+  const requestedDays = Number(filters.days);
+  const days = Number.isInteger(requestedDays) && requestedDays >= 1 && requestedDays <= bounds.maxDays ? requestedDays : Math.min(28, bounds.maxDays);
+  const end = parseISODate(bounds.lastDate)!.getTime() + DAY_MS;
   const start = end - days * DAY_MS;
   return {
     from: dateKey(new Date(start)),
-    to: DEMO_LAST_DATE,
+    to: bounds.lastDate,
     start,
     end,
     days,

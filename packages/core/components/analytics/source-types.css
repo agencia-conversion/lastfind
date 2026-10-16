@@ -1,0 +1,355 @@
+.st-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.st-badge i {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+.st-badge-missing {
+  color: var(--muted-foreground);
+  border-style: dashed;
+}
+.st-panel .st-body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+}
+.st-panel .st-caption {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.st-panel .st-empty {
+  margin: 0;
+  padding: 4px 16px 20px;
+  color: var(--muted-foreground);
+}
+.st-chart {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+.st-donut {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin: 0;
+}
+.st-donut figcaption {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  pointer-events: none;
+}
+.st-donut figcaption strong {
+  font-size: 22px;
+  line-height: 26px;
+}
+.st-donut figcaption span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.st-donut svg:focus,
+.st-donut .recharts-surface:focus {
+  outline: none;
+}
+.st-legend {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.st-legend button {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.st-legend button:hover {
+  background: var(--muted);
+}
+.st-legend button:focus-visible,
+.st-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+.st-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.st-legend-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-legend b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.st-legend small {
+  min-width: 26px;
+  color: var(--muted-foreground);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.st-partial {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--muted);
+  font-size: 13px;
+}
+.st-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.st-notice p {
+  flex: 1 1 220px;
+  margin: 0;
+}
+.st-notice svg {
+  flex: none;
+}
+.st-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 13px;
+}
+.st-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 520px) {
+  .st-chart {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .st-legend {
+    width: 100%;
+  }
+}
+.drill-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.drill-link:hover {
+  color: var(--primary);
+}
+.drill-link:not([href]) {
+  color: inherit;
+  cursor: default;
+}
+.drill-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.st-entity {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.st-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.st-entity-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px 14px;
+}
+.st-entity-head > :first-child {
+  margin-top: 6px;
+}
+@media (max-width: 640px) {
+  .st-entity-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .st-entity-head > :nth-child(3) {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+.st-entity-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  overflow-wrap: anywhere;
+}
+.st-entity-url {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.st-entity-url a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.st-entity-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 8px 0 0;
+}
+.st-entity-domain {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.st-metrics {
+  margin-bottom: 0;
+}
+.st-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .st-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.st-trend {
+  margin: 0;
+  padding: 8px 12px 12px;
+}
+.st-url {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 32ch;
+}
+.st-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+.st-entity .st-empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--muted-foreground);
+}
+.live-app .live-frequency > a {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.live-app .live-frequency > a:hover span.truncate {
+  color: var(--primary);
+}
+.st-type-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.st-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+}
+.overview-stack {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.live-app .live-frequency > a > i {
+  display: block;
+  height: 7px;
+  min-width: 2px;
+  max-width: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+}
+.live-app .live-frequency > a b {
+  text-align: right;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.live-app .live-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.live-app .live-run-title strong {
+  font-weight: 600;
+}
+.live-app .live-run-title:hover strong {
+  color: var(--primary);
+}
+.st-badge-quiet {
+  border-style: dotted;
+  color: var(--muted-foreground);
+}
+.st-list-notice {
+  display: grid;
+  gap: 6px;
+  padding: 10px 16px 0;
+}
+.st-chip {
+  gap: 4px;
+}
+.st-chip button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}

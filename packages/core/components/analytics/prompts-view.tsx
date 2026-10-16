@@ -1,8 +1,11 @@
 'use client';
+import { createPortal } from 'react-dom';
+import { useCollectionPage } from './shared';
 
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type Dispatch,
@@ -158,6 +161,7 @@ export function PromptsView({
   setAddOpen,
   readOnly = false,
   reportFilters = defaultFilters,
+  visible: isVisible = true,
 }: {
   prompts: DemoPrompt[];
   setPrompts: Dispatch<SetStateAction<DemoPrompt[]>>;
@@ -166,6 +170,7 @@ export function PromptsView({
   setAddOpen: (value: boolean) => void;
   readOnly?: boolean;
   reportFilters?: DemoFilters;
+  visible?: boolean;
 }) {
   const copy = useCopy();
   const { number, percent } = useNumbers();
@@ -181,6 +186,26 @@ export function PromptsView({
   const [importText, setImportText] = useState('');
   const [fileError, setFileError] = useState('');
   const [topbarHeight, setTopbarHeight] = useState(0);
+  const [sticky, setSticky] = useState(false);
+  const [titleTarget, setTitleTarget] = useState<Element | null>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isVisible || !sentinel.current) {
+      setSticky(false);
+      setTitleTarget(null);
+      return;
+    }
+    setTitleTarget(document.querySelector('.page-title-row'));
+    const observer = new IntersectionObserver(
+      ([entry]) =>
+        setSticky(
+          !entry.isIntersecting && entry.boundingClientRect.top < topbarHeight,
+        ),
+      { rootMargin: `-${topbarHeight}px 0px 0px 0px` },
+    );
+    observer.observe(sentinel.current);
+    return () => observer.disconnect();
+  }, [isVisible, topbarHeight]);
   useEffect(() => {
     const topbar = document.querySelector('.analytics-topbar');
     if (!topbar) return;
@@ -203,7 +228,14 @@ export function PromptsView({
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
-  const visible = scoped.filter((prompt) => prompt.status === status);
+  const promptPage = useCollectionPage(
+    scoped.filter((prompt) => prompt.status === status),
+    `${topic}|${search}|${status}|${JSON.stringify(reportFilters)}`,
+  );
+  const visible = promptPage.rows;
+  useEffect(() => {
+    queueMicrotask(() => setSelected([]));
+  }, [promptPage.page, topic, search, status, reportFilters]);
   const selectedVisible = visible.filter((prompt) =>
     selected.includes(prompt.id),
   );
@@ -406,6 +438,35 @@ export function PromptsView({
       ) === index,
   );
 
+  const promptActions = (
+    <PrimaryMenuActions
+      label={copy('More prompt actions', 'Mais ações de prompts')}
+      action={
+        <Button
+          disabled={readOnly}
+          size="sm"
+          className="text-sm"
+          onClick={() => openEditor()}
+        >
+          <Plus size={14} />
+          {copy('Add prompt', 'Adicionar prompt')}
+        </Button>
+      }
+    >
+      <DropdownMenuItem
+        disabled={readOnly}
+        onClick={() => {
+          setImportOpen(true);
+          setImportText('');
+          setFileError('');
+        }}
+      >
+        <Upload />
+        {copy('Import', 'Importar')}
+      </DropdownMenuItem>
+    </PrimaryMenuActions>
+  );
+
   return (
     <>
       {readOnly && (
@@ -416,8 +477,13 @@ export function PromptsView({
           )}
         </output>
       )}
+      {isVisible &&
+        !sticky &&
+        titleTarget &&
+        createPortal(promptActions, titleTarget)}
+      <div ref={sentinel} className="h-px" aria-hidden="true" />
       <div
-        className="prompts-layout grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]"
+        className={`prompts-layout ${sticky ? 'preview-prompts-sticky' : ''} grid items-start gap-5 lg:grid-cols-[180px_minmax(0,1fr)]`}
         style={{ '--prompts-sticky-top': `${topbarHeight}px` } as CSSProperties}
       >
         <aside
@@ -510,35 +576,28 @@ export function PromptsView({
           >
             <CollectionToolbar
               className="prompts-status-bar"
-              actions={
-                <PrimaryMenuActions
-                  label={copy('More prompt actions', 'Mais ações de prompts')}
-                  action={
-                    <Button
-                      disabled={readOnly}
-                      size="sm"
-                      className="text-sm"
-                      onClick={() => openEditor()}
-                    >
-                      <Plus size={14} />
-                      {copy('Add prompt', 'Adicionar prompt')}
-                    </Button>
-                  }
-                >
-                  <DropdownMenuItem
-                    disabled={readOnly}
-                    onClick={() => {
-                      setImportOpen(true);
-                      setImportText('');
-                      setFileError('');
+              actions={sticky ? promptActions : null}
+            >
+              {sticky && (
+                <select
+                  className="m-3 rounded-md border bg-background p-2 text-sm"
+                  aria-label={copy('Prompt topics', 'Temas dos prompts')}
+                  value={topic}
+                  onChange={(event) => {
+                    setTopic(event.target.value);
+                    resetSelection();
                     }}
                   >
-                    <Upload />
-                    {copy('Import', 'Importar')}
-                  </DropdownMenuItem>
-                </PrimaryMenuActions>
-              }
-            >
+                    <option value="all">
+                    {copy('All topics', 'Todos os tópicos')}
+                  </option>
+                  {topics.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              )}
               <TabsList
                 variant="line"
                 className="gap-3"
@@ -926,13 +985,14 @@ export function PromptsView({
         </output>
       )}
 
+      {promptPage.controls}
       <Dialog
         open={addOpen && !readOnly}
         onOpenChange={(open) => {
           if (!open) closeEditor();
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingId

@@ -8,11 +8,11 @@ import {
 } from '../packages/core/lib/project-store-contract.ts';
 
 const MAX_LINE = 8 * 1024 * 1024;
-const entities = ['prompts', 'runs'];
+const entitiesFor = (schema) => schema >= 3 ? ['prompts', 'runs', 'semantic_evaluations'] : ['prompts', 'runs'];
 function identity(manifest) {
   if (
     !manifest ||
-    ![1, 2].includes(manifest.schema) ||
+    ![1, 2, 3, 4].includes(manifest.schema) ||
     !['projectId', 'ownerId', 'generation'].every(
       (key) =>
         typeof manifest[key] === 'string' &&
@@ -21,7 +21,7 @@ function identity(manifest) {
     ) ||
     !Number.isSafeInteger(manifest.revision) ||
     manifest.revision < 0 ||
-    (manifest.schema === 2 &&
+    (manifest.schema >= 2 &&
       ((manifest.analysisRevision !== null &&
         (typeof manifest.analysisRevision !== 'string' ||
           manifest.analysisRevision.length > 200)) ||
@@ -35,7 +35,7 @@ function identity(manifest) {
     manifest.ownerId,
     manifest.generation,
     manifest.revision,
-    ...(manifest.schema === 2
+    ...(manifest.schema >= 2
       ? [manifest.analysisRevision, manifest.analysisMutationRevision]
       : []),
   ]);
@@ -71,10 +71,11 @@ export async function inspectBackup(
 ) {
   let header,
     footer,
-    current = 'prompts';
-  const counts = { prompts: 0, runs: 0 },
-    digests = { prompts: '', runs: '' },
-    lastIds = { prompts: '', runs: '' },
+    current = 'prompts',
+    entities = entitiesFor(1);
+  const counts = { prompts: 0, runs: 0, semantic_evaluations: 0 },
+    digests = { prompts: '', runs: '', semantic_evaluations: '' },
+    lastIds = { prompts: '', runs: '', semantic_evaluations: '' },
     seen = new Set();
   for await (const record of records(stream, onBytes)) {
     if (footer)
@@ -86,6 +87,7 @@ export async function inspectBackup(
       if (project && record.manifest.projectId !== project)
         throw new Error('This backup belongs to another project.');
       header = record.manifest;
+      entities = entitiesFor(header.schema);
       continue;
     }
     if (record.type === 'chunk') {
@@ -94,7 +96,7 @@ export async function inspectBackup(
         !entities.includes(entity) ||
         !Array.isArray(rows) ||
         rows.length > 100 ||
-        (current === 'runs' && entity !== 'runs')
+        entities.indexOf(entity) < entities.indexOf(current)
       )
         throw new Error('Invalid project backup chunk.');
       current = entity;
@@ -105,7 +107,7 @@ export async function inspectBackup(
           typeof row.id !== 'string' ||
           row.id <= lastIds[entity] ||
           row.project_id !== header.projectId ||
-          (entity === 'runs' && row.owner_id !== header.ownerId)
+          (entity !== 'prompts' && row.owner_id !== header.ownerId)
         )
           throw new Error(
             'Project backup rows are unordered or belong to another owner/project.',

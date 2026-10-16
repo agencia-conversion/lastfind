@@ -1,4 +1,5 @@
 'use client';
+import { useCollectionPage } from './shared';
 
 import { useMemo, useState } from 'react';
 import {
@@ -19,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useI18n } from '@/lib/i18n';
 import {
   brandMetrics,
@@ -131,15 +133,22 @@ export function SourcesView({
     [availableSources, responses],
   );
   const query = search.trim().toLocaleLowerCase(locale);
-  const rows = (tab === 'domains' ? domains : availableSources).filter(
+  const filteredRows = (tab === 'domains' ? domains : availableSources).filter(
     (source) =>
       `${source.domain} ${source.url} ${source.title}`
         .toLocaleLowerCase(locale)
         .includes(query),
   );
+  const sourcePage = useCollectionPage(
+    filteredRows,
+    `${tab}|${search}|${JSON.stringify(responses.map((item) => item.id))}`,
+  );
+  const rows = sourcePage.rows;
   const selectedSources = availableSources.filter(
     (source) => source.domain === selectedDomain,
   );
+
+  const evidencePage = useCollectionPage(selectedSources, selectedDomain ?? '');
 
   return (
     <div className="space-y-5">
@@ -210,40 +219,40 @@ export function SourcesView({
           {['domains', 'urls'].map((value) => (
             <TabsContent key={value} value={value}>
               {rows.length ? (
-                <div className="overflow-x-auto">
-                  <table className="analytics-table min-w-[660px]">
-                    <thead>
-                      <tr>
-                        <th className="w-10">#</th>
-                        <th>
+                <div>
+                  <Table className="analytics-table min-w-[660px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">#</TableHead>
+                        <TableHead>
                           {value === 'domains'
                             ? copy('Domain', 'Domínio')
                             : 'URL'}
-                        </th>
-                        <th className="text-right">
+                        </TableHead>
+                        <TableHead className="text-right">
                           <span className="inline-flex items-center gap-1">
                             {copy('Cited responses', 'Respostas com citação')}
                             <ArrowDown size={12} />
                           </span>
-                        </th>
-                        <th className="text-right">
+                        </TableHead>
+                        <TableHead className="text-right">
                           {copy('Citation rate', 'Taxa de citação')}
-                        </th>
-                        <th className="text-right">
+                        </TableHead>
+                        <TableHead className="text-right">
                           {copy(
                             'Consulted responses',
                             'Respostas com consulta',
                           )}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {rows.map((source, index) => (
-                        <tr key={source.id}>
-                          <td className="text-muted-foreground">
+                        <TableRow key={source.id}>
+                          <TableCell className="text-muted-foreground">
                             {count(index + 1)}
-                          </td>
-                          <td>
+                          </TableCell>
+                          <TableCell>
                             <button
                               type="button"
                               aria-label={copy(
@@ -274,11 +283,11 @@ export function SourcesView({
                                 )}
                               </span>
                             </button>
-                          </td>
-                          <td className="text-right tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
                             {count(source.cited)}
-                          </td>
-                          <td aria-label={percent(source.rate)}>
+                          </TableCell>
+                          <TableCell aria-label={percent(source.rate)}>
                             <div className="flex items-center justify-end gap-2.5">
                               <span className="h-1 w-14 overflow-hidden rounded-full bg-muted">
                                 <span
@@ -290,8 +299,8 @@ export function SourcesView({
                                 {percent(source.rate)}
                               </span>
                             </div>
-                          </td>
-                          <td className="text-right tabular-nums">
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
                             {knownConsulted ? (
                               count(source.consulted)
                             ) : (
@@ -299,11 +308,11 @@ export function SourcesView({
                                 {copy('Not provided', 'Não informado')}
                               </span>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               ) : (
                 <EmptyState
@@ -364,7 +373,7 @@ export function SourcesView({
                 )}
               />
             )}
-            {selectedSources.map((source) => (
+            {evidencePage.rows.map((source) => (
               <div key={source.id} className="rounded-lg border p-3">
                 <div className="flex items-start gap-2.5">
                   <SiteFavicon
@@ -412,8 +421,10 @@ export function SourcesView({
               'Estes links são ilustrativos e pertencem a um conjunto de dados sintético. Eles não representam uma coleta ou uma resposta verificada de um modelo.',
             )}
           </p>
+          {evidencePage.controls}
         </DialogContent>
       </Dialog>
+      {sourcePage.controls}
     </div>
   );
 }
@@ -492,43 +503,43 @@ export function ModelsView({
             `Como ${brandName} aparece nas respostas de exemplo selecionadas.`,
           )}
         />
-        <div className="overflow-x-auto">
-          <table className="analytics-table min-w-[720px]">
-            <thead>
-              <tr>
-                <th>{copy('Model', 'Modelo')}</th>
-                <th className="text-right">{copy('Responses', 'Respostas')}</th>
-                <th className="text-right">
+        <div>
+          <Table className="analytics-table min-w-[720px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{copy('Model', 'Modelo')}</TableHead>
+                <TableHead className="text-right">{copy('Responses', 'Respostas')}</TableHead>
+                <TableHead className="text-right">
                   {copy('Brand mentions', 'Menções à marca')}
-                </th>
-                <th className="text-right">
+                </TableHead>
+                <TableHead className="text-right">
                   {copy('Visibility', 'Visibilidade')}
-                </th>
-                <th className="text-right">{copy('Citations', 'Citações')}</th>
-                <th className="text-right">
+                </TableHead>
+                <TableHead className="text-right">{copy('Citations', 'Citações')}</TableHead>
+                <TableHead className="text-right">
                   {copy('Consulted evidence', 'Evidência de consulta')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row) => (
-                <tr key={row.model}>
-                  <td className="font-medium">
+                <TableRow key={row.model}>
+                  <TableCell className="font-medium">
                     <ModelMark model={row.model} />
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {number(row.samples.length)}
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {number(row.mentions)}
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {row.samples.length ? percent(row.visibility) : '—'}
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {number(row.citations)}
-                  </td>
-                  <td className="text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     {row.consultedEvidence ? (
                       <span className="text-sm tabular-nums">
                         {number(row.consultedEvidence)} /{' '}
@@ -539,11 +550,11 @@ export function ModelsView({
                         {copy('Not provided', 'Não informado')}
                       </span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <p className="border-t px-5 py-3 text-sm leading-relaxed text-muted-foreground">
           {copy(
@@ -674,36 +685,36 @@ export function ChatsView({
         />
       </CollectionToolbar>
       {visible.length ? (
-        <div className="overflow-x-auto">
-          <table className="analytics-table min-w-[800px]">
-            <thead>
-              <tr>
-                <th className="w-[43%]">Prompt</th>
-                <th>{copy('Model', 'Modelo')}</th>
-                <th>{copy('Brands mentioned', 'Marcas mencionadas')}</th>
-                <th className="text-right">{copy('Citations', 'Citações')}</th>
-                <th>
+        <div>
+          <Table className="analytics-table min-w-[800px]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[43%]">Prompt</TableHead>
+                <TableHead>{copy('Model', 'Modelo')}</TableHead>
+                <TableHead>{copy('Brands mentioned', 'Marcas mencionadas')}</TableHead>
+                <TableHead className="text-right">{copy('Citations', 'Citações')}</TableHead>
+                <TableHead>
                   <span className="inline-flex items-center gap-1">
                     {copy('Date', 'Data')}
                     <ArrowDown size={12} />
                   </span>
-                </th>
-                <th>
+                </TableHead>
+                <TableHead>
                   <span className="sr-only">
                     {copy('Open response', 'Abrir resposta')}
                   </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visible.map((response) => {
                 const prompt = promptMap.get(response.promptId);
                 const brands = response.brandIds
                   .map((id) => demoBrands.find((brand) => brand.id === id))
                   .filter((brand) => !!brand);
                 return (
-                  <tr key={response.id}>
-                    <td>
+                  <TableRow key={response.id}>
+                    <TableCell>
                       <button
                         type="button"
                         aria-label={copy(
@@ -721,11 +732,11 @@ export function ChatsView({
                           {prompt?.topic ?? '—'}
                         </span>
                       </button>
-                    </td>
-                    <td className="whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
                       <ModelMark model={response.model} />
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-1">
                         {brands.slice(0, 2).map((brand) => (
                           <Badge
@@ -753,16 +764,16 @@ export function ChatsView({
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {number(new Set(response.sourceIds).size)}
-                    </td>
-                    <td className="whitespace-nowrap text-sm text-muted-foreground">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                       <time dateTime={response.date}>
                         {formatTime(response.date)}
                       </time>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -771,12 +782,12 @@ export function ChatsView({
                       >
                         <ChevronRight size={14} />
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <EmptyState

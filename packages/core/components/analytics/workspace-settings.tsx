@@ -1,4 +1,5 @@
 'use client';
+import { useCollectionPage } from './shared';
 
 import {
   useState,
@@ -33,6 +34,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useI18n, type Locale } from '@/lib/i18n';
 import {
   FilterSelect,
@@ -107,6 +116,8 @@ function WorkspaceSettings({
   )!;
   const role = workspaceRole(session);
   const manage = canManage(session);
+  const memberPage = useCollectionPage(workspace.members, workspace.id);
+  const projectPage = useCollectionPage(workspace.projects, workspace.id);
   const activeMemberCount = workspace.members.filter(
     (member) => member.status === 'active',
   ).length;
@@ -638,29 +649,29 @@ function WorkspaceSettings({
               }
               onAction={manage ? () => openEditor('invite') : undefined}
             />
-            <div className="relative overflow-x-auto border-t">
-              <table className="analytics-table min-w-[650px]">
-                <thead>
-                  <tr>
-                    <th>{copy('Member', 'Membro')}</th>
-                    <th>{copy('Role', 'Permissão')}</th>
-                    <th>Status</th>
-                    <th>
+            <div className="border-t">
+              <Table className="analytics-table min-w-[650px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{copy('Member', 'Membro')}</TableHead>
+                    <TableHead>{copy('Role', 'Permissão')}</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>
                       <span className="sr-only">
                         {copy('Actions', 'Ações')}
                       </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workspace.members.map((member) => {
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberPage.rows.map((member) => {
                     const person = session.users.find(
                       (item) => item.id === member.userId,
                     )!;
                     const editable = canManageMember(session, member);
                     return (
-                      <tr key={member.userId}>
-                        <td aria-label={person.name}>
+                      <TableRow key={member.userId}>
+                        <TableCell aria-label={person.name}>
                           <div className="flex items-center gap-3">
                             <UserAvatar user={person} />
                             <div>
@@ -677,8 +688,8 @@ function WorkspaceSettings({
                               </p>
                             </div>
                           </div>
-                        </td>
-                        <td>
+                        </TableCell>
+                        <TableCell>
                           {editable ? (
                             <FilterSelect
                               label={copy(
@@ -714,8 +725,8 @@ function WorkspaceSettings({
                               {roleName(member.role)}
                             </span>
                           )}
-                        </td>
-                        <td>
+                        </TableCell>
+                        <TableCell>
                           <Badge
                             variant="outline"
                             className={`gap-1.5 text-sm font-normal ${member.status === 'invited' ? 'text-muted-foreground' : ''}`}
@@ -727,8 +738,8 @@ function WorkspaceSettings({
                               ? copy('Active', 'Ativo')
                               : copy('Invited', 'Convidado')}
                           </Badge>
-                        </td>
-                        <td className="text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           {editable && (
                             <Button
                               variant="ghost"
@@ -762,12 +773,13 @@ function WorkspaceSettings({
                               />
                             </Button>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
+              {memberPage.controls}
             </div>
             <div className="flex gap-2 border-t bg-muted/15 px-5 py-3.5 text-sm leading-relaxed text-muted-foreground">
               <Mail size={14} className="mt-0.5 shrink-0" />
@@ -837,7 +849,7 @@ function WorkspaceSettings({
               onAction={manage ? () => openEditor('project') : undefined}
             />
             <div className="divide-y border-t">
-              {workspace.projects.map((project) => (
+              {projectPage.rows.map((project) => (
                 <div
                   key={project.id}
                   className="flex flex-wrap items-center gap-3 px-5 py-4"
@@ -900,6 +912,7 @@ function WorkspaceSettings({
                 'Novos projetos começam com uma lista de prompts vazia.',
               )}
             </div>
+            {projectPage.controls}
           </section>
         </TabsContent>
 

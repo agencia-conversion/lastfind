@@ -1,5 +1,8 @@
 'use client';
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext,
+  useEffect,
+  useState, type ReactNode,
+} from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -10,6 +13,7 @@ import {
   Search,
   EllipsisVertical,
 } from 'lucide-react';
+import { ENGINE_META, ENGINE_LABELS, isEngine } from '@/lib/engines';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -156,15 +160,18 @@ export function FilterSelect({
   onChange,
   options,
   icon,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   icon?: ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <Select
+      disabled={disabled}
       value={value}
       onValueChange={(v) => v !== null && onChange(v)}
       items={options}
@@ -428,7 +435,7 @@ export function ModelMark({
   model,
   label = true,
 }: {
-  model: DemoModel;
+  model: string;
   label?: boolean;
 }) {
   return (
@@ -436,12 +443,12 @@ export function ModelMark({
       {/* Local, tiny SVG identity assets do not require image optimization. */}
       {/* eslint-disable-next-line next/no-img-element */}
       <img
-        src={`/icons/ai/${modelIcons[model]}.svg`}
+        src={`/icons/ai/${isEngine(model) ? ENGINE_META[model].icon : (modelIcons[model as DemoModel] ?? 'google-color')}.svg`}
         alt={label ? '' : model}
         width={17}
         height={17}
       />
-      {label && <span>{model}</span>}
+      {label && <span>{isEngine(model) ? ENGINE_LABELS[model] : model}</span>}
     </span>
   );
 }
@@ -502,4 +509,117 @@ export function EmptyState({
       {action}
     </div>
   );
+}
+
+export function collectionWindow<T>(
+  items: T[],
+  requestedPage: number,
+  pageSize = 25,
+) {
+  const pages = Math.max(1, Math.ceil(items.length / pageSize));
+  const page = Math.max(1, Math.min(requestedPage, pages));
+  const offset = (page - 1) * pageSize;
+  return { rows: items.slice(offset, offset + pageSize), offset, page, pages };
+}
+export function useCollectionPage<T>(
+  items: T[],
+  scope: string,
+  pageSize = 25,
+  translate?: (en: string, pt: string) => string,
+  label = '',
+  controlled?: { page: number; onPage: (page: number) => void },
+) {
+  const defaultCopy = useCopy();
+  const copy = translate ?? defaultCopy;
+  const [state, setState] = useState({ scope, page: 1 });
+  useEffect(() => {
+    if (state.scope === scope || state.page === 1) return;
+    queueMicrotask(() => setState({ scope, page: 1 }));
+  }, [scope, state.scope, state.page]);
+  const window = collectionWindow(
+    items,
+    controlled?.page ?? (state.scope === scope ? state.page : 1),
+    pageSize,
+  );
+  const { page, pages } = window;
+  return {
+    ...window,
+    controls: (
+      <CollectionPagination
+        page={page}
+        pages={pages}
+        total={items.length}
+        onPrevious={() =>
+          controlled
+            ? controlled.onPage(page - 1)
+            : setState({ scope, page: page - 1 })
+        }
+        onNext={() =>
+          controlled
+            ? controlled.onPage(page + 1)
+            : setState({ scope, page: page + 1 })
+        }
+        previousLabel={copy('Previous', 'Anterior')}
+        nextLabel={copy('Next', 'Próxima')}
+        label={`${label ? `${label} · ` : ''}${copy('Page', 'Página')} ${page} / ${pages} · ${items.length} ${copy('items', 'itens')}`}
+      />
+    ),
+  };
+}
+export function CollectionPagination({
+  page,
+  pages,
+  total,
+  onPrevious,
+  onNext,
+  previousLabel,
+  nextLabel,
+  label,
+  busy = false,
+}: {
+  page: number;
+  pages?: number;
+  total?: number;
+  onPrevious: () => void;
+  onNext: () => void;
+  previousLabel: string;
+  nextLabel: string;
+  label: string;
+  busy?: boolean;
+}) {
+  if (total === 0) return null;
+  return (
+    <nav
+      className="collection-pagination flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm"
+      aria-label={label}
+    >
+      <span aria-live="polite">{label}</span>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy || page <= 1}
+          onClick={onPrevious}
+        >
+          {previousLabel}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy || (pages != null && page >= pages)}
+          onClick={onNext}
+        >
+          {nextLabel}
+        </Button>
+      </div>
+    </nav>
+  );
+}
+
+export function TopicFilter({ topics, value, onChange, label }: { topics: { id: string; name: string }[]; value: string; onChange: (value: string) => void; label: string }) {
+  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" aria-label={label} />}><ChevronDown size={14} />{value || label}</DropdownMenuTrigger><DropdownMenuContent className="analytics-menu"><DropdownMenuItem onClick={() => onChange('')}>{label}</DropdownMenuItem>{topics.map((topic) => <DropdownMenuItem key={topic.id} onClick={() => onChange(topic.name)}>{topic.name}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>;
+}
+
+export function AnalyticsSkeleton({ label, rows = 6 }: { label: string; rows?: number }) {
+  return <output aria-busy="true" aria-label={label} className="analytics-loading-skeleton"><span className="sr-only">{label}</span><div className="skeleton-heading" />{Array.from({ length: rows }, (_, index) => <div className="skeleton-row" key={index}><i /><i /><i /></div>)}</output>;
 }

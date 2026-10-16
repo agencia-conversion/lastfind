@@ -1,11 +1,12 @@
 'use client';
 import { useI18n } from '@/lib/i18n';
+import { Eyebrow } from '@/components/lastfind/presentation/eyebrow';
 export default function NotFound() {
   const { locale } = useI18n();
   const l = (en: string, pt: string) => (locale === 'en' ? en : pt);
   return (
     <main className="page-shell">
-      <span className="eyebrow">404</span>
+      <Eyebrow>404</Eyebrow>
       <h1>{l('The answer is not here.', 'A resposta não está aqui.')}</h1>
       <p>
         {l(

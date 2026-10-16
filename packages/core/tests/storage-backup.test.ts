@@ -195,3 +195,15 @@ void test('backup parser rejects malformed UTF-8 and bounds an unfinished NDJSON
     /too large/,
   );
 });
+
+void test('schema 4 backup preserves unit subscriptions and Semantic rows while legacy digests remain stable', async () => {
+  const unitRows = [{ ...prompts[0], unit_id: 'prompt-1', subscribed: 1, engines_override_json: '["chat_gpt","gemini"]' }];
+  assert.equal(await extendStoreDigest('', 'prompts', prompts, 3), await extendStoreDigest('', 'prompts', unitRows, 3));
+  assert.notEqual(await extendStoreDigest('', 'prompts', prompts, 4), await extendStoreDigest('', 'prompts', unitRows, 4));
+  const manifest = { ...header, schema: 4, analysisRevision: null, analysisMutationRevision: 0 };
+  const footer = { ...manifest, counts: { prompts: 1, runs: 1, semantic_evaluations: 0 }, digests: { prompts: await extendStoreDigest('', 'prompts', unitRows, 4), runs: await extendStoreDigest('', 'runs', runs, 4), semantic_evaluations: await extendStoreDigest('', 'semantic_evaluations', [], 4) } };
+  const records = [{ type: 'manifest', manifest }, { type: 'chunk', entity: 'prompts', rows: unitRows }, { type: 'chunk', entity: 'runs', rows: runs }, { type: 'chunk', entity: 'semantic_evaluations', rows: [] }, { type: 'footer', manifest: footer }];
+  const bytes = records.map(record => JSON.stringify(record)).join('\n') + '\n';
+  assert.deepEqual(await inspectBackup(Readable.from([bytes])), footer);
+  await assert.rejects(inspectBackup(Readable.from([bytes.replace('"subscribed":1','"subscribed":0')])), /checksum/);
+});

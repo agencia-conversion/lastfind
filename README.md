@@ -2,27 +2,26 @@
 
 Open-source AI visibility analytics, powered by DataForSEO. Track prompts across supported AI engines, compare competitors and explore cited and consulted sources. Apache-2.0 licensed.
 
-## Personal installation
+## Install it yourself
 
-Install Node.js 22.13 or newer, clone this repository and run:
+Lastfind runs on your own Cloudflare account, using your own DataForSEO account to collect AI answers and, optionally, OpenRouter for brand sentiment. You pay those providers directly; Lastfind adds no fee.
+
+**Follow the step-by-step guide: [docs/install.md](docs/install.md)** ([Português (Brasil)](docs/install.pt-BR.md)). It covers creating each account and key, what everything costs, installing, your first project, updating, backup, removal and troubleshooting. The short version, with Node.js 22.13 or newer installed:
 
 ```sh
+git clone https://github.com/agencia-conversion/lastfind.git
+cd lastfind
 npm ci
-cp .env.example .env
+npm run setup
 ```
 
-Add your DataForSEO login and password to `.env`, then run `npm run setup`.
+The guided setup asks for what is missing in plain language, checks your DataForSEO and OpenRouter keys before creating anything, connects your Cloudflare account, provisions the control D1 database, project SQLite storage and private raw-response bucket, deploys the application and prints your address and where your owner key is saved. It can be run again safely and never activates a paid Cloudflare subscription for you. `npm run setup -- --check-only` only verifies your keys. Vercel and other hosts are not supported (see the guide).
 
-The guided setup connects your Cloudflare account, checks that R2 is available, provisions the control D1 database, project SQLite storage and private raw-response bucket, reads your DataForSEO credentials from the private `.env` file and deploys the application. It never activates a paid Cloudflare subscription for you. Save the generated owner key securely; it opens your personal installation.
+The native Worker monitors prompts daily at 04:00 Brasília and completes provider work asynchronously; a newly added prompt is collected right away. Original responses remain private in R2; normalized evidence and reports live in project SQLite.
 
-The native Worker monitors prompts daily at 04:00 Brasília and completes provider work asynchronously. DataForSEO and Cloudflare usage belong to your own accounts. Configurable budget limits help control spending. Original responses remain private in R2; normalized evidence and reports live in project SQLite.
+## Developing
 
 For local development, run `npm run dev` and use the owner key in `.lastfind/development/selfhost-access-key.txt`; the session and SQLite state are isolated to this checkout. Provider credentials for local use belong in `.env.dev.selfhost`. Production credentials in `.env` are only used by the installer. Check changes with `npm run verify` and `npm run build:selfhost`. See [ARCHITECTURE.md](ARCHITECTURE.md), [REQUIREMENTS.md](REQUIREMENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Updating an existing installation
-
-Keep the old checkout until the update is verified. Clone this repository into a new directory, run `npm ci`, and copy your private `.env`, `wrangler.selfhost.json`, and `.lastfind/secrets.json` plus `.lastfind/access-key.txt` from the existing installation. Do not commit these files. Run `npm run deploy:selfhost`: it retains your Worker, D1, project namespace, R2 bucket, owner identity and access key. The independent baseline preserves existing records and can be reapplied safely. Verify `/api/health` and your projects before retiring the old checkout.
-
 
 ### Interface
 

@@ -85,8 +85,8 @@ export function semanticRequest(answer: string, targets: BrandTarget[], config: 
   if (metadataParts.length > 6) throw new Error('Semantic configuration is too large.');
   const answerParts = chunks(excerpt.text, 470).slice(0, 10 - metadataParts.length);
   const submittedText = answerParts.join('');
-  const system = 'Assess association in the supplied AI answer only. 0=explicit negative, 25=weak, 50=mixed, 75=clear positive, 100=strong specific endorsement. Mere mention, silence or unclear identity gives null. Cite an exact answer quote for every score. Never use outside knowledge. Output JSON only.';
-  const prompt = 'Return JSON {"readings":[{"brand":"exact name","attribute":"exact id","state":"assessed|insufficient|ambiguous","score":0|25|50|75|100|null,"quote":"exact answer excerpt or null","reason":"brief"}]}. Include every brand and attribute pair. Only assessed has a score and quote. No markdown.';
+  const system = 'Assess association in the supplied AI answer only. 0=explicit negative, 25=weak, 50=mixed, 75=clear positive, 100=strong specific endorsement. Mere mention, silence or unclear identity gives null. Cite an exact answer quote for every score. Join META parts and ANSWER parts separately in order, without inserting or changing characters. Never use outside knowledge. Output JSON only.';
+  const prompt = 'Return JSON {"readings":[{"brand":"exact name","attribute":"exact id","state":"assessed|insufficient|ambiguous","score":0|25|50|75|100|null,"quote":"verbatim ANSWER excerpt, 8-240 characters, or null","reason":"at most 240 characters"}]}. Include every brand and attribute pair. For insufficient/ambiguous, score and quote must both be null. No markdown.';
   if (system.length > 500 || prompt.length > 500) throw new Error('Semantic prompt exceeds provider limit.');
   return {
     payload: {

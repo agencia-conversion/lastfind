@@ -1,3 +1,4 @@
+import { sourceKey } from './source-sql';
 import { ENGINES, ENGINE_LABELS, isEngine } from '@/lib/engines';
 import type { Engine, Citation } from '@/lib/types';
 import type {
@@ -11,6 +12,7 @@ import type {
   CompetitorsReport,
   SourcesPage,
   SourceDetail,
+  SourceEntityDetail,
   OpportunitiesReport,
 } from '@/lib/report-types';
 import { projectReadDatabase } from './project-store-read';
@@ -22,7 +24,7 @@ import {
   RUN_SUMMARY_COLUMNS,
   runSummary,
 } from './run-rows';
-import { firstMentionPosition } from '@/lib/metrics';
+import { firstMentionPosition, mentionPositions } from '@/lib/metrics';
 import { seriesColorVar } from '@/lib/chart-series';
 
 const complete = `r.status='complete' AND r.response_available=1`;
@@ -37,10 +39,10 @@ const statuses = [
   'failed',
   'unknown',
 ];
-// Answers are persisted at 180k UTF-16 code units. Four rows stays below the
-// 4 MiB D1 result ceiling even for four-byte UTF-8 text, with room for row
-// metadata; cursor pagination keeps the full cohort intact.
-const POSITION_BATCH_SIZE = 4;
+// Bound the encoded page, including JSON escaping and row metadata, below the
+// ProjectStore's 4 MiB result ceiling without four-row round trips for short answers.
+const POSITION_BATCH_SIZE = 1000;
+const POSITION_PAGE_BYTES = 3 * 1024 * 1024;
 
 function canonicalTargetSql(target: string) {
   const aliases = `(SELECT COALESCE(json_group_array(value),'[]') FROM (
@@ -222,7 +224,11 @@ export async function reportContext(owner: string, q: URLSearchParams) {
       `(${complete}) AND ${mentionExpression} AND NOT EXISTS(SELECT 1 FROM json_each(r.sources_json) own WHERE ${selectedDomain.replaceAll('cs.value', 'own.value')})`,
     );
   for (const [param, clause, max] of [
-    ['prompt', 'r.prompt_id=?', 100],
+    [
+      'prompt',
+      'EXISTS(SELECT 1 FROM prompts selected JOIN prompts member ON COALESCE(member.unit_id,member.id)=COALESCE(selected.unit_id,selected.id) AND member.project_id=selected.project_id WHERE (selected.id=? OR selected.unit_id=?) AND member.id=r.prompt_id AND member.project_id=r.project_id)',
+      100,
+    ],
     [
       'topic',
       'EXISTS(SELECT 1 FROM prompts rp WHERE rp.id=r.prompt_id AND rp.project_id=r.project_id AND rp.tag=?)',
@@ -235,6 +241,7 @@ export async function reportContext(owner: string, q: URLSearchParams) {
         throw new ApiError(400, `Invalid ${param} filter.`);
       extra.push(clause);
       extraBindings.push(value);
+      if (param === 'prompt') extraBindings.push(value);
     }
   }
   const tags = [
@@ -271,7 +278,7 @@ export async function reportContext(owner: string, q: URLSearchParams) {
     const sourceConditions: string[] = [];
     if (source) {
       sourceConditions.push(
-        `json_extract(rs.value,'$.${filter.sourceGroup}')=?`,
+        `${sourceKey('rs', filter.sourceGroup)}=?`,
       );
       extraBindings.push(source);
     }
@@ -283,7 +290,7 @@ export async function reportContext(owner: string, q: URLSearchParams) {
     }
     if (ownOnly) {
       sourceConditions.push(
-        `EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=json_extract(rs.value,'$.domain'))`,
+        `EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('rs', 'domain')})`,
       );
     }
     extra.push(
@@ -370,6 +377,62 @@ function metrics(
     cost: Number(row?.cost || 0),
   };
 }
+async function visitMentionPositions(
+  ctx: Context,
+  visit: (promptId: string, position: number, sample: { date: string; domain: string; primary: boolean }) => void,
+  allBrands = false,
+) {
+  let cursor: { date: string; id: string } | null = null;
+  for (;;) {
+    const rows: Record<string, unknown>[] = (
+      await ctx.database
+        .prepare(
+          `${ctx.withClause}, position_candidates AS (
+              SELECT r.id,r.created_at,
+                length(CAST(json_object('id',r.id,'prompt_id',r.prompt_id,'created_at',r.created_at,'answer',r.answer,'targets_json',${EFFECTIVE_TARGETS_SQL},'mentions_json',${EFFECTIVE_MENTIONS_SQL}) AS BLOB)) AS row_bytes
+              FROM runs r WHERE ${ctx.where} AND ${complete}${allBrands ? '' : ` AND ${ctx.mentionExpression}`}${cursor ? ' AND (r.created_at>? OR (r.created_at=? AND r.id>?))' : ''}
+              ORDER BY r.created_at,r.id LIMIT ${POSITION_BATCH_SIZE}
+            ), position_page AS (
+              SELECT *,SUM(row_bytes)
+                OVER (ORDER BY created_at,id ROWS UNBOUNDED PRECEDING) AS page_bytes,
+                ROW_NUMBER() OVER (ORDER BY created_at,id) AS page_row
+              FROM position_candidates
+            ) SELECT r.id,r.prompt_id,r.created_at,r.answer,${EFFECTIVE_TARGETS_SQL} AS targets_json,${EFFECTIVE_MENTIONS_SQL} AS mentions_json
+              FROM position_page page JOIN runs r ON r.id=page.id
+              WHERE page.page_bytes<=${POSITION_PAGE_BYTES} OR page.page_row=1 ORDER BY r.created_at,r.id`,
+        )
+        .bind(
+          ctx.brandBinding,
+          ...ctx.bindings,
+          ...(cursor ? [cursor.date, cursor.date, cursor.id] : []),
+        )
+        .all<Record<string, unknown>>()
+    ).results;
+    for (const row of rows) {
+      let targets: { name: string; domain: string; aliases?: string[] }[] = [];
+      let mentions: Record<string, boolean>;
+      try {
+        targets = JSON.parse(String(row.targets_json));
+        mentions = JSON.parse(String(row.mentions_json));
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(targets)) continue;
+      if (!mentions || typeof mentions !== 'object') mentions = {};
+      const positions = allBrands ? mentionPositions(row.answer as string | null, targets) : null;
+      const selected = allBrands ? targets.filter((target) => mentions[target.name]) :
+        targets.filter((target, index) => ctx.isPrimary ? index === 0 : target.domain === ctx.brandBinding);
+      for (const target of selected) {
+        const position = positions ? positions[targets.indexOf(target)] : firstMentionPosition(row.answer as string | null, [target.name, ...(target.aliases || [])], targets);
+        if (position != null) visit(String(row.prompt_id), position, { date: String(row.created_at).slice(0,10), domain: target.domain, primary: target === targets[0] });
+      }
+    }
+    // A short page can be byte-limited, so only an empty page ends the cohort.
+    if (!rows.length) break;
+    const last: Record<string, unknown> = rows.at(-1)!;
+    cursor = { date: String(last.created_at), id: String(last.id) };
+  }
+}
 export async function summaryReport(ctx: Context): Promise<SummaryReport> {
   const {
     where,
@@ -392,7 +455,7 @@ export async function summaryReport(ctx: Context): Promise<SummaryReport> {
         .bind(brandBinding, filter.cutoff, ...ctx.combinedBindings),
       database
         .prepare(`${withClause} SELECT CASE WHEN r.created_at>=? THEN 'current' ELSE 'previous' END period,
-      COUNT(DISTINCT json_extract(s.value,'$.domain')) total FROM runs r,json_each(r.sources_json) s WHERE ${where} AND ${complete} GROUP BY period`)
+      COUNT(DISTINCT ${sourceKey('s', 'domain')}) total FROM runs r,json_each(r.sources_json) s WHERE ${where} AND ${complete} GROUP BY period`)
       .bind(brandBinding, filter.cutoff, ...ctx.combinedBindings),
     database
       .prepare(`${withClause} SELECT substr(r.created_at,1,10) day,COUNT(*) responses,SUM(${mentionExpression}) mentions,
@@ -423,50 +486,20 @@ export async function summaryReport(ctx: Context): Promise<SummaryReport> {
         .bind(brandBinding, ...ctx.combinedBindings),
     ]);
   const positionByPeriod = new Map<string, number[]>();
-  for (const [period, bindings] of [
-    ['current', ctx.bindings],
-    ['previous', ctx.previousBindings],
-  ] as const) {
-    let cursor: { date: string; id: string } | null = null;
-    for (;;) {
-      const rows: Record<string, unknown>[] = (
-        await database
-          .prepare(
-            `${withClause} SELECT r.id,r.created_at,r.answer,${EFFECTIVE_TARGETS_SQL} AS targets_json FROM runs r WHERE ${where} AND ${complete} AND ${ctx.mentionExpression}${cursor ? ' AND (r.created_at>? OR (r.created_at=? AND r.id>?))' : ''} ORDER BY r.created_at,r.id LIMIT ${POSITION_BATCH_SIZE}`,
-          )
-          .bind(
-            brandBinding,
-            ...bindings,
-            ...(cursor ? [cursor.date, cursor.date, cursor.id] : []),
-          )
-          .all<Record<string, unknown>>()
-      ).results;
-      for (const row of rows) {
-        let targets: { name: string; domain: string; aliases?: string[] }[] =
-          [];
-        try {
-          targets = JSON.parse(String(row.targets_json));
-        } catch {
-          continue;
-        }
-        const selected = ctx.isPrimary
-          ? targets[0]
-          : targets.find((target) => target.domain === brandBinding);
-        const position = firstMentionPosition(
-          row.answer as string | null,
-          [selected?.name || brandBinding, ...(selected?.aliases || [])],
-          targets,
-        );
-        if (position != null) {
-          const positions = positionByPeriod.get(period) || [];
-          positions.push(position);
-          positionByPeriod.set(period, positions);
+  const dailyPositions = new Map<string, { sum: number; samples: number }>();
+  for (const [period, bindings] of [['current', ctx.bindings], ['previous', ctx.previousBindings]] as const) {
+    await visitMentionPositions({ ...ctx, bindings }, (_promptId, position, sample) => {
+      const selected = ctx.isPrimary ? sample.primary : sample.domain === ctx.brandBinding;
+      if (selected) {
+        const positions = positionByPeriod.get(period) || []; positions.push(position); positionByPeriod.set(period, positions);
+      }
+      if (period === 'current') {
+        for (const key of [sample.domain, ...(selected ? ['selected'] : [])]) {
+          const id = `${sample.date}\0${key}`, cell = dailyPositions.get(id) ?? { sum: 0, samples: 0 };
+          cell.sum += position; cell.samples++; dailyPositions.set(id, cell);
         }
       }
-      if (rows.length < POSITION_BATCH_SIZE) break;
-      const last: Record<string, unknown> = rows.at(-1)!;
-      cursor = { date: String(last.created_at), id: String(last.id) };
-    }
+    }, period === 'current');
   }
   const averagePosition = (period: string) => {
     const values = positionByPeriod.get(period) || [];
@@ -591,7 +624,11 @@ export async function summaryReport(ctx: Context): Promise<SummaryReport> {
       }[]
     ).map((row) => {
       const totalMentions = row.total_mentions || 0;
+      const positions = dailyPositions.get(`${row.day}\0selected`);
       return {
+        responses: row.responses, mentions: row.mentions, totalMentions,
+        positionSum: positions?.sum ?? 0, positionSamples: positions?.samples ?? 0,
+        position: positions?.samples ? positions.sum / positions.samples : null,
         date: row.day,
         brand: (row.mentions / row.responses) * 100,
         sov: totalMentions ? (row.mentions / totalMentions) * 100 : null,
@@ -603,6 +640,12 @@ export async function summaryReport(ctx: Context): Promise<SummaryReport> {
               100,
           ]),
         ),
+        ...Object.fromEntries(ctx.competitors.flatMap((competitor, index) => {
+          const position = dailyPositions.get(`${row.day}\0${competitor.domain}`);
+          return [[`mentionsC${index}`, mentionMap.get(`${row.day}\0${competitor.domain}`) || 0],
+            [`positionSumC${index}`, position?.sum ?? 0], [`positionSamplesC${index}`, position?.samples ?? 0],
+            [`positionC${index}`, position?.samples ? position.sum / position.samples : null]];
+        })),
         ...Object.fromEntries(
           ctx.competitors.map((c, i) => [
             `sovC${i}`,
@@ -640,8 +683,18 @@ function analysisRow(row: Record<string, unknown>): AnalysisRow {
     noAnswer: Number(row.no_answer || 0),
   };
 }
-export async function analysisReport(ctx: Context): Promise<AnalysisReport> {
+function reportPage(q: URLSearchParams, key = 'page') {
+  const page = Number(q.get(key) || 1);
+  if (!Number.isInteger(page) || page < 1 || page > 10000)
+    throw new ApiError(400, 'Invalid page.');
+  return page;
+}
+export async function analysisReport(ctx: Context,
+  q = new URLSearchParams(),
+): Promise<AnalysisReport> {
   const database = ctx.database;
+  const topicPage = reportPage(q, 'topicPage'),
+    promptPage = reportPage(q, 'promptPage');
   const aggregate = `COUNT(*) attempts,SUM(CASE WHEN ${complete} THEN 1 ELSE 0 END) responses,
     SUM(CASE WHEN ${complete} THEN ${ctx.mentionExpression} ELSE 0 END) mentions,
     SUM(CASE WHEN ${complete} AND NOT ${ctx.mentionExpression} AND ${ctx.otherMention} THEN 1 ELSE 0 END) opportunities,
@@ -660,12 +713,12 @@ export async function analysisReport(ctx: Context): Promise<AnalysisReport> {
       .bind(ctx.brandBinding, ...ctx.bindings),
     database
       .prepare(`${ctx.withClause} SELECT p.tag key,p.tag label,${aggregate} FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id
-      WHERE ${ctx.where} GROUP BY p.tag ORDER BY opportunities DESC,responses DESC,key LIMIT 51`)
-      .bind(ctx.brandBinding, ...ctx.bindings),
+      WHERE ${ctx.where} GROUP BY p.tag ORDER BY opportunities DESC,responses DESC,key LIMIT 51 OFFSET ?`)
+      .bind(ctx.brandBinding, ...ctx.bindings, (topicPage - 1) * 50),
     database
-      .prepare(`${ctx.withClause} SELECT r.prompt_id key,p.text label,p.engine engine,p.tag topic,${aggregate} FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id
-      WHERE ${ctx.where} GROUP BY r.prompt_id ORDER BY opportunities DESC,responses DESC,key LIMIT 51`)
-      .bind(ctx.brandBinding, ...ctx.bindings),
+      .prepare(`${ctx.withClause} SELECT COALESCE(p.unit_id,p.id) key,p.text label,r.engine engine,p.tag topic,${aggregate} FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id
+      WHERE ${ctx.where} GROUP BY COALESCE(p.unit_id,p.id) ORDER BY opportunities DESC,responses DESC,key LIMIT 51 OFFSET ?`)
+      .bind(ctx.brandBinding, ...ctx.bindings, (promptPage - 1) * 50),
   ]);
   return {
     channels: ENGINES.filter(
@@ -736,7 +789,14 @@ export async function historyReport(
   ).results;
   return historyPage(rows);
 }
-export async function promptReport(ctx: Context): Promise<PromptReport> {
+export async function promptReport(
+  ctx: Context,
+  compact = false,
+): Promise<PromptReport> {
+  const subscriptions = (await ctx.database.prepare('SELECT id,engine,COALESCE(unit_id,id) unit_id FROM prompts WHERE project_id=?').bind(String(ctx.project.id)).all<{ id: string; unit_id: string; engine: Engine }>()).results;
+  const units = new Map(subscriptions.map((row) => [row.id, row.unit_id]));
+  const unitId = (id: string) => units.get(id) || id;
+  const channelBySubscription = new Map(subscriptions.map((row) => [row.id, row.engine]));
   const [stats, brands, latest] = await ctx.database.batch<
     Record<string, unknown>
   >([
@@ -751,10 +811,14 @@ export async function promptReport(ctx: Context): Promise<PromptReport> {
       .prepare(`${ctx.withClause} SELECT r.prompt_id,m.key name FROM runs r,json_each(${EFFECTIVE_MENTIONS_SQL}) m
       WHERE ${ctx.where} AND ${complete} AND m.value=1 GROUP BY r.prompt_id,m.key ORDER BY r.prompt_id,name`)
       .bind(ctx.brandBinding, ...ctx.bindings),
-    ctx.database
+    ...(compact
+      ? []
+      : [
+          ctx.database
       .prepare(`${ctx.withClause}, latest AS (SELECT r.id,ROW_NUMBER() OVER(PARTITION BY r.prompt_id ORDER BY r.created_at DESC,r.id DESC) position
       FROM runs r WHERE ${ctx.where}) SELECT ${RUN_SUMMARY_COLUMNS} FROM latest l JOIN runs r ON r.id=l.id WHERE l.position=1`)
       .bind(ctx.brandBinding, ...ctx.bindings),
+        ]),
   ]);
   const result: PromptReport = {};
   for (const row of stats.results as {
@@ -771,7 +835,8 @@ export async function promptReport(ctx: Context): Promise<PromptReport> {
         ? (Number(row.mentions) / Number(row.responses)) * 100
         : 0,
     };
-    const item = result[row.prompt_id] ?? {
+    const id = unitId(row.prompt_id);
+    const item: PromptReport[string] = result[id] ?? {
       responses: 0,
       mentions: 0,
       visibility: 0,
@@ -780,14 +845,25 @@ export async function promptReport(ctx: Context): Promise<PromptReport> {
       delta: { responses: 0, mentions: 0, visibility: 0 },
       brands: [],
     };
-    if (row.period === 'current')
-      Object.assign(item, score, { pending: Number(row.pending) });
-    else item.previous = score;
-    result[row.prompt_id] = item;
+    const target = row.period === 'current' ? item : item.previous;
+    target.responses += score.responses;
+    target.mentions += score.mentions;
+    target.visibility = target.responses ? target.mentions / target.responses * 100 : 0;
+    if (row.period === 'current') {
+      item.pending += Number(row.pending);
+      const engine = channelBySubscription.get(row.prompt_id);
+      if (engine) {
+        item.channels ??= {};
+        const channel = item.channels[engine] ??= { responses: 0, mentions: 0, visibility: 0, position: null };
+        channel.responses += score.responses; channel.mentions += score.mentions;
+        channel.visibility = channel.responses ? channel.mentions / channel.responses * 100 : 0;
+      }
+    }
+    result[id] = item;
   }
   for (const row of brands.results as { prompt_id: string; name: string }[]) {
-    const item = result[row.prompt_id];
-    if (item) item.brands.push(String(row.name));
+    const item = result[unitId(row.prompt_id)];
+    if (item && !item.brands.includes(String(row.name))) item.brands.push(String(row.name));
   }
   for (const item of Object.values(result))
     item.delta = {
@@ -795,15 +871,36 @@ export async function promptReport(ctx: Context): Promise<PromptReport> {
       mentions: item.mentions - item.previous.mentions,
       visibility: item.visibility - item.previous.visibility,
     };
-  for (const row of latest.results)
-    if (result[String(row.prompt_id)])
-      result[String(row.prompt_id)].latest = runSummary(row);
+  for (const row of latest?.results ?? []) {
+    const item = result[unitId(String(row.prompt_id))];
+    const run = runSummary(row);
+    if (item && (!item.latest || `${run.created_at}${run.id}` > `${item.latest.created_at}${item.latest.id}`)) item.latest = run;
+  }
+  const positions = new Map<string, { sum: number; count: number }>();
+  const channelPositions = new Map<string, { sum: number; count: number }>();
+  await visitMentionPositions(ctx, (subscriptionId, position) => {
+    const promptId = unitId(subscriptionId);
+    const value = positions.get(promptId) || { sum: 0, count: 0 };
+    value.sum += position;
+    value.count += 1;
+    positions.set(promptId, value);
+    const engine = channelBySubscription.get(subscriptionId);
+    if (engine) { const key = `${promptId}|${engine}`, score = channelPositions.get(key) ?? { sum: 0, count: 0 }; score.sum += position; score.count++; channelPositions.set(key, score); }
+  });
+  for (const [id, item] of Object.entries(result)) {
+    const value = positions.get(id);
+    item.position = value ? value.sum / value.count : null;
+    for (const [engine, channel] of Object.entries(item.channels ?? {})) { const score = channelPositions.get(`${id}|${engine}`); channel.position = score ? score.sum / score.count : null; }
+  }
   return result;
 }
 export async function promptDetail(
   ctx: Context,
   q: URLSearchParams,
 ): Promise<PromptDetail> {
+  const sourcePage = reportPage(q, 'sourcePage');
+  const scoresPromise = promptReport(ctx, true);
+  const historyPromise = historyReport(ctx, q);
   const [daily, platforms, sources] = await ctx.database.batch<
     Record<string, unknown>
   >([
@@ -819,9 +916,9 @@ export async function promptDetail(
       .bind(ctx.brandBinding, ...ctx.bindings),
     ctx.database
       .prepare(
-        `${ctx.withClause} SELECT json_extract(s.value,'$.domain') domain,COUNT(DISTINCT r.id) responses FROM runs r,json_each(r.sources_json) s WHERE ${ctx.where} AND ${complete} GROUP BY domain ORDER BY responses DESC,domain LIMIT 21`,
+        `${ctx.withClause} SELECT ${sourceKey('s', 'domain')} domain,COUNT(DISTINCT r.id) responses FROM runs r,json_each(r.sources_json) s WHERE ${ctx.where} AND ${complete} GROUP BY domain ORDER BY responses DESC,domain LIMIT 51 OFFSET ?`,
       )
-      .bind(ctx.brandBinding, ...ctx.bindings),
+      .bind(ctx.brandBinding, ...ctx.bindings, (sourcePage - 1) * 50),
   ]);
   const makeScore = (row: Record<string, unknown>) => ({
     responses: Number(row.responses),
@@ -830,24 +927,39 @@ export async function promptDetail(
       ? (Number(row.mentions) / Number(row.responses)) * 100
       : 0,
   });
+  const [scores, history] = await Promise.all([scoresPromise, historyPromise]);
+  const values = Object.values(scores);
+  const score = values.length === 1 ? values[0] : undefined;
+  const responses = values.reduce((sum, row) => sum + row.responses, 0),
+    mentions = values.reduce((sum, row) => sum + row.mentions, 0);
   return {
+    metrics: {
+      responses,
+      mentions,
+      visibility: responses ? (mentions / responses) * 100 : 0,
+      position: score?.position ?? null,
+    },
     daily: daily.results
       .slice(0, 90)
       .map((row) => ({ date: String(row.date), ...makeScore(row) })),
     platforms: platforms.results.map((row) => ({
       engine: row.engine as Engine,
       ...makeScore(row),
+      position: score?.channels?.[row.engine as Engine]?.position ?? null,
     })),
-    sources: sources.results.slice(0, 20).map((row) => ({
+    sources: sources.results.slice(0, 50).map((row) => ({
       domain: String(row.domain),
       responses: Number(row.responses),
     })),
-    history: await historyReport(ctx, q),
+    hasMoreSources: sources.results.length > 50,
+    history,
   };
 }
 export async function competitorsReport(
   ctx: Context,
+  q = new URLSearchParams(),
 ): Promise<CompetitorsReport> {
+  const page = reportPage(q);
   const rows = (
     await ctx.database
       .prepare(`${ctx.withClause} SELECT json_extract(target.value,'$.name') name,json_extract(target.value,'$.domain') domain,
@@ -865,10 +977,14 @@ export async function competitorsReport(
       name: String(row.name),
       domain: String(row.domain),
     });
+  const totalMentions = rows.reduce(
+    (sum, row) => sum + Number(row.mentions),
+    0,
+  );
   const matrix = (dimension: 'engine' | 'topic') =>
     [...targets.values()].map((target) => {
-      const cells: CompetitorsReport['platforms'][number]['cells'] = {};
-      for (const row of rows.filter(
+        const cells: CompetitorsReport['platforms'][number]['cells'] = {};
+        for (const row of rows.filter(
         (value) => String(value.name) === target.name,
       )) {
         const key = String(row[dimension]);
@@ -885,34 +1001,50 @@ export async function competitorsReport(
           visibility: responses ? (mentions / responses) * 100 : 0,
         };
       }
-      const values = Object.values(cells);
-      const responses = values.reduce((sum, value) => sum + value.responses, 0);
-      const mentions = values.reduce((sum, value) => sum + value.mentions, 0);
-      return {
-        ...target,
-        responses,
-        mentions,
-        visibility: responses ? (mentions / responses) * 100 : 0,
-        cells,
-      };
-    });
+        const values = Object.values(cells);
+        const responses = values.reduce((sum, value) => sum + value.responses, 0);
+        const mentions = values.reduce((sum, value) => sum + value.mentions, 0);
+        return {
+          ...target,
+          responses,
+          mentions,
+          visibility: responses ? (mentions / responses) * 100 : 0,
+          shareOfVoice: totalMentions ? (mentions / totalMentions) * 100 : null,
+          cells,
+        };
+      })
+      .sort(
+        (a, b) =>
+          (b.shareOfVoice ?? -1) - (a.shareOfVoice ?? -1) ||
+          a.name.localeCompare(b.name),
+      );
   const gaps = (
     await ctx.database
-      .prepare(`${ctx.withClause} SELECT r.prompt_id prompt,p.text label,r.engine,p.tag topic,COUNT(*) responses
+        .prepare(`${ctx.withClause} SELECT COALESCE(p.unit_id,p.id) prompt,p.text label,p.tag topic,
+      json_group_array(DISTINCT r.engine) engines,COUNT(DISTINCT r.id) responses,
+      json_group_array(DISTINCT json_object('name',m.key,'domain',json_extract(target.value,'$.domain'))) brands
       FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id
+      JOIN json_each(${EFFECTIVE_MENTIONS_SQL}) m ON m.value=1
+      JOIN json_each(${EFFECTIVE_TARGETS_SQL}) target ON json_extract(target.value,'$.name')=m.key
       WHERE ${ctx.where} AND ${complete} AND NOT ${ctx.mentionExpression} AND ${ctx.otherMention}
-      GROUP BY r.prompt_id,r.engine,p.tag ORDER BY responses DESC,p.text LIMIT 51`)
-      .bind(ctx.brandBinding, ...ctx.bindings)
+      GROUP BY COALESCE(p.unit_id,p.id),p.text,p.tag ORDER BY responses DESC,p.text,prompt LIMIT 51 OFFSET ?`)
+      .bind(ctx.brandBinding, ...ctx.bindings, (page - 1) * 50)
       .all<Record<string, unknown>>()
   ).results;
   return {
+    hasMoreCompetitorOnly: gaps.length > 50,
     platforms: matrix('engine'),
     topics: matrix('topic'),
     competitorOnly: gaps.slice(0, 50).map((row) => ({
       prompt: String(row.prompt),
       label: String(row.label),
       responses: Number(row.responses),
-      engine: row.engine as Engine,
+      engine: (JSON.parse(String(row.engines)) as Engine[])[0],
+      engines: JSON.parse(String(row.engines)) as Engine[],
+      brands: JSON.parse(String(row.brands)) as {
+    name: string;
+    domain: string;
+  }[],
       topic: String(row.topic),
     })),
   };
@@ -930,9 +1062,12 @@ function sourceOptions(q: URLSearchParams) {
     group,
   };
 }
+/** Page size is 50 for the UI; type aggregation and filters read a bounded larger window. */
+export const SOURCE_LIST_PAGE = 50;
 export async function sourcesReport(
   ctx: Context,
   q: URLSearchParams,
+  size = SOURCE_LIST_PAGE,
 ): Promise<SourcesPage> {
   const { column, group } = sourceOptions(q);
   const page = Number(q.get('page') || 1);
@@ -943,29 +1078,29 @@ export async function sourcesReport(
   if (q.get('own') && !ownOnly)
     throw new ApiError(400, 'Invalid source filter.');
   const ownershipWhere = ownOnly
-    ? ` AND EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=json_extract(s.value,'$.domain'))`
+    ? ` AND EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('s', 'domain')})`
     : '';
   const [rows, availability] = await ctx.database.batch<
     Record<string, unknown>
   >([
     ctx.database
-      .prepare(`${ctx.withClause} SELECT json_extract(s.value,'$.${group}') key,json_extract(s.value,'$.domain') domain,
+      .prepare(`${ctx.withClause} SELECT ${sourceKey('s', group)} key,${sourceKey('s', 'domain')} domain,
       MIN(json_extract(s.value,'$.title')) title,COUNT(DISTINCT r.id) responses,
       COUNT(DISTINCT CASE WHEN ${ctx.mentionExpression} THEN r.id END) mentions,
       COUNT(DISTINCT json_extract(s.value,'$.url')) pages,group_concat(DISTINCT r.engine) engines,
-      MAX(CASE WHEN EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=json_extract(s.value,'$.domain')) THEN 1 ELSE 0 END) own_snapshot,
+      MAX(CASE WHEN EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('s', 'domain')}) THEN 1 ELSE 0 END) own_snapshot,
       MAX(CASE WHEN EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) competitor_target,json_each(CASE WHEN json_type(competitor_target.value,'$.domains')='array' THEN json_extract(competitor_target.value,'$.domains') ELSE json_array(json_extract(competitor_target.value,'$.domain')) END) competitor_domain WHERE CAST(competitor_target.key AS INTEGER)>0 AND competitor_domain.value=json_extract(s.value,'$.domain')) THEN 1 ELSE 0 END) competitor_snapshot
       FROM runs r,json_each(${column}) s WHERE ${ctx.where} AND ${complete}
       AND (?='' OR instr(lower(COALESCE(json_extract(s.value,'$.url'),'') || ' ' || COALESCE(json_extract(s.value,'$.title'),'')),lower(?))>0)
-      ${ownershipWhere} GROUP BY json_extract(s.value,'$.${group}') ORDER BY responses DESC,key LIMIT 51 OFFSET ?`)
-      .bind(ctx.brandBinding, ...ctx.bindings, search, search, (page - 1) * 50),
+      ${ownershipWhere} GROUP BY ${sourceKey('s', group)} ORDER BY responses DESC,key LIMIT ${size + 1} OFFSET ?`)
+      .bind(ctx.brandBinding, ...ctx.bindings, search, search, (page - 1) * size),
     ctx.database
       .prepare(`${ctx.withClause} SELECT COUNT(*) complete,SUM(CASE WHEN r.consulted_sources_json IS NOT NULL THEN 1 ELSE 0 END) available
       FROM runs r WHERE ${ctx.where} AND ${complete}`)
       .bind(ctx.brandBinding, ...ctx.bindings),
   ]);
   return {
-    rows: rows.results.slice(0, 50).map((r) => ({
+    rows: rows.results.slice(0, size).map((r) => ({
       key: String(r.key),
       domain: String(r.domain),
       title: group === 'domain' ? String(r.domain) : String(r.title || r.key),
@@ -982,7 +1117,7 @@ export async function sourcesReport(
           ? 'competitor'
           : 'third-party',
     })),
-    hasMore: rows.results.length > 50,
+    hasMore: rows.results.length > size,
     available: Number(availability.results[0]?.available || 0),
     complete: Number(availability.results[0]?.complete || 0),
   };
@@ -1004,12 +1139,12 @@ export async function sourceDetail(
   if (q.get('own') && !ownOnly)
     throw new ApiError(400, 'Invalid source filter.');
   const ownershipWhere = ownOnly
-    ? ` AND EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=json_extract(s.value,'$.domain'))`
+    ? ` AND EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('s', 'domain')})`
     : '';
   const [sources, runs] = await ctx.database.batch<Record<string, unknown>>([
     ctx.database
-      .prepare(`${ctx.withClause} SELECT DISTINCT json_extract(s.value,'$.url') url,json_extract(s.value,'$.domain') domain,json_extract(s.value,'$.title') title
-      FROM runs r,json_each(${column}) s WHERE ${ctx.where} AND ${complete} AND json_extract(s.value,'$.${group}')=?
+      .prepare(`${ctx.withClause} SELECT DISTINCT json_extract(s.value,'$.url') url,${sourceKey('s', 'domain')} domain,json_extract(s.value,'$.title') title
+      FROM runs r,json_each(${column}) s WHERE ${ctx.where} AND ${complete} AND ${sourceKey('s', group)}=?
       AND (?='' OR instr(lower(COALESCE(json_extract(s.value,'$.url'),'') || ' ' || COALESCE(json_extract(s.value,'$.title'),'')),lower(?))>0)
       ${ownershipWhere}
       AND (?='' OR json_extract(s.value,'$.url')>?) ORDER BY url LIMIT 51`)
@@ -1024,7 +1159,7 @@ export async function sourceDetail(
       ),
     ctx.database
       .prepare(`${ctx.withClause} SELECT ${RUN_SUMMARY_COLUMNS} FROM runs r WHERE ${ctx.where} AND ${complete}
-      AND EXISTS(SELECT 1 FROM json_each(${column}) s WHERE json_extract(s.value,'$.${group}')=?
+      AND EXISTS(SELECT 1 FROM json_each(${column}) s WHERE ${sourceKey('s', group)}=?
         AND (?='' OR instr(lower(COALESCE(json_extract(s.value,'$.url'),'') || ' ' || COALESCE(json_extract(s.value,'$.title'),'')),lower(?))>0)
         ${ownershipWhere})${after.where} ORDER BY r.created_at DESC,r.id DESC LIMIT 26`)
       .bind(
@@ -1048,13 +1183,145 @@ export async function sourceDetail(
   };
 }
 
+/** Citations (responses × distinct domain) in the cohort, independent of paging. */
+export async function citationTotal(ctx: Context, q: URLSearchParams) {
+  const { column, group } = sourceOptions(q);
+  const row = await ctx.database
+    .prepare(`${ctx.withClause} SELECT COUNT(*) citations FROM (SELECT DISTINCT r.id,${sourceKey('s', group)} key FROM runs r,json_each(${column}) s WHERE ${ctx.where} AND ${complete})`)
+    .bind(ctx.brandBinding, ...ctx.bindings)
+    .first<{ citations: number }>();
+  return Number(row?.citations || 0);
+}
+
+const rate = (part: number, whole: number) => (whole ? (part / whole) * 100 : 0);
+
+/**
+ * Detail of one cited domain or URL. `citing` is the cohort of complete
+ * responses whose cited sources contain the key; `total` is the same period and
+ * filters without the source condition, so rates state their denominator.
+ */
+export async function sourceEntityReport(
+  owner: string,
+  q: URLSearchParams,
+  kind: 'domain' | 'url',
+): Promise<Omit<SourceEntityDetail, 'sourceType' | 'domainType' | 'classifier'>> {
+  const key = (q.get('key') || '').trim();
+  if (!key || key.length > 4000) throw new ApiError(400, 'Invalid source.');
+  const citingQuery = new URLSearchParams(q);
+  citingQuery.delete('key');
+  citingQuery.set('source', key);
+  citingQuery.set('sourceKind', 'cited');
+  citingQuery.set('sourceGroup', kind);
+  const totalQuery = new URLSearchParams(citingQuery);
+  totalQuery.delete('source');
+  const [citing, total] = await Promise.all([
+    reportContext(owner, citingQuery),
+    reportContext(owner, totalQuery),
+  ]);
+  const bindCiting = [citing.brandBinding, ...citing.bindings];
+  const cited = `${sourceKey('s', kind)}=?`;
+  const [identity, daily, totalDaily, platforms, totalPlatforms, prompts, urls, brands] =
+    await citing.database.batch<Record<string, unknown>>([
+      citing.database
+        .prepare(`${citing.withClause} SELECT ${sourceKey('s', 'domain')} domain,MIN(json_extract(s.value,'$.title')) title,COUNT(DISTINCT json_extract(s.value,'$.url')) pages,COUNT(DISTINCT r.id) citing
+        FROM runs r,json_each(r.sources_json) s WHERE ${citing.where} AND ${complete} AND ${cited}`)
+        .bind(...bindCiting, key),
+      citing.database
+        .prepare(`${citing.withClause} SELECT substr(r.created_at,1,10) date,COUNT(*) citing FROM runs r WHERE ${citing.where} AND ${complete} GROUP BY date ORDER BY date LIMIT 91`)
+        .bind(...bindCiting),
+      citing.database
+        .prepare(`${total.withClause} SELECT substr(r.created_at,1,10) date,COUNT(*) total FROM runs r WHERE ${total.where} AND ${complete} GROUP BY date ORDER BY date LIMIT 91`)
+        .bind(total.brandBinding, ...total.bindings),
+      citing.database
+        .prepare(`${citing.withClause} SELECT r.engine,COUNT(*) citing FROM runs r WHERE ${citing.where} AND ${complete} GROUP BY r.engine ORDER BY citing DESC`)
+        .bind(...bindCiting),
+      citing.database
+        .prepare(`${total.withClause} SELECT r.engine,COUNT(*) total FROM runs r WHERE ${total.where} AND ${complete} GROUP BY r.engine`)
+        .bind(total.brandBinding, ...total.bindings),
+      citing.database
+        .prepare(`${citing.withClause} SELECT COALESCE(p.unit_id,p.id) prompt,MIN(r.prompt_text) text,MIN(p.tag) topic,COUNT(*) responses
+        FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id WHERE ${citing.where} AND ${complete} GROUP BY prompt ORDER BY responses DESC,text LIMIT 25`)
+        .bind(...bindCiting),
+      citing.database
+        .prepare(`${citing.withClause} SELECT json_extract(s.value,'$.url') url,MIN(json_extract(s.value,'$.title')) title,COUNT(DISTINCT r.id) responses
+        FROM runs r,json_each(r.sources_json) s WHERE ${citing.where} AND ${complete} AND ${cited} GROUP BY url ORDER BY responses DESC,url LIMIT 25`)
+        .bind(...bindCiting, key),
+      citing.database
+        .prepare(`${citing.withClause} SELECT m.key name,COUNT(DISTINCT r.id) responses FROM runs r,json_each(${EFFECTIVE_MENTIONS_SQL}) m
+        WHERE ${citing.where} AND ${complete} AND m.value=1 GROUP BY m.key ORDER BY responses DESC,name LIMIT 20`)
+        .bind(...bindCiting),
+    ]);
+  const citingCount = Number(identity.results[0]?.citing || 0);
+  const totalResponses = totalDaily.results.length
+    ? Number((await citing.database.prepare(`${total.withClause} SELECT COUNT(*) total FROM runs r WHERE ${total.where} AND ${complete}`).bind(total.brandBinding, ...total.bindings).first<{ total: number }>())?.total || 0)
+    : 0;
+  const domain = kind === 'domain' ? key : String(identity.results[0]?.domain || '');
+  const own = [String(citing.project.domain), ...(JSON.parse(String(citing.project.additional_domains_json || '[]')) as string[])];
+  const targets = [
+    { name: String(citing.project.name), domain: String(citing.project.domain) },
+    ...citing.competitors,
+  ];
+  const totalByDay = new Map(totalDaily.results.map((row) => [String(row.date), Number(row.total)]));
+  const totalByEngine = new Map(totalPlatforms.results.map((row) => [String(row.engine), Number(row.total)]));
+  const history = await historyReport(citing, q);
+  return {
+    kind,
+    key,
+    domain,
+    title: kind === 'url' && identity.results[0]?.title ? String(identity.results[0].title) : null,
+    ownership: own.includes(domain)
+      ? 'own'
+      : citing.competitors.some((target) => target.domain === domain)
+        ? 'competitor'
+        : 'third-party',
+    metrics: {
+      citing: citingCount,
+      total: totalResponses,
+      rate: rate(citingCount, totalResponses),
+      pages: Number(identity.results[0]?.pages || 0),
+    },
+    daily: daily.results.slice(0, 90).map((row) => {
+      const day = String(row.date),
+        denominator = totalByDay.get(day) ?? 0;
+      return { date: day, citing: Number(row.citing), total: denominator, rate: rate(Number(row.citing), denominator) };
+    }),
+    platforms: platforms.results.map((row) => {
+      const denominator = totalByEngine.get(String(row.engine)) ?? 0;
+      return { engine: row.engine as Engine, citing: Number(row.citing), total: denominator, rate: rate(Number(row.citing), denominator) };
+    }),
+    prompts: prompts.results.map((row) => ({
+      prompt: String(row.prompt),
+      text: String(row.text),
+      topic: String(row.topic ?? ''),
+      responses: Number(row.responses),
+    })),
+    urls:
+      kind === 'domain'
+        ? urls.results.map((row) => ({
+            url: String(row.url),
+            title: String(row.title || row.url),
+            responses: Number(row.responses),
+            pageType: 'unclassified' as const,
+          }))
+        : [],
+    brands: brands.results.map((row) => ({
+      name: String(row.name),
+      domain: targets.find((target) => target.name === row.name)?.domain ?? '',
+      responses: Number(row.responses),
+    })),
+    history,
+  };
+}
+
 /**
  * A bounded, evidence-led opportunity list. It never infers what an external
  * page omits: it only links source domains that were actually cited.
  */
 export async function opportunitiesReport(
   ctx: Context,
+  q = new URLSearchParams(),
 ): Promise<OpportunitiesReport> {
+  const page = reportPage(q);
   const rows = (
     await ctx.database
       .prepare(`${ctx.withClause} SELECT * FROM (
@@ -1062,12 +1329,12 @@ export async function opportunitiesReport(
         FROM runs r WHERE ${ctx.where} AND ${complete} AND NOT ${ctx.mentionExpression} AND ${ctx.otherMention}
         GROUP BY r.prompt_id,r.engine
         UNION ALL
-        SELECT 'uncited-brand' type,json_extract(s.value,'$.domain') id,json_extract(s.value,'$.domain') title,COUNT(DISTINCT r.id) responses,json_extract(s.value,'$.domain') source,NULL engine
+        SELECT 'uncited-brand' type,${sourceKey('s', 'domain')} id,${sourceKey('s', 'domain')} title,COUNT(DISTINCT r.id) responses,${sourceKey('s', 'domain')} source,NULL engine
         FROM runs r,json_each(r.sources_json) s WHERE ${ctx.where} AND ${complete} AND ${ctx.mentionExpression}
           AND NOT EXISTS(SELECT 1 FROM json_each(r.sources_json) own WHERE ${ctx.selectedDomain.replaceAll('cs.value', 'own.value')})
-        GROUP BY json_extract(s.value,'$.domain')
-      ) ORDER BY responses DESC,title LIMIT 51`)
-      .bind(ctx.brandBinding, ...ctx.bindings, ...ctx.bindings)
+        GROUP BY ${sourceKey('s', 'domain')} HAVING ${sourceKey('s', 'domain')}<>''
+      ) ORDER BY responses DESC,title,type,id,engine LIMIT 51 OFFSET ?`)
+      .bind(ctx.brandBinding, ...ctx.bindings, ...ctx.bindings, (page - 1) * 50)
       .all<Record<string, unknown>>()
   ).results;
   return {

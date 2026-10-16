@@ -90,6 +90,10 @@ try {
   await rpc({ scope, action: 'status' }, 409);
   await rpc({ scope, action: 'initialize' });
   await rpc({ scope, action: 'initialize' });
+  await rpc({ scope, action: 'apply', changes: [{ entity: 'prompts', id: 'prompt-a', revision: 1, data: { id: 'prompt-a', project_id: scope.projectId, text: 'Legacy question', engine: 'chat_gpt' } }] });
+  assert.equal((await query('SELECT subscribed FROM prompts WHERE id=\'prompt-a\''))[0].subscribed, 1);
+  await rpc({ scope, action: 'apply', changes: [{ entity: 'prompts', id: 'prompt-a', revision: 2, data: { id: 'prompt-a', project_id: scope.projectId, unit_id: 'prompt-a', engines_override_json: '["chat_gpt","gemini"]', subscribed: 1 } }] });
+  assert.equal((await query('SELECT unit_id FROM prompts WHERE id=\'prompt-a\''))[0].unit_id, 'prompt-a');
   assert.equal(
     (await rpc({ scope, action: 'apply', changes: [change(10)] })).applied,
     1,

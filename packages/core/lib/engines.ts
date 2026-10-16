@@ -46,7 +46,7 @@ export const ENGINE_META: Record<
     maxLength: 500,
   },
   google_ai_mode: {
-    icon: 'google-color',
+    icon: 'ai-mode',
     family: 'serp',
     batch: true,
     maxLength: 700,

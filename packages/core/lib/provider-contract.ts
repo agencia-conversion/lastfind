@@ -1,4 +1,7 @@
 import { ENGINE_META, type Engine } from './engines.ts';
+// Accepted Standard tasks may use 4xxxx codes while still waiting for results.
+export const providerTaskPending = (code: number) => [20100, 40601, 40602].includes(code);
+
 export function providerBase(engine: Engine) {
   if (engine === 'google_ai_mode') return 'serp/google/ai_mode';
   if (engine === 'google_ai_overviews') return 'serp/google/organic';

@@ -1,4 +1,5 @@
 'use client';
+import { useCollectionPage } from './shared';
 
 import { useMemo, useState } from 'react';
 import {
@@ -36,6 +37,7 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   demoModels,
   demoSources,
@@ -122,12 +124,15 @@ export function SemanticEvidenceView({
       ? defaultSemanticConfiguration(locale)
       : { enabled: false, attributes: [] });
   const [notice, setNotice] = useState('');
-  const [limit, setLimit] = useState(12);
   const prompts = project.prompts.filter((prompt) =>
     promptMatchesFilters(prompt, filters),
   );
   const answers = [...report.responses].sort((a, b) =>
     b.date.localeCompare(a.date),
+  );
+  const answerPage = useCollectionPage(
+    answers,
+    `${project.id}|${JSON.stringify(filters)}`,
   );
   const sourceIds = new Set(answers.flatMap((answer) => answer.sourceIds));
   const range = getDateRange(filters);
@@ -374,7 +379,7 @@ export function SemanticEvidenceView({
           />
         ) : (
           <div className="semantic-evidence-answers">
-            {answers.slice(0, limit).map((answer) => (
+            {answerPage.rows.map((answer) => (
               <article key={answer.id}>
                 <div className="semantic-evidence-answer-meta">
                   <ModelMark model={answer.model} />
@@ -433,16 +438,7 @@ export function SemanticEvidenceView({
             ))}
           </div>
         )}
-        {answers.length > limit && (
-          <div className="p-5">
-            <Button
-              variant="outline"
-              onClick={() => setLimit((value) => value + 12)}
-            >
-              {l('Load more answers', 'Carregar mais respostas')}
-            </Button>
-          </div>
-        )}
+        {answerPage.controls}
       </section>
     </div>
   );
@@ -659,6 +655,11 @@ function SemanticBrandingContent({
   const filteredOpportunities = opportunities.filter((item) =>
     text(item.label).toLowerCase().includes(search.trim().toLowerCase()),
   );
+  const opportunityPage = useCollectionPage(
+    filteredOpportunities,
+    `${project.id}|${search}|${JSON.stringify(filters)}`,
+  );
+  const historyPage = useCollectionPage(history, project.id);
   const selectedExisting = project.prompts.filter(
     (prompt) =>
       prompt.status === 'active' && selectedPrompts.includes(prompt.id),
@@ -933,34 +934,33 @@ function SemanticBrandingContent({
                 'A mesma seleção, separada por modelo. Modelos não selecionados ficam sem amostra.',
               )}
             />
-            <div className="semantic-table-scroll">
-              <table className="semantic-table">
-                <thead>
-                  <tr>
-                    <th>{l('Engine', 'Modelo')}</th>
-                    <th>{l('Coverage', 'Cobertura')}</th>
-                    <th>{l('Leader', 'Líder')}</th>
-                    <th>{l('Gap', 'Lacuna')}</th>
-                    <th>{l('Sentiment', 'Sentimento')}</th>
-                    <th>{l('Position', 'Posição')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table className="semantic-table" containerClassName="semantic-table-scroll">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{l('Engine', 'Modelo')}</TableHead>
+                    <TableHead>{l('Coverage', 'Cobertura')}</TableHead>
+                    <TableHead>{l('Leader', 'Líder')}</TableHead>
+                    <TableHead>{l('Gap', 'Lacuna')}</TableHead>
+                    <TableHead>{l('Sentiment', 'Sentimento')}</TableHead>
+                    <TableHead>{l('Position', 'Posição')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {summary.engines.map((engine) => (
-                    <tr key={engine.model}>
-                      <td>
+                    <TableRow key={engine.model}>
+                      <TableCell>
                         <ModelMark model={engine.model} />
                         <small>
                           {number(engine.total)} {l('responses', 'respostas')}
                         </small>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         <b>{engine.total ? percent(engine.coverage) : '—'}</b>
                         <small>
                           {number(engine.mentions)} / {number(engine.total)}
                         </small>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {engine.total && engine.leader ? (
                           <>
                             <span className="semantic-site">
@@ -975,11 +975,11 @@ function SemanticBrandingContent({
                         ) : (
                           '—'
                         )}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {engine.total ? `${number(engine.gap, 1)} pp` : '—'}
-                      </td>
-                      <td
+                      </TableCell>
+                      <TableCell
                         aria-label={l(
                           `Positive: ${number(engine.positive)}; neutral: ${number(engine.neutral)}; alert: ${number(engine.alert)}`,
                           `Positivo: ${number(engine.positive)}; neutro: ${number(engine.neutral)}; alerta: ${number(engine.alert)}`,
@@ -1002,15 +1002,14 @@ function SemanticBrandingContent({
                             {number(engine.alert)}
                           </span>
                         </div>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {engine.mentions ? number(engine.position, 1) : '—'}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
             <div className="semantic-panel-foot">
               {l(
                 'Sentiment counts: positive ≥ 85, neutral 75–84, alert < 75. These are the thresholds of the Lastfind classification method.',
@@ -1060,21 +1059,20 @@ function SemanticBrandingContent({
                 'Coocorrência relaciona uma fonte citada e a marca na resposta; não prova que a página menciona a marca.',
               )}
             />
-            <div className="semantic-table-scroll">
-              <table className="semantic-table">
-                <thead>
-                  <tr>
-                    <th>{l('Source', 'Fonte')}</th>
-                    <th>{l('Type / format', 'Tipo / formato')}</th>
-                    <th>{l('Confidence', 'Confiança')}</th>
-                    <th>{l('Cited / consulted', 'Citada / consultada')}</th>
-                    <th>{l('With your brand', 'Com sua marca')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Table className="semantic-table" containerClassName="semantic-table-scroll">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{l('Source', 'Fonte')}</TableHead>
+                    <TableHead>{l('Type / format', 'Tipo / formato')}</TableHead>
+                    <TableHead>{l('Confidence', 'Confiança')}</TableHead>
+                    <TableHead>{l('Cited / consulted', 'Citada / consultada')}</TableHead>
+                    <TableHead>{l('With your brand', 'Com sua marca')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {summary.sources.map((source) => (
-                    <tr key={source.id}>
-                      <td>
+                    <TableRow key={source.id}>
+                      <TableCell>
                         <button
                           className="semantic-site"
                           onClick={() => onOpenSource(source.domain)}
@@ -1083,34 +1081,33 @@ function SemanticBrandingContent({
                           {source.domain}
                           <ArrowUpRight size={12} />
                         </button>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {classification(source.type)}
                         <small>{classification(source.format)}</small>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline">
                           {percent(source.confidence, 0)}
                         </Badge>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {number(source.citations)} /{' '}
                         {summary.consultedAvailable
                           ? number(source.consulted)
                           : '—'}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {source.citations ? percent(source.association) : '—'}
                         <small>
                           {number(source.associated)}{' '}
                           {l('co-occurrences', 'coocorrências')}
                         </small>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
           </section>
           <section className="analytics-panel semantic-spaced">
             <Panel
@@ -1123,22 +1120,21 @@ function SemanticBrandingContent({
                 'Ocorrências de citações na amostra selecionada. Confiança de classificação ilustrativa.',
               )}
             />
-            <div className="semantic-table-scroll">
-              <table className="semantic-table">
-                <thead>
-                  <tr>
-                    <th>{l('Format', 'Formato')}</th>
+            <Table className="semantic-table" containerClassName="semantic-table-scroll">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{l('Format', 'Formato')}</TableHead>
                     {demoModels.map((model) => (
-                      <th key={model}>
+                      <TableHead key={model}>
                         <ModelMark model={model} />
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {summary.sources.map((source) => (
-                    <tr key={source.id}>
-                      <td>{classification(source.format)}</td>
+                    <TableRow key={source.id}>
+                      <TableCell>{classification(source.format)}</TableCell>
                       {demoModels.map((model) => {
                         const total = summary.sources.reduce(
                           (sum, row) => sum + Number(row.engines[model] ?? 0),
@@ -1148,7 +1144,7 @@ function SemanticBrandingContent({
                           ? (Number(source.engines[model]) / total) * 100
                           : 0;
                         return (
-                          <td key={model}>
+                          <TableCell key={model}>
                             <span
                               className="semantic-format-value"
                               style={{
@@ -1159,14 +1155,13 @@ function SemanticBrandingContent({
                             >
                               {total ? percent(value, 0) : '—'}
                             </span>
-                          </td>
+                          </TableCell>
                         );
                       })}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
           </section>
         </TabsContent>
 
@@ -1246,22 +1241,21 @@ function SemanticBrandingContent({
                 {l('Undo', 'Desfazer')}
               </Button>
             </div>
-            <div className="semantic-table-scroll">
-              <table className="semantic-table">
-                <thead>
-                  <tr>
-                    <th>{l('Canonical brand', 'Marca canônica')}</th>
-                    <th>{l('Names and domains', 'Nomes e domínios')}</th>
-                    <th>{l('Raw identities', 'Identidades originais')}</th>
-                    <th>
+            <Table className="semantic-table" containerClassName="semantic-table-scroll">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{l('Canonical brand', 'Marca canônica')}</TableHead>
+                    <TableHead>{l('Names and domains', 'Nomes e domínios')}</TableHead>
+                    <TableHead>{l('Raw identities', 'Identidades originais')}</TableHead>
+                    <TableHead>
                       <span className="sr-only">{l('Actions', 'Ações')}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {entities.map((entity) => (
-                    <tr key={entity.id}>
-                      <td>
+                    <TableRow key={entity.id}>
+                      <TableCell>
                         <span className="semantic-site">
                           <SiteFavicon
                             domain={entity.domain}
@@ -1269,8 +1263,8 @@ function SemanticBrandingContent({
                           />
                           <b>{entity.name}</b>
                         </span>
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         <div className="semantic-aliases">
                           {entity.members
                             .flatMap((member) => member.aliases)
@@ -1283,9 +1277,9 @@ function SemanticBrandingContent({
                               </Badge>
                             ))}
                         </div>
-                      </td>
-                      <td>{number(entity.members.length)}</td>
-                      <td>
+                      </TableCell>
+                      <TableCell>{number(entity.members.length)}</TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1299,12 +1293,11 @@ function SemanticBrandingContent({
                           <Split />
                           {l('Split', 'Separar')}
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
             <form
               className="semantic-add-brand"
               onSubmit={(event) => {
@@ -1418,7 +1411,7 @@ function SemanticBrandingContent({
                 placeholder={l('Search by attribute', 'Busque por atributo')}
               />
             </div>
-            {filteredOpportunities.map((item, index) => (
+            {opportunityPage.rows.map((item, index) => (
               <div className="semantic-opportunity" key={item.id}>
                 <span className="semantic-priority">
                   {number(index + 1).padStart(2, '0')}
@@ -1470,6 +1463,7 @@ function SemanticBrandingContent({
                 </Button>
               </div>
             ))}
+            {opportunityPage.controls}
             {!filteredOpportunities.length && (
               <EmptyState
                 title={l(
@@ -1536,7 +1530,7 @@ function SemanticBrandingContent({
                 )}
               />
             </div>
-            {history.map((snapshot) => (
+            {historyPage.rows.map((snapshot) => (
               <button
                 className="semantic-report-row"
                 key={snapshot.id}
@@ -1563,6 +1557,7 @@ function SemanticBrandingContent({
                 <ChevronRight size={15} />
               </button>
             ))}
+            {historyPage.controls}
           </section>
         </TabsContent>
       </Tabs>
@@ -2179,43 +2174,41 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
             `Domínio próprio citado em ${number(summary.linked)} de ${number(snapshot.responses)} respostas. Consultado em ${number(summary.consulted)} de ${number(summary.consultedAvailable)} respostas que informam evidência de consulta.`,
           )}
         </p>
-        <div className="semantic-table-scroll">
-          <table className="semantic-table">
-            <thead>
-              <tr>
-                <th>{l('Brand', 'Marca')}</th>
-                <th>{l('Visibility', 'Visibilidade')}</th>
-                <th>Share of voice</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table className="semantic-table" containerClassName="semantic-table-scroll">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{l('Brand', 'Marca')}</TableHead>
+                <TableHead>{l('Visibility', 'Visibilidade')}</TableHead>
+                <TableHead>Share of voice</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {competitors.map((row) => (
-                <tr key={row.entity.id}>
-                  <td>
+                <TableRow key={row.entity.id}>
+                  <TableCell>
                     {row.entity.name}
                     <small>
                       {row.entity.members
                         .map((member) => member.name)
                         .join(' + ')}
                     </small>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {snapshot.responses ? percent(row.summary.coverage) : '—'}
                     <small>
                       {number(row.summary.mentions.length)} /{' '}
                       {number(snapshot.responses)}
                     </small>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {row.summary.canonicalMentions
                       ? percent(row.summary.shareOfVoice)
                       : '—'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
       </section>
       <section>
         <h3>{l('Associations and priorities', 'Associações e prioridades')}</h3>
@@ -2225,19 +2218,18 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
             'Associação divide respostas anotadas com a marca pelas respostas elegíveis ao atributo. A lacuna é a diferença para a marca canônica líder, em pontos percentuais.',
           )}
         </p>
-        <div className="semantic-table-scroll">
-          <table className="semantic-table">
-            <thead>
-              <tr>
-                <th>{l('Attribute', 'Atributo')}</th>
-                <th>{l('Association', 'Associação')}</th>
-                <th>{l('Leader / gap', 'Líder / lacuna')}</th>
-              </tr>
-            </thead>
-            <tbody>
+        <Table className="semantic-table" containerClassName="semantic-table-scroll">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{l('Attribute', 'Atributo')}</TableHead>
+                <TableHead>{l('Association', 'Associação')}</TableHead>
+                <TableHead>{l('Leader / gap', 'Líder / lacuna')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {summary.associations.map((attribute) => (
-                <tr key={attribute.id}>
-                  <td>
+                <TableRow key={attribute.id}>
+                  <TableCell>
                     {l(attribute.label.en, attribute.label.pt)}
                     <small>
                       {l('Illustrative confidence', 'Confiança ilustrativa')}:{' '}
@@ -2245,27 +2237,26 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
                         ? percent(attribute.confidence, 0)
                         : '—'}
                     </small>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {attribute.eligible ? percent(attribute.value) : '—'}
                     <small>
                       {number(attribute.evidence.length)} /{' '}
                       {number(attribute.eligible)}
                     </small>
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {attribute.eligible ? attribute.leader?.entity.name : '—'}
                     <small>
                       {attribute.eligible
                         ? `${number(attribute.gap, 1)} pp`
                         : '—'}
                     </small>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
         {summary.associations
           .filter((item) => item.eligible > 0 && item.gap > 0)
           .sort((a, b) => b.gap - a.gap)
@@ -2282,48 +2273,46 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
       </section>
       <section>
         <h3>{l('Coverage by engine', 'Cobertura por modelo')}</h3>
-        <div className="semantic-table-scroll">
-          <table className="semantic-table">
-            <thead>
-              <tr>
-                <th>{l('Engine', 'Modelo')}</th>
-                <th>{l('Coverage', 'Cobertura')}</th>
-                <th>{l('Position', 'Posição')}</th>
-                <th>
+        <Table className="semantic-table" containerClassName="semantic-table-scroll">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{l('Engine', 'Modelo')}</TableHead>
+                <TableHead>{l('Coverage', 'Cobertura')}</TableHead>
+                <TableHead>{l('Position', 'Posição')}</TableHead>
+                <TableHead>
                   {l(
                     'Positive / neutral / alert',
                     'Positivo / neutro / alerta',
                   )}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {summary.engines
                 .filter((engine) => snapshot.models.includes(engine.model))
                 .map((engine) => (
-                  <tr key={engine.model}>
-                    <td>
+                  <TableRow key={engine.model}>
+                    <TableCell>
                       {engine.model}
                       <small>{engine.total ? engine.leader?.name : '—'}</small>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {engine.total ? percent(engine.coverage) : '—'}
                       <small>
                         {number(engine.mentions)} / {number(engine.total)}
                       </small>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {engine.mentions ? number(engine.position, 1) : '—'}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {number(engine.positive)} / {number(engine.neutral)} /{' '}
                       {number(engine.alert)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
         <p>
           {l(
             'Position averages the order of canonical brand appearance only in answers mentioning the brand. Sentiment counts those same answers: positive ≥ 85, neutral 75–84, alert < 75 in the synthetic score.',
@@ -2340,19 +2329,18 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
           )}
         </p>
         {summary.sources.length ? (
-          <div className="semantic-table-scroll">
-            <table className="semantic-table">
-              <thead>
-                <tr>
-                  <th>{l('Source', 'Fonte')}</th>
-                  <th>{l('Cited / consulted', 'Citada / consultada')}</th>
-                  <th>{l('With brand', 'Com a marca')}</th>
-                </tr>
-              </thead>
-              <tbody>
+          <Table className="semantic-table" containerClassName="semantic-table-scroll">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{l('Source', 'Fonte')}</TableHead>
+                  <TableHead>{l('Cited / consulted', 'Citada / consultada')}</TableHead>
+                  <TableHead>{l('With brand', 'Com a marca')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {summary.sources.map((source) => (
-                  <tr key={source.id}>
-                    <td>
+                  <TableRow key={source.id}>
+                    <TableCell>
                       <a href={source.url} target="_blank" rel="noreferrer">
                         {source.domain}
                       </a>
@@ -2361,24 +2349,23 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
                         {sourceLabel(source.format)} ·{' '}
                         {percent(source.confidence, 0)}
                       </small>
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {number(source.citations)} /{' '}
                       {summary.consultedAvailable
                         ? number(source.consulted)
                         : '—'}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {source.citations ? percent(source.association) : '—'}
                       <small>
                         {number(source.associated)} / {number(source.citations)}
                       </small>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
         ) : (
           <p>
             {l(
@@ -2398,21 +2385,20 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
             'Participação nas ocorrências de citações de cada modelo. Uma resposta pode conter várias citações; o denominador é citações, não respostas.',
           )}
         </p>
-        <div className="semantic-table-scroll">
-          <table className="semantic-table">
-            <thead>
-              <tr>
-                <th>{l('Format', 'Formato')}</th>
+        <Table className="semantic-table" containerClassName="semantic-table-scroll">
+            <TableHeader>
+              <TableRow>
+                <TableHead>{l('Format', 'Formato')}</TableHead>
                 {snapshot.models.map((model) => (
-                  <th key={model}>{model}</th>
+                  <TableHead key={model}>{model}</TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {[...new Set(summary.sources.map((source) => source.format))].map(
                 (format) => (
-                  <tr key={format}>
-                    <td>{sourceLabel(format)}</td>
+                  <TableRow key={format}>
+                    <TableCell>{sourceLabel(format)}</TableCell>
                     {snapshot.models.map((model) => {
                       const count = summary.sources
                         .filter((source) => source.format === format)
@@ -2427,20 +2413,19 @@ export function SemanticReportDocument({ snapshot }: { snapshot: Snapshot }) {
                         0,
                       );
                       return (
-                        <td key={model}>
+                        <TableCell key={model}>
                           {total ? percent((count / total) * 100, 0) : '—'}
                           <small>
                             {number(count)} / {number(total)}
                           </small>
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 ),
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
       </section>
       <section>
         <h3>{l('Score method and limits', 'Método do score e limites')}</h3>

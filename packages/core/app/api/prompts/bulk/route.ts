@@ -1,3 +1,7 @@
+import { db } from '@/lib/server/env';
+import { capacityGuards } from '@/lib/server/capabilities';
+import { syncTopics } from '@/lib/server/topics';
+import { startMonitoring } from '@/lib/server/monitor';
 import { requireUser } from '@/lib/server/auth';
 import {
   body,
@@ -7,89 +11,53 @@ import {
   ApiError,
   textField,
 } from '@/lib/server/http';
-import { ownedProject } from '@/lib/server/workspace';
-import { nextRunTime, nextWeeklyRunTime } from '@/lib/scheduling';
-import { db, now } from '@/lib/server/env';
-import { promptInput } from '@/lib/server/prompts';
-import { startMonitoring } from '@/lib/server/monitor';
-import { accountCapabilities, capacityGuards } from '@/lib/server/capabilities';
-import { syncTopics } from '@/lib/server/topics';
+import { ownedPrompt, promptUpdateStatements } from '@/lib/server/prompts';
 export async function PATCH(request: Request) {
   try {
     sameOrigin(request);
-    const u = await requireUser(),
-      data = await body(request),
-      projectId = textField(data.project_id, 'Projeto', 1, 100);
-    const project = await ownedProject(projectId, u.id);
-    const free = (await accountCapabilities(u.id)).promptLimit === 10;
+    const user = await requireUser(),
+      data = await body(request);
+    const project = textField(data.project_id, 'Project', 1, 100);
     if (
       !Array.isArray(data.ids) ||
       !data.ids.length ||
       data.ids.length > 100 ||
       data.ids.some((id) => typeof id !== 'string')
     )
-      throw new ApiError(400, 'Selecione até 100 prompts.');
-    const ids = [...new Set(data.ids)] as string[],
-      action = String(data.action);
-    if (!['pause', 'resume', 'archive', 'restore', 'organize'].includes(action))
-      throw new ApiError(400, 'Ação inválida.');
-
-    const rows = (
-      await db()
-        .prepare(
-          'SELECT id FROM prompts WHERE project_id=? AND id IN (SELECT value FROM json_each(?))',
-        )
-        .bind(projectId, JSON.stringify(ids))
-        .all()
-    ).results;
-    if (rows.length !== ids.length)
-      throw new ApiError(404, 'Prompt não encontrado neste projeto.');
-    const org =
-      action === 'organize'
-        ? promptInput(
-            {
-              text: 'Organization only',
-              engine: 'chat_gpt',
-              tag: data.tag,
-              tags: data.tags,
-            },
-            String(project.language_code),
-          )
-        : null;
-    const selected = 'project_id=? AND id IN (SELECT value FROM json_each(?))';
-    const selection = [projectId, JSON.stringify(ids)];
-    const change = org
-      ? db()
-          .prepare(`UPDATE prompts SET tag=?,tags_json=? WHERE ${selected}`)
-          .bind(org.tag, JSON.stringify(org.tags), ...selection)
-      : action === 'archive'
-        ? db()
-            .prepare(
-              `UPDATE prompts SET archived=1,active=0 WHERE ${selected} AND archived=0`,
-            )
-            .bind(...selection)
-        : action === 'pause'
-          ? db()
-              .prepare(
-                `UPDATE prompts SET active=0 WHERE ${selected} AND active=1`,
-              )
-              .bind(...selection)
-          : db()
-              .prepare(`UPDATE prompts SET active=1,archived=0,next_run_at=CASE WHEN active=0 OR archived=1 THEN ? ELSE next_run_at END
-        WHERE ${selected} AND NOT EXISTS(SELECT 1 FROM prompts other WHERE other.project_id=prompts.project_id AND other.id<>prompts.id AND other.archived=0 AND other.text=prompts.text COLLATE NOCASE AND other.engine=prompts.engine)
-        AND (engine<>'gemini' OR ?='en')`)
-              .bind(free ? nextWeeklyRunTime(now()) : nextRunTime(now()), ...selection, project.language_code);
-    const results = await db().batch([
-      change,
-      syncTopics(projectId, u.id),
-      ...(['restore', 'resume', 'organize'].includes(action)
-        ? capacityGuards(u.id)
-        : []),
+      throw new ApiError(400, 'Select up to 100 questions.');
+    const ids = [...new Set(data.ids)] as string[];
+    const changes: Record<string, Record<string, unknown>> = {
+      pause: { active: false },
+      resume: { active: true, archived: false },
+      archive: { archived: true },
+      restore: { archived: false, active: true },
+      organize: {
+        ...('tag' in data ? { tag: data.tag } : {}),
+        ...('tags' in data ? { tags: data.tags } : {}),
+      },
+    };
+    const change = changes[String(data.action)];
+    if (!change) throw new ApiError(400, 'Invalid action.');
+    for (const id of ids)
+      if ((await ownedPrompt(id, user.id)).project_id !== project)
+        throw new ApiError(404, 'Question not found in this project.');
+    const statements: D1PreparedStatement[] = [];
+    const capacityChecks = { engines: false, prompts: false, topics: false };
+    for (const id of ids) {
+      const prepared = await promptUpdateStatements(id, user.id, change);
+      statements.push(...prepared.statements);
+      for (const key of ['engines', 'prompts', 'topics'] as const)
+        capacityChecks[key] ||= prepared.capacityChecks[key];
+    }
+    await db().batch([
+      ...statements,
+      syncTopics(project, user.id),
+      ...capacityGuards(user.id, capacityChecks),
     ]);
-    const updated = results[0].meta.changes;
-    await startMonitoring(u.id, projectId);
+    await startMonitoring(user.id, project);
+    const updated = ids.length;
     return json({ updated, skipped: ids.length - updated });
-  } catch (e) {
-    return fail(e);
+  } catch (error) {
+    return fail(error);
   }
 }

@@ -1,3 +1,5 @@
+export const responseCacheExpiry = new WeakMap<object, number>();
+
 function clientMessage(en: string, pt: string) {
   const portuguese =
     typeof document !== 'undefined' &&
@@ -51,6 +53,14 @@ export async function requestJson<T = Record<string, unknown>>(
             'Não foi possível concluir. Tente novamente.',
           ),
     );
+  const expires = Number(r.headers.get('X-Lastfind-Cache-Expires'));
+  if (
+    result &&
+    typeof result === 'object' &&
+    Number.isFinite(expires) &&
+    expires > 0
+  )
+    responseCacheExpiry.set(result, expires);
   return result;
 }
 

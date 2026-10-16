@@ -3,6 +3,10 @@ import type { Capabilities } from '@/lib/types';
 import { positiveLimit } from '@/lib/scheduling';
 import { setting } from '@/lib/server/env';
 export const providerSettings = true;
+// A personal installation collects a new prompt right away instead of waiting for the next 04:00 window.
+export const collectNewPromptsImmediately = true;
+// One owner owns every project and the installer cannot know project ids, so `BRAND_RESEARCH_PROJECTS=*` is honored.
+export const researchAllProjects = true;
 export const semanticEvaluationAvailable = false;
 export async function processSemanticJobs() { return 0; }
 export function semanticBudgetCondition(_month: string, _reservedUsd: number) { return { sql: '1=1', params: [] as (string | number)[] }; }
@@ -14,3 +18,7 @@ export function monthlyRunLimit() { return positiveLimit(setting('SELF_HOST_MONT
 export function budgetCondition(_owner: string, _month: string, _credits: number) { return {sql: '1=1', params: [] as (string | number)[]}; }
 export async function usageWindow(_owner: string) { return {periodStart: new Date().toISOString().slice(0,7)+'-01T00:00:00.000Z', creditsLimit: null, limit: monthlyRunLimit()}; }
 export function policyError(_message: string): string | null { return null; }
+
+export function promptEngineGuards(_owner: string, _unitId: string, _engines: string[], _restoring: boolean): D1PreparedStatement[] { return []; }
+
+export async function processProjectOperations() { return 0; }

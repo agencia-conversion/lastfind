@@ -1,5 +1,15 @@
 import type { BrandTarget, Citation, Run } from './types.ts';
 
+/** A bounded substring must never split a UTF-16 surrogate pair. */
+export function sliceUnicode(text: string, start: number, end = text.length) {
+  let from = Math.max(0, start), to = Math.min(text.length, end);
+  const high = (code: number) => code >= 0xd800 && code <= 0xdbff;
+  const low = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+  if (low(text.charCodeAt(from)) && high(text.charCodeAt(from - 1))) from++;
+  if (low(text.charCodeAt(to)) && high(text.charCodeAt(to - 1))) to--;
+  return text.slice(from, Math.max(from, to));
+}
+
 function escapeExpression(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -8,20 +18,20 @@ function escapeExpression(value: string) {
  * Finds a selected brand's textual rank in an answer snapshot. URLs and
  * source-list lines never count as mentions; absent names stay unavailable.
  */
-export function firstMentionPosition(
-  answer: string | null | undefined,
-  selectedNames: string[],
-  targets: BrandTarget[],
-): number | null {
-  const prose = (answer || '')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(
-      /^\s*(?:#{1,6}\s*)?(sources?|fontes?|references?|referências?)\s*:?[\s\S]*$/gimu,
-      ' ',
-    )
-    .replace(/^\s*[-*+]\s+.*https?:.*$/gimu, ' ')
+export function brandProse(answer: string | null | undefined) {
+  let references = false;
+  return (answer || '').replace(/```[\s\S]*?```/g, ' ').split('\n').filter((line) => {
+    if (/^\s*(?:#{1,6}\s*)?(?:sources?|fontes?|references?|referências?)\s*:?\s*$/iu.test(line)) { references = true; return false; }
+    if (references && /^\s*#{1,6}\s+\S/u.test(line)) references = false;
+    return !references;
+  }).join('\n')
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+\[[^\]]+\]\(https?:[^\n]*\)\s*$/gimu, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/(?:https?:\/\/|www\.)[^\s)\]}>,]+/giu, ' ');
-  const normalizedProse = normalizeText(prose);
+}
+
+function mentionOffsetReader(answer: string | null | undefined) {
+  const normalizedProse = normalizeText(brandProse(answer));
   const first = (names: string[]) => {
     const positions = [
       ...new Set(names.map((name) => normalizeText(name.trim())).filter(Boolean)),
@@ -36,6 +46,15 @@ export function firstMentionPosition(
       .filter((index) => index >= 0);
     return positions.length ? Math.min(...positions) : null;
   };
+  return first;
+}
+
+export function firstMentionPosition(
+  answer: string | null | undefined,
+  selectedNames: string[],
+  targets: BrandTarget[],
+): number | null {
+  const first = mentionOffsetReader(answer);
   const selected = first(selectedNames);
   if (selected == null) return null;
   const selectedKeys = new Set(
@@ -48,6 +67,17 @@ export function firstMentionPosition(
     return position != null && position < selected;
   });
   return earlier.length + 1;
+}
+/** All snapshot target ranks in one prose normalization/search pass. Same definition as firstMentionPosition. */
+export function mentionPositions(answer: string | null | undefined, targets: BrandTarget[]): (number | null)[] {
+  const first = mentionOffsetReader(answer);
+  const offsets = targets.map((target) => first([target.name, ...(target.aliases || [])]));
+  return targets.map((target, index) => {
+    const offset = offsets[index];
+    if (offset == null) return null;
+    const selectedKeys = new Set([target.name, ...(target.aliases || [])].map(normalizeText));
+    return offsets.filter((other, otherIndex) => other != null && other < offset && !selectedKeys.has(normalizeText(targets[otherIndex].name))).length + 1;
+  });
 }
 export function normalizeText(text: string) {
   return text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
@@ -83,14 +113,7 @@ export function safeUrl(value: unknown): string | null {
   }
 }
 export function matchesBrand(answer: string, target: BrandTarget) {
-  const clean = normalizeText(answer.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1'));
-  return [target.name, ...(target.aliases || [])].some((candidate) => {
-    const name = normalizeText(candidate).replace(
-      /[.*+?^${}()|[\]\\]/g,
-      '\\$&',
-    );
-    return !!name && new RegExp(`(^|[^\\p{L}\\p{N}])${name}($|[^\\p{L}\\p{N}])`, 'u').test(clean);
-  });
+  return mentionOffsetReader(answer)([target.name, ...(target.aliases || [])]) != null;
 }
 export function extractResponse(
   result: Record<string, unknown>,

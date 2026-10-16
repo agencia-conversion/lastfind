@@ -14,6 +14,7 @@ import {
 } from './capabilities';
 import {
   providerPayload,
+  providerTaskPending,
   providerResultPath,
   providerResultCost,
 } from '@/lib/provider-contract';
@@ -32,7 +33,9 @@ import { ownedProject } from './workspace';
 import { flushProjectStores, registerProjectStore } from './project-store';
 import { requireMonitoringStorage } from './monitoring-storage';
 import { buildTargetSnapshot } from '@/lib/target-snapshot.mjs';
-import { processSemanticJobs } from './capabilities';
+import { processBrandResearchJobs } from './brand-research';
+import { processSourceTypeJobs } from './source-types';
+import { processSemanticJobs, processProjectOperations } from './capabilities';
 type RunRow = {
   id: string;
   owner_id: string;
@@ -80,7 +83,7 @@ export async function reserveRuns(
   const prompts = (
     await database
       .prepare(
-        `SELECT * FROM prompts WHERE project_id=? AND archived=0 AND active=1${promptId ? ' AND id=?' : ''}${dueOnly ? ' AND next_run_at<=?' : ''} AND engine IN (${capabilities.engines.map(() => '?').join(',')})${allowed ? ' AND id IN (SELECT value FROM json_each(?))' : ''} ORDER BY next_run_at,id LIMIT 20`,
+        `SELECT * FROM prompts WHERE project_id=? AND archived=0 AND subscribed=1 AND active=1${promptId ? ' AND COALESCE(unit_id,id)=(SELECT COALESCE(unit_id,id) FROM prompts WHERE id=?)' : ''}${dueOnly ? ' AND next_run_at<=?' : ''} AND engine IN (${capabilities.engines.map(() => '?').join(',')})${allowed ? ' AND id IN (SELECT value FROM json_each(?))' : ''} ORDER BY next_run_at,id LIMIT 20`,
       )
       .bind(
         projectId,
@@ -227,7 +230,7 @@ export async function submitQueued(
     .run();
   await database
     .prepare(
-      `UPDATE runs SET status='failed',error='Project or prompt was archived before submission.',completed_at=? WHERE status='queued'${scope.sql} AND (EXISTS(SELECT 1 FROM projects WHERE projects.id=runs.project_id AND (${runIds ? 'projects.archived=1' : 'projects.archived=1 OR projects.daily_enabled=0'})) OR EXISTS(SELECT 1 FROM prompts WHERE prompts.id=runs.prompt_id AND (${runIds ? 'prompts.archived=1' : 'prompts.archived=1 OR prompts.active=0'})))`,
+      `UPDATE runs SET status='failed',error='Project or prompt was archived before submission.',completed_at=? WHERE status='queued'${scope.sql} AND (EXISTS(SELECT 1 FROM projects WHERE projects.id=runs.project_id AND (${runIds ? 'projects.archived=1' : 'projects.archived=1 OR projects.daily_enabled=0'})) OR EXISTS(SELECT 1 FROM prompts WHERE prompts.id=runs.prompt_id AND (${runIds ? 'prompts.archived=1' : 'prompts.archived=1 OR prompts.active=0 OR prompts.subscribed=0'})))`,
     )
     .bind(now(), ...scope.params)
     .run();
@@ -266,15 +269,10 @@ export async function submitQueued(
       .slice(0, engine === 'perplexity' ? 3 : 100);
     if (!group.length) continue;
     const claim = crypto.randomUUID();
-    await database.batch(
-      group.map((r) =>
-        database
-          .prepare(
-            "UPDATE runs SET status='submitting',claimed_at=?,error=? WHERE id=? AND status='queued'",
-          )
-          .bind(now(), claim, r.id),
-      ),
-    );
+    await database.batch(group.map((r) => {
+      const budget = budgetCondition(r.owner_id, `${now().slice(0, 7)}-01T00:00:00.000Z`, 0);
+      return database.prepare(`UPDATE runs SET status='submitting',claimed_at=?,error=? WHERE id=? AND status='queued' AND (${budget.sql})`).bind(now(), claim, r.id, ...budget.params);
+    }));
     const rows = (
       await database
         .prepare(
@@ -505,7 +503,7 @@ export async function collectRun(row: RunRow, notified = false) {
     const task = tasks[0];
     if (!task || task.id !== row.provider_task_id)
       throw new Error('The provider returned a different task.');
-    if ([20100, 40601, 40602].includes(task.status_code)) return;
+    if (providerTaskPending(task.status_code)) return;
     if (task.status_code !== 20000) {
       await database
         .prepare(
@@ -599,9 +597,15 @@ export async function tick() {
 async function runTick() {
   await syncAccess();
   const database = db();
-  if (!setting('DATAFORSEO_LOGIN') || !setting('DATAFORSEO_PASSWORD'))
+  try {
+    await processProjectOperations();
+  } catch {
+    console.error('Project operation could not be processed.');
+  }
+  const monitoringConfigured = !!setting('DATAFORSEO_LOGIN') && !!setting('DATAFORSEO_PASSWORD');
+  if (!monitoringConfigured && setting('BRAND_RESEARCH_ENABLED') !== 'true')
     throw new ApiError(503, 'Monitoring provider is unavailable.');
-  const projects = (
+  const projects = monitoringConfigured ? (
     await database
       .prepare(
         `SELECT projects.id,projects.owner_id FROM
@@ -613,7 +617,7 @@ async function runTick() {
       )
       .bind(now())
       .all<{ id: string; owner_id: string }>()
-  ).results;
+  ).results : [];
   for (const p of projects) {
     await database
       .prepare(
@@ -623,15 +627,21 @@ async function runTick() {
       .run();
     await startMonitoring(p.owner_id, p.id);
   }
-  const submitted = await submitQueued(),
-    collected = await collectPending();
+  const submitted = monitoringConfigured ? await submitQueued() : 0,
+    collected = monitoringConfigured ? await collectPending() : 0;
   let semanticJobs: number | { retry: true };
   try {
-    semanticJobs = await processSemanticJobs();
+    semanticJobs = monitoringConfigured ? await processSemanticJobs() : 0;
   } catch {
     semanticJobs = { retry: true };
     console.error('Semantic evaluation will retry on the next tick.');
   }
+  let brandResearchJobs: number | { retry: true };
+  try { brandResearchJobs = await processBrandResearchJobs(); }
+  catch { brandResearchJobs = { retry: true }; console.error('Brand evaluation will retry on the next tick.'); }
+  let sourceTypeJobs: number | { retry: true };
+  try { sourceTypeJobs = await processSourceTypeJobs(); }
+  catch { sourceTypeJobs = { retry: true }; console.error('Source classification will retry on the next tick.'); }
   // Analytics publication is retryable and cannot undo a collected provider
   // response or cause another paid submission when a project store is down.
   let projectStorage: unknown;
@@ -648,5 +658,5 @@ async function runTick() {
     )
     .bind(stamp)
     .run();
-  return { ok: true, submitted, collected, semanticJobs, projectStorage, heartbeat: stamp };
+  return { ok: true, submitted, collected, semanticJobs, brandResearchJobs, sourceTypeJobs, projectStorage, heartbeat: stamp };
 }

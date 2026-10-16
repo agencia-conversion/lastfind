@@ -93,6 +93,7 @@ import {
 } from './workspace-data';
 
 import { AnalyticsSidebar, navigation } from './analytics-sidebar';
+import { PageHeading } from '@/components/lastfind/presentation/page-heading';
 
 export function AnalyticsApp({
   initialPath,
@@ -240,6 +241,25 @@ export function AnalyticsApp({
   const pageTitle = configuringAttributes
     ? l('Brand attributes', 'Atributos da marca')
     : l(current.en, current.pt);
+  const pageDescription = selectedPrompt
+    ? l('Explore performance for this specific prompt.', 'Explore o desempenho deste prompt.')
+    : configuringAttributes
+      ? l('Choose and refine the associations that define your brand positioning.', 'Escolha e refine as associações que definem o posicionamento da sua marca.')
+      : tab === 'semantic-branding'
+        ? l('Understand the associations, sources and evidence shaping your brand in AI.', 'Entenda as associações, fontes e evidências que formam sua marca na IA.')
+        : tab === 'overview'
+          ? l('Understand how AI sees your brand. Make your next move count.', 'Entenda como a IA vê sua marca. Dê o próximo passo com dados.')
+          : tab === 'prompts'
+            ? l('Track the questions that matter to your brand.', 'Acompanhe as perguntas que importam para sua marca.')
+            : tab === 'competitors'
+              ? l('See who stands out in AI answers, and where you stand.', 'Veja quem se destaca nas respostas de IA e onde sua marca está.')
+              : tab === 'sources'
+                ? l('Discover the sources behind your AI visibility.', 'Descubra as fontes por trás da sua visibilidade em IA.')
+                : tab === 'models'
+                  ? l('Your performance across the AI search landscape.', 'Seu desempenho nos principais modelos de busca com IA.')
+                  : tab === 'chats'
+                    ? l('Every answer tells a story. Explore yours.', 'Cada resposta conta uma história. Explore a sua.')
+                    : l('Make this workspace your own.', 'Deixe este workspace com a sua cara.');
   const own = report.brands.find((b) => b.id === 'conversion')!;
   const navigate = (next: string) => {
     route.navigate(next);
@@ -523,111 +543,28 @@ export function AnalyticsApp({
               </section>
             ) : (
               <>
-                <div className="page-heading">
-                  <div>
-                    {selectedPrompt && (
-                      <button
-                        className="back-to-prompts"
-                        onClick={() => navigate('prompts')}
-                      >
-                        <ArrowLeft size={13} />
-                        {l('All prompts', 'Todos os prompts')}
-                      </button>
-                    )}
-                    <div className="page-title-row">
-                      <h1>
-                        {selectedPrompt ? selectedPrompt.text : pageTitle}
-                      </h1>
-                    </div>
-                    <p>
-                      {selectedPrompt
-                        ? l(
-                            'Explore performance for this specific prompt.',
-                            'Explore o desempenho deste prompt.',
-                          )
-                        : configuringAttributes
-                          ? l(
-                              'Choose and refine the associations that define your brand positioning.',
-                              'Escolha e refine as associações que definem o posicionamento da sua marca.',
-                            )
-                          : tab === 'semantic-branding'
-                            ? l(
-                                'Understand the associations, sources and evidence shaping your brand in AI.',
-                                'Entenda as associações, fontes e evidências que formam sua marca na IA.',
-                              )
-                            : tab === 'overview'
-                              ? l(
-                                  'Understand how AI sees your brand. Make your next move count.',
-                                  'Entenda como a IA vê sua marca. Dê o próximo passo com dados.',
-                                )
-                              : tab === 'prompts'
-                                ? l(
-                                    'Track the questions that matter to your brand.',
-                                    'Acompanhe as perguntas que importam para sua marca.',
-                                  )
-                                : tab === 'competitors'
-                                  ? l(
-                                      'See who stands out in AI answers, and where you stand.',
-                                      'Veja quem se destaca nas respostas de IA e onde sua marca está.',
-                                    )
-                                  : tab === 'sources'
-                                    ? l(
-                                        'Discover the sources behind your AI visibility.',
-                                        'Descubra as fontes por trás da sua visibilidade em IA.',
-                                      )
-                                    : tab === 'models'
-                                      ? l(
-                                          'Your performance across the AI search landscape.',
-                                          'Seu desempenho nos principais modelos de busca com IA.',
-                                        )
-                                      : tab === 'chats'
-                                        ? l(
-                                            'Every answer tells a story. Explore yours.',
-                                            'Cada resposta conta uma história. Explore a sua.',
-                                          )
-                                        : l(
-                                            'Make this workspace your own.',
-                                            'Deixe este workspace com a sua cara.',
-                                          )}
-                    </p>
-                  </div>
-                  <div className="page-actions">
-                    {hasSampleData &&
-                      (selectedPrompt || tab === 'competitors') && (
-                        <Button variant="outline" onClick={exportReport}>
-                          <Download />
-                          {l('Export', 'Exportar')}
-                        </Button>
-                      )}
-                    {!selectedPrompt && tab === 'overview' && (
-                      <PrimaryMenuActions
-                        label={l(
-                          'More overview actions',
-                          'Mais ações da visão geral',
+                <>
+                  {selectedPrompt && <button className="back-to-prompts" onClick={() => navigate('prompts')}><ArrowLeft size={13} />{l('All prompts', 'Todos os prompts')}</button>}
+                  <PageHeading
+                    title={selectedPrompt ? selectedPrompt.text : pageTitle}
+                    description={pageDescription}
+                    actions={
+                      <>
+                        {hasSampleData && (selectedPrompt || tab === 'competitors') && (
+                          <Button variant="outline" onClick={exportReport}><Download />{l('Export', 'Exportar')}</Button>
                         )}
-                        action={
-                          <Button
-                            disabled={readOnly}
-                            onClick={() => {
-                              navigate('prompts');
-                              setAddOpen(true);
-                            }}
+                        {!selectedPrompt && tab === 'overview' && (
+                          <PrimaryMenuActions
+                            label={l('More overview actions', 'Mais ações da visão geral')}
+                            action={<Button disabled={readOnly} onClick={() => setAddOpen(true)}><Plus />{l('Add prompt', 'Adicionar prompt')}</Button>}
                           >
-                            <Plus />
-                            {l('Add prompt', 'Adicionar prompt')}
-                          </Button>
-                        }
-                      >
-                        {hasSampleData && (
-                          <DropdownMenuItem onClick={exportReport}>
-                            <Download />
-                            {l('Export', 'Exportar')}
-                          </DropdownMenuItem>
+                            {hasSampleData && <DropdownMenuItem onClick={exportReport}><Download />{l('Export', 'Exportar')}</DropdownMenuItem>}
+                          </PrimaryMenuActions>
                         )}
-                      </PrimaryMenuActions>
-                    )}
-                  </div>
-                </div>
+                      </>
+                    }
+                  />
+                </>
                 {!hasSampleData &&
                   tab !== 'settings' &&
                   tab !== 'prompts' &&
@@ -701,8 +638,11 @@ export function AnalyticsApp({
                     />
                   </>
                 )}
-                {tab === 'prompts' && (
+                <div
+                  style={tab === 'prompts' ? undefined : { display: 'none' }}
+                >
                   <PromptsView
+                    visible={tab === 'prompts'}
                     key={contextKey}
                     prompts={prompts}
                     reportFilters={filters}
@@ -712,7 +652,7 @@ export function AnalyticsApp({
                     setAddOpen={setAddOpen}
                     readOnly={readOnly}
                   />
-                )}
+                </div>
                 {hasSampleData && tab === 'competitors' && (
                   <section className="analytics-panel">
                     <div className="panel-heading">

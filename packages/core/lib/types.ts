@@ -2,7 +2,7 @@ import type { RawArchiveMetadata } from './raw-responses';
 import type { Engine } from './engines';
 export { ENGINE_LABELS } from './engines';
 export type { Engine } from './engines';
-export type Topic = { id: string; project_id: string; name: string };
+export type Topic = { id: string; project_id: string; name: string; engines_override?: Engine[] | null };
 export type BrandTarget = {
   name: string;
   domain: string;
@@ -20,6 +20,7 @@ export type Project = {
   competitors: BrandTarget[];
   location_code: number;
   language_code: string;
+  engines?: Engine[];
   daily_enabled: number;
   interval_hours: number;
   category: string;
@@ -28,6 +29,10 @@ export type Project = {
 };
 export type Prompt = {
   id: string;
+  unit_id?: string;
+  engines?: Engine[];
+  engines_override?: Engine[] | null;
+  subscription_ids?: string[];
   project_id: string;
   text: string;
   engine: Engine;
@@ -72,7 +77,7 @@ export type Run = {
   raw_response?: RawArchiveMetadata;
 };
 export type Workspace = {
-  user: { email: string; name: string };
+  user: { email: string; name: string; engines_override?: Engine[] | null };
   projects: Project[];
   prompts: Prompt[];
   topics: Topic[];

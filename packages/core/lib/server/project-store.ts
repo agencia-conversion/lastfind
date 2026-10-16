@@ -28,7 +28,7 @@ export type StoreRegistry = {
   updated_at: string;
 };
 export type StoreManifest = {
-  schema: 1 | 2 | 3;
+  schema: 1 | 2 | 3 | 4;
   projectId: string;
   ownerId: string;
   generation: string;
@@ -48,8 +48,8 @@ type Verification = {
   counts: Partial<Record<StoreEntity, number>>;
   done: boolean;
 };
-const storeEntities = (schema: 1 | 2 | 3): StoreEntity[] =>
-  schema === 3 ? ['prompts', 'runs', 'semantic_evaluations'] : ['prompts', 'runs'];
+const storeEntities = (schema: 1 | 2 | 3 | 4): StoreEntity[] =>
+  schema >= 3 ? ['prompts', 'runs', 'semantic_evaluations'] : ['prompts', 'runs'];
 const scopeOf = (r: StoreRegistry, generation = r.generation): StoreScope => ({
   ownerId: r.owner_id,
   projectId: r.project_id,
@@ -256,7 +256,7 @@ export async function exportProjectStore(projectId: string, ownerId: string) {
               JSON.stringify({
                 type: 'manifest',
                 manifest: {
-                  schema: 3,
+                  schema: 4,
                   projectId,
                   ownerId,
                   generation,
@@ -279,7 +279,7 @@ export async function exportProjectStore(projectId: string, ownerId: string) {
           cursor,
           limit: 100,
         });
-        digest = await extendStoreDigest(digest, entity, page.rows, 3);
+        digest = await extendStoreDigest(digest, entity, page.rows, 4);
         counts[entity] = (counts[entity] || 0) + page.rows.length;
         controller.enqueue(
           encoder.encode(
@@ -305,7 +305,7 @@ export async function exportProjectStore(projectId: string, ownerId: string) {
             )
               throw new Error('Project changed during export.');
             const manifest: StoreManifest = {
-              schema: 3,
+              schema: 4,
               projectId,
               ownerId,
               generation,
@@ -349,7 +349,7 @@ export async function beginProjectStoreRestore(
   const registry = await ensureProjectStore(projectId, ownerId);
   if (
     !manifest ||
-    ![1, 2, 3].includes(manifest.schema) ||
+    ![1, 2, 3, 4].includes(manifest.schema) ||
     manifest.projectId !== projectId ||
     manifest.ownerId !== ownerId ||
     (manifest.schema >= 2 &&
@@ -435,7 +435,7 @@ export async function restoreProjectStoreChunk(
             !r ||
             typeof r.id !== 'string' ||
             r.project_id !== projectId ||
-            (entity === 'runs' && r.owner_id !== ownerId),
+            (entity !== 'prompts' && r.owner_id !== ownerId),
         )
       )
         throw new ApiError(400, 'Invalid restore batch.');
@@ -587,6 +587,19 @@ export async function commitProjectStoreRestore(
             409,
             'Project targets changed during restore. Export a current snapshot and try again.',
           );
+        // Legacy digests exclude unit fields; restore them from canonical control metadata after verification.
+        if (expected.schema < 4) {
+          let promptCursor = '';
+          do {
+            const promptPage = await projectStoreRpc<{ rows: StoreRow[]; nextCursor: string | null }>({ scope: scopeOf(registry, generation), action: 'scan', entity: 'prompts', cursor: promptCursor, limit: 100 });
+            const ids = promptPage.rows.map((row) => row.id);
+            if (ids.length) {
+              const canonical = await db().prepare('SELECT id,project_id,unit_id,engines_override_json,subscribed FROM prompts WHERE project_id=? AND id IN (SELECT value FROM json_each(?))').bind(projectId, JSON.stringify(ids)).all<StoreRow>();
+              if (canonical.results.length) await projectStoreRpc({ scope: scopeOf(registry, generation), action: 'apply', changes: canonical.results.map((data) => ({ entity: 'prompts' as const, id: String(data.id), revision: registry.source_revision, data })) });
+            }
+            promptCursor = promptPage.nextCursor ?? '';
+          } while (promptCursor);
+        }
         if (
           expected.schema >= 2 &&
           expected.analysisRevision &&

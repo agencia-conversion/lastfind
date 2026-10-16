@@ -113,6 +113,22 @@ await test('presets end on the last complete demo day and malformed custom input
   );
 });
 
+await test('live date bounds include today and reject a 91-day custom window', () => {
+  const bounds = { firstDate: '2000-01-01', lastDate: '2026-10-13', maxDays: 90 };
+  assert.equal(isValidDateRange('2026-10-13', '2026-10-13', bounds), true);
+  assert.equal(isValidDateRange('2026-07-16', '2026-10-13', bounds), true);
+  assert.equal(isValidDateRange('2026-07-15', '2026-10-13', bounds), false);
+  assert.equal(isValidDateRange('2026-10-13', '2026-10-14', bounds), false);
+  assert.deepEqual(
+    [getDateRange({ days: '1' }, bounds).from, getDateRange({ days: '1' }, bounds).to],
+    ['2026-10-13', '2026-10-13'],
+  );
+  assert.deepEqual(
+    [getDateRange({ days: 'custom', from: '2026-09-01', to: '2026-09-30' }, bounds).days],
+    [30],
+  );
+});
+
 await test('custom report boundaries include the final day and compare the preceding equal-length interval', () => {
   const filters: DemoFilters = {
     ...defaultFilters,
@@ -278,4 +294,14 @@ await test('invalid or incomplete date URLs discard both bounds while keeping ot
     }).toString(),
     '',
   );
+});
+
+await test('nonpreset numeric periods respect live bounds and invalid numbers retain the safe fallback', () => {
+  const bounds = { firstDate: '2000-01-01', lastDate: '2026-10-14', maxDays: 90 };
+  const range = getDateRange({days:'60'}, bounds);
+  assert.deepEqual([range.days,range.from,range.to],[60,'2026-08-16','2026-10-14']);
+  assert.equal(range.end-range.start,60*DAY_MS);
+  assert.equal(getDateRange({days:'90'},bounds).days,90);
+  for (const days of ['0','-1','1.5','91','366','Infinity','NaN','']) assert.deepEqual(getDateRange({days},bounds),getDateRange({days:'28'},bounds));
+  assert.equal(getDateRange({days:'60'},{...bounds,maxDays:14}).days,14);
 });

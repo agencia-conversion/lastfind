@@ -15,6 +15,7 @@ import {
   semanticAssociationRows,
   type SemanticAssessment,
 } from '../components/analytics/semantic-association-data.ts';
+import { measuredAssociationReport } from '../components/analytics/semantic-measured-data.ts';
 import {
   createSemanticSnapshot,
   initialBrandEntities,
@@ -173,6 +174,9 @@ test('ranking uses a shared cohort and never compares disjoint model samples or 
   );
   assert.equal(disjoint.ranking.length, 0);
   assert.equal(disjoint.own?.score, null);
+  assert.equal(disjoint.own?.attributes[0].observedValue, 80);
+  assert.equal(disjoint.own?.attributes[0].observedDenominator, 1);
+  assert.equal(disjoint.strongest?.attribute.id, 'a');
 });
 
 test('changed attribute names or intent invalidate prior grades even with the same stable ID', () => {
@@ -552,4 +556,60 @@ test('corrupt, oversized and unsupported tab settings are ignored and storage fa
     configuration: config,
     language: 'en-US',
   });
+});
+
+test('measured display keeps observed zero and missing distinct without ranking disjoint cohorts', () => {
+  const report = measuredAssociationReport(config, {
+    ownBrand: 'Example',
+    brands: [
+      { name: 'Example', domain: 'example.test' },
+      { name: 'Rival', domain: 'rival.test' },
+    ],
+    cells: [
+      {
+        brand: 'Example',
+        attribute: 'a',
+        score: null,
+        samples: 0,
+        observedScore: 0,
+        observedSamples: 25,
+        observations: 25,
+        insufficient: 0,
+        ambiguous: 0,
+      },
+      {
+        brand: 'Example',
+        attribute: 'b',
+        score: null,
+        samples: 0,
+        observedScore: null,
+        observedSamples: 0,
+        observations: 1,
+        insufficient: 1,
+        ambiguous: 0,
+      },
+      {
+        brand: 'Rival',
+        attribute: 'a',
+        score: null,
+        samples: 0,
+        observedScore: 75,
+        observedSamples: 2,
+        observations: 2,
+        insufficient: 0,
+        ambiguous: 0,
+      },
+    ],
+    prompts: 2,
+    engines: ['chat_gpt'],
+    date: '2026-10-14T07:00:00Z',
+  });
+  assert.equal(report.own?.attributes[0].observedValue, 0);
+  assert.equal(report.own?.attributes[0].observedDenominator, 25);
+  assert.equal(report.own?.attributes[1].observedValue, null);
+  assert.equal(report.own?.score, null);
+  assert.equal(report.gap, null);
+  assert.equal(report.ranking.length, 0);
+  assert.equal(report.comparableAttributes, 0);
+  assert.equal(report.strongest?.observedValue, 0);
 });

@@ -36,8 +36,10 @@ export async function fail(error: unknown) {
     );
   if (error instanceof ApiError) return response(error.message, error.status);
   const message = error instanceof Error ? error.message : '';
+  if (message.includes('PROMPT_CHANGED')) return response('This question changed. Refresh and try again.', 409);
   const policyMessage = policyError(message);
   if (policyMessage) return response(policyMessage, 403);
+  if (message.includes('UNIQUE constraint failed: prompts')) return response('This question already exists.', 409);
   if (message.includes('UNIQUE constraint failed: topics'))
     return response('Já existe um tópico com esse nome.', 409);
   console.error(

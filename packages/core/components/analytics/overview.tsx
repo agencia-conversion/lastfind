@@ -40,6 +40,7 @@ import {
   type DemoPrompt,
   type DemoResponse,
 } from './demo-data';
+import { getTrendScale, rankTrendSeries } from '@/lib/report-trend';
 import {
   BrandMark,
   Change,
@@ -56,6 +57,7 @@ type Metric = 'visibility' | 'shareOfVoice' | 'position';
 export function getTrendPoints(report: DemoReport, metric: Metric) {
   return report.trend.map((point) => {
     const rows = report.responses.filter((r) => r.date.startsWith(point.date));
+    if (!rows.length) return null;
     const totalMentions = rows.reduce(
       (sum, response) => sum + response.brandIds.length,
       0,
@@ -77,7 +79,7 @@ export function getTrendPoints(report: DemoReport, metric: Metric) {
         }),
       ),
     };
-  });
+  }).filter((point) => point !== null);
 }
 export function formatPositionTick(value: number, locale: string) {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(
@@ -85,49 +87,7 @@ export function formatPositionTick(value: number, locale: string) {
   );
 }
 
-export function getTrendScale(
-  points: ReturnType<typeof getTrendPoints>,
-  brands: string[],
-  metric: Metric,
-) {
-  const values = points
-    .flatMap((point) =>
-      brands.map((brand) => (point as Record<string, unknown>)[brand]),
-    )
-    .filter(
-      (value): value is number =>
-        typeof value === 'number' && Number.isFinite(value),
-    );
-  if (!values.length)
-    return {
-      domain: [0, metric === 'position' ? 6 : 100],
-      ticks: metric === 'position' ? [0, 2, 4, 6] : [0, 25, 50, 75, 100],
-    };
-  const min = Math.min(...values),
-    max = Math.max(...values);
-  const span = Math.max(metric === 'position' ? 1 : 10, max - min);
-  const step =
-    metric === 'position'
-      ? Math.max(0.5, Math.ceil((span / 4) * 2) / 2)
-      : Math.max(5, Math.ceil(span / 4 / 5) * 5);
-  const low = Math.max(
-    metric === 'position' ? 1 : 0,
-    Math.floor((min - span * 0.1) / step) * step,
-  );
-  const high =
-    metric === 'position'
-      ? Math.ceil((max + span * 0.1) / step) * step
-      : Math.min(100, Math.ceil((max + span * 0.1) / step) * step);
-  const ticks = [low];
-  for (
-    let tick = Math.ceil((low + 0.001) / step) * step;
-    tick < high;
-    tick += step
-  )
-    ticks.push(tick);
-  ticks.push(high);
-  return { domain: [low, high], ticks };
-}
+export { getTrendScale };
 
 export function BrandRanking({
   report,
@@ -225,9 +185,33 @@ function TrendChart({
   // padding spread clustered lines without clipping extremes or changing ratios.
   const { domain, ticks } = getTrendScale(
     points,
-    report.brands.map((brand) => brand.id),
+    report.brands.filter((brand) => !hidden.includes(brand.id)).map((brand) => brand.id),
     metric,
   );
+  const totalMentions = report.responses.reduce(
+    (sum, response) => sum + response.brandIds.length,
+    0,
+  );
+  const tooltipRank = new Map(rankTrendSeries(report.brands
+    .map((brand) => {
+      const values = brandMetrics(report.responses, brand.id);
+      return {
+        key: brand.id,
+        name: brand.name,
+        value:
+          metric === 'shareOfVoice'
+            ? totalMentions
+              ? (values.mentions / totalMentions) * 100
+              : null
+            : metric === 'position'
+              ? values.mentions
+                ? values.position
+                : null
+              : report.responses.length
+                ? values.visibility
+                : null,
+      };
+    })));
   return (
     <>
       <figure
@@ -283,6 +267,7 @@ function TrendChart({
                 fontSize: 14,
               }}
               labelFormatter={(date) => chartDate(String(date), true)}
+              itemSorter={(item) => tooltipRank.get(String(item.dataKey)) ?? Infinity}
               formatter={(value, name) => [
                 metric === 'visibility' || metric === 'shareOfVoice'
                   ? percent(Number(value))
@@ -299,7 +284,11 @@ function TrendChart({
                     type="monotone"
                     stroke={b.color}
                     strokeWidth={b.id === 'conversion' ? 2.5 : 1.5}
-                    dot={points.length === 1 ? { r: 4 } : false}
+                    dot={(props) => {
+                      if (props.payload?.[b.id] == null || points.filter((point) => (point as Record<string, unknown>)[b.id] != null).length !== 1) return <g key={props.index} />;
+                      return <circle key={props.index} cx={props.cx} cy={props.cy} r={4} fill={b.color} />;
+                    }}
+                    connectNulls
                     activeDot={{ r: 4 }}
                     isAnimationActive={false}
                   />

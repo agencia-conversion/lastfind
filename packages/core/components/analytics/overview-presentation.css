@@ -201,14 +201,23 @@
 .analytics-topbar .topbar-actions {
   flex: 1;
   justify-content: flex-end;
+  min-width: 0;
 }
 .topbar-filters {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: visible;
 }
 .topbar-filters .analytics-filters {
-  width: max-content;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-end;
+}
+.topbar-filters .filter-main {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .topbar-actions > [data-slot='button'] {
   flex: 0 0 auto;
@@ -358,6 +367,7 @@
 .overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.24fr) minmax(0, 1fr);
+  align-items: start;
   gap: 18px;
   margin-bottom: 20px;
 }
@@ -428,6 +438,9 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
+}
+.analytics-action-group {
+  margin-inline-start: auto;
 }
 .analytics-search {
   position: relative;
@@ -566,11 +579,11 @@
 }
 .ranking-panel .analytics-table th:nth-child(3),
 .ranking-panel .analytics-table td:nth-child(3) {
-  width: 90px;
+  width: 104px;
 }
 .ranking-panel .analytics-table th:nth-child(4),
 .ranking-panel .analytics-table td:nth-child(4) {
-  width: 76px;
+  width: 104px;
 }
 .analytics-table th {
   font-size: 14px;
@@ -579,7 +592,7 @@
   height: 34px;
   padding: 8px 12px;
   background: var(--sidebar);
-  border-block: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 .analytics-table td {
@@ -664,12 +677,32 @@
     padding-block: 12px;
   }
 }
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
   .analytics-content {
     padding: 23px 20px 14px;
   }
   .analytics-topbar {
     padding-inline: 20px;
+  }
+  .analytics-topbar {
+    flex-wrap: wrap;
+  }
+  .analytics-topbar > div:first-child,
+  .analytics-topbar .topbar-actions {
+    flex: 1 1 100%;
+  }
+  .analytics-topbar .topbar-actions {
+    justify-content: flex-start;
+  }
+  .topbar-filters {
+    flex: 1 1 auto;
+  }
+  .topbar-filters .analytics-filters,
+  .topbar-filters .filter-main {
+    width: 100%;
+  }
+  .topbar-filters .filter-main {
+    flex-wrap: wrap;
   }
   .metric-summary {
     padding: 15px 13px;
@@ -695,7 +728,9 @@
 }
 @media (max-width: 767px) {
   .analytics-topbar {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
     padding: 8px 14px;
     min-height: 50px;
   }
@@ -710,15 +745,54 @@
     justify-content: flex-start;
   }
   .analytics-topbar > div:first-child {
-    flex: 1 1 100%;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
     min-height: 34px;
   }
   .analytics-topbar .topbar-actions {
-    flex: 1 1 100%;
-    gap: 8px;
+    display: contents;
+  }
+  .analytics-topbar .topbar-actions > [data-slot='button'] {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .analytics-topbar .topbar-filters {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    min-width: 0;
   }
   .topbar-filters {
-    flex: 1;
+    width: 100%;
+  }
+  .topbar-filters .analytics-filters {
+    display: block;
+    width: 100%;
+  }
+  .topbar-filters .filter-main {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .topbar-filters .filter-divider {
+    display: none;
+  }
+  .topbar-filters .filter-main > * {
+    min-width: 0;
+    width: 100%;
+  }
+  .topbar-filters .filter-main [data-slot='button'] {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .topbar-filters .filter-main [data-slot='button'] > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .analytics-topbar > div {
     gap: 7px;
@@ -770,11 +844,11 @@
   }
   .ranking-panel .analytics-table th:nth-child(3),
   .ranking-panel .analytics-table td:nth-child(3) {
-    width: 84px;
+    width: 96px;
   }
   .ranking-panel .analytics-table th:nth-child(4),
   .ranking-panel .analytics-table td:nth-child(4) {
-    width: 70px;
+    width: 88px;
   }
   .ranking-panel .analytics-table th:first-child,
   .ranking-panel .analytics-table td:first-child {
@@ -873,4 +947,19 @@
   .analytics-app .trend-panel .panel-heading [role='tablist'] {
     flex-wrap: nowrap;
   }
+}
+
+/* Overview-only series palette; canonical roster slots keep line/legend identity stable. */
+.trend-panel {
+  --chart-1: #1649ff;
+  --chart-2: #16a36a;
+  --chart-3: #e58b20;
+  --chart-4: #e34f5f;
+  --chart-5: #a45be0;
+  --chart-6: #14a7b5;
+}
+.overview-trend-controls { gap: 8px; }
+.overview-trend-controls [data-slot='toggle-group'] { max-width: 100%; }
+@media (max-width: 420px) {
+  .overview-trend-controls [data-slot='toggle-group-item'] { padding-inline: 7px; }
 }

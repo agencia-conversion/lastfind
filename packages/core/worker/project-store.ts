@@ -25,8 +25,9 @@ const RUN_NUMBERS = new Set([
   'cost',
   'raw_response_bytes',
 ]);
-const PROMPT_NUMBERS = new Set(['active', 'archived']);
+const PROMPT_NUMBERS = new Set(['active', 'archived', 'subscribed']);
 const defaults: Record<string, string> = {
+  subscribed: '1',
   mentions_json: "'{}'",
   sources_json: "'[]'",
   search_queries_json: "'[]'",
@@ -134,6 +135,10 @@ export class ProjectStore extends DurableObject<Record<string, unknown>> {
     sql.exec(
       `CREATE TABLE IF NOT EXISTS prompts (${PROMPT_STORE_COLUMNS.map((c) => `${c} ${PROMPT_NUMBERS.has(c) ? 'INTEGER' : 'TEXT'}${c === 'id' ? ' PRIMARY KEY' : ''}${defaults[c] ? ` DEFAULT ${defaults[c]}` : ''}`).join(',')})`,
     );
+    const promptColumns = new Set(sql.exec<{ name: string }>('PRAGMA table_info(prompts)').toArray().map((column) => column.name));
+    for (const [column, type] of [['unit_id', 'TEXT'], ['engines_override_json', 'TEXT'], ['subscribed', 'INTEGER NOT NULL DEFAULT 1']])
+      if (!promptColumns.has(column)) sql.exec(`ALTER TABLE prompts ADD COLUMN ${column} ${type}`);
+    sql.exec('CREATE INDEX IF NOT EXISTS prompts_unit ON prompts(unit_id)');
     sql.exec(`CREATE TABLE IF NOT EXISTS semantic_evaluations (
       id TEXT PRIMARY KEY,owner_id TEXT NOT NULL,project_id TEXT NOT NULL,
       run_id TEXT NOT NULL,config_revision INTEGER NOT NULL,

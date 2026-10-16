@@ -1,4 +1,7 @@
 import type { Citation, Engine, Run } from './types';
+import type { DomainType, PageType, SourceTypeClassifier, SourceTypeKind, UNCLASSIFIED } from './source-types.ts';
+/** Cached type of a cited domain or URL; `unclassified` means no result exists for the active evaluator. */
+export type SourceTypeValue = DomainType | PageType | typeof UNCLASSIFIED;
 export type Metrics = {
   responses: number;
   visibility: number;
@@ -55,6 +58,7 @@ export type SummaryReport = {
   }[];
   /** `null` values (e.g. `sov`/`sovC{i}`) are a gap: no tracked brand had a
    *  mention that day, not a measured zero share. */
+  /** Daily additive counts/sums support weighted UTC calendar buckets without answer text. */
   daily: Record<string, string | number | null>[];
 };
 export type AnalysisRow = {
@@ -82,22 +86,46 @@ export type AnalysisReport = {
 export type HistoryPage = { runs: Run[]; nextCursor: string | null };
 export type PromptScore = { responses: number; mentions: number; visibility: number };
 export type PromptReport = Record<string, {
-  responses: number; mentions: number; visibility: number; pending: number; latest?: Run;
+  responses: number; mentions: number; visibility: number; pending: number; position?: number | null; latest?: Run;
   previous: PromptScore; delta: PromptScore; brands: string[];
+  channels?: Partial<Record<Engine, { responses: number; mentions: number; visibility: number; position: number | null }>>;
 }>;
 export type PromptDetail = {
+  metrics?: PromptScore & { position: number | null };
+  hasMoreSources?: boolean;
   daily: { date: string; responses: number; mentions: number; visibility: number }[];
-  platforms: { engine: Engine; responses: number; mentions: number; visibility: number }[];
+  platforms: {
+    engine: Engine;
+    responses: number;
+    mentions: number;
+    visibility: number;
+    position?: number | null;
+  }[];
   sources: { domain: string; responses: number }[];
   history: HistoryPage;
 };
 export type CompetitorMatrixRow = {
-  name: string; domain: string; responses: number; mentions: number; visibility: number;
+  name: string;
+  domain: string;
+  responses: number;
+  mentions: number;
+  visibility: number;
+  shareOfVoice?: number | null;
   cells: Record<string, { responses: number; mentions: number; visibility: number }>;
 };
 export type CompetitorsReport = {
-  platforms: CompetitorMatrixRow[]; topics: CompetitorMatrixRow[];
-  competitorOnly: { prompt: string; label: string; responses: number; engine: Engine; topic: string }[];
+  hasMoreCompetitorOnly?: boolean;
+  platforms: CompetitorMatrixRow[];
+  topics: CompetitorMatrixRow[];
+  competitorOnly: {
+    prompt: string;
+    label: string;
+    responses: number;
+    engine: Engine;
+    topic: string
+    engines?: Engine[];
+    brands?: { name: string; domain: string; }[];
+  }[];
 };
 export type SourceRow = {
   key: string;
@@ -109,12 +137,47 @@ export type SourceRow = {
   mentions: number;
   visibility: number;
   ownership: 'own' | 'competitor' | 'third-party';
+  /** Domain type (domain grouping) or page type (URL grouping). */
+  sourceType?: SourceTypeValue;
+  /** URL grouping only: the type of the page's domain. */
+  domainType?: SourceTypeValue;
 };
 export type SourcesPage = {
   rows: SourceRow[];
   hasMore: boolean;
   available: number;
   complete: number;
+  classifier?: SourceTypeClassifier;
+};
+export type SourceTypeShare = { type: SourceTypeValue; citations: number; domains: number; share: number };
+export type SourceTypesReport = {
+  classifier: SourceTypeClassifier;
+  /** Responses citing a domain, summed over domains: one citation per response and domain. */
+  citations: number;
+  classified: number;
+  unclassified: number;
+  types: SourceTypeShare[];
+  /** Domains beyond the aggregation ceiling count as unclassified. */
+  truncated: boolean;
+  pendingBatches: number;
+};
+export type SourceEntityDetail = {
+  kind: SourceTypeKind;
+  key: string;
+  domain: string;
+  title: string | null;
+  ownership: 'own' | 'competitor' | 'third-party';
+  sourceType: SourceTypeValue;
+  /** URL detail: the type of its domain. */
+  domainType?: SourceTypeValue;
+  classifier: SourceTypeClassifier;
+  metrics: { citing: number; total: number; rate: number; pages: number };
+  daily: { date: string; citing: number; total: number; rate: number }[];
+  platforms: { engine: Engine; citing: number; total: number; rate: number }[];
+  prompts: { prompt: string; text: string; topic: string; responses: number }[];
+  urls: { url: string; title: string; responses: number; pageType: SourceTypeValue }[];
+  brands: { name: string; domain: string; responses: number }[];
+  history: HistoryPage;
 };
 export type SourceDetail = {
   sources: Citation[];

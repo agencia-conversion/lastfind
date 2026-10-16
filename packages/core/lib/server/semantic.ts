@@ -33,12 +33,19 @@ export async function saveSemanticConfiguration(projectId: string, ownerId: stri
   return semanticConfiguration(projectId, ownerId);
 }
 
-export async function semanticReport(projectId: string, ownerId: string, q: URLSearchParams) {
+export async function semanticReport(
+  projectId: string,
+  ownerId: string,
+  q: URLSearchParams,
+) {
   const requestedRevision = q.get('revision');
   const revision = requestedRevision ? Number(requestedRevision) : undefined;
   if (requestedRevision && (!Number.isSafeInteger(revision) || Number(revision) < 1))
     throw new ApiError(400,'Invalid semantic revision.');
-  const configuration = await semanticConfiguration(projectId,ownerId,revision);
+  const [configuration, project] = await Promise.all([
+    semanticConfiguration(projectId,ownerId,revision),
+    ownedProject(projectId, ownerId),
+  ]);
   const filter = parseReportFilter(q);
   const engine = q.get('engine') || 'all';
   const topic = q.get('topic') || '';
@@ -58,7 +65,10 @@ export async function semanticReport(projectId: string, ownerId: string, q: URLS
     bindings.push(...engines);
   }
   if (topic) { clauses.push('p.tag=?'); bindings.push(topic); }
-  if (prompt) { clauses.push('r.prompt_id=?'); bindings.push(prompt); }
+  if (prompt) {
+    clauses.push('COALESCE(p.unit_id,p.id)=?');
+    bindings.push(prompt);
+  }
   if (tags.length) {
     clauses.push(`EXISTS(SELECT 1 FROM json_each(p.tags_json) tag WHERE tag.value IN (${tags.map(() => '?').join(',')}))`);
     bindings.push(...tags);
@@ -78,23 +88,52 @@ export async function semanticReport(projectId: string, ownerId: string, q: URLS
     eligibleBindings.push(...engines);
   }
   if (topic) { eligibleClauses.push('p.tag=?'); eligibleBindings.push(topic); }
-  if (prompt) { eligibleClauses.push('r.prompt_id=?'); eligibleBindings.push(prompt); }
+  if (prompt) {
+    eligibleClauses.push('COALESCE(p.unit_id,p.id)=?');
+    eligibleBindings.push(prompt);
+  }
   if (tags.length) {
     eligibleClauses.push(`EXISTS(SELECT 1 FROM json_each(p.tags_json) tag WHERE tag.value IN (${tags.map(() => '?').join(',')}))`);
     eligibleBindings.push(...tags);
   }
-  const eligible = await analytics.prepare(`SELECT COUNT(*) count FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id WHERE ${eligibleClauses.join(' AND ')}`)
+  const eligiblePromise = analytics.prepare(`SELECT COUNT(*) count FROM runs r JOIN prompts p ON p.id=r.prompt_id AND p.project_id=r.project_id WHERE ${eligibleClauses.join(' AND ')}`)
     .bind(...eligibleBindings).first<{ count: number }>();
-  const evaluated = await analytics.prepare(`SELECT COUNT(*) count ${from} WHERE ${where}`)
+  const evaluatedPromise = analytics.prepare(`SELECT COUNT(*) count ${from} WHERE ${where}`)
     .bind(...bindings).first<{ count: number }>();
-  const summary = (await analytics.prepare(`SELECT json_extract(x.value,'$.brand') brand,
+  const summaryPromise = analytics.prepare(`SELECT json_extract(x.value,'$.brand') brand,
       json_extract(x.value,'$.attribute') attribute,
       AVG(CASE WHEN json_extract(x.value,'$.state')='assessed' THEN json_extract(x.value,'$.score') END) score,
       SUM(json_extract(x.value,'$.state')='assessed') samples,
       COUNT(*) observations ${from},json_each(e.assessment_json,'$.readings') x
       WHERE ${where}${brand ? ` AND json_extract(x.value,'$.brand')=?` : ''}
       GROUP BY brand,attribute ORDER BY brand,attribute`)
-    .bind(...bindings,...(brand ? [brand] : [])).all<Record<string,unknown>>()).results;
+    .bind(...bindings,...(brand ? [brand] : [])).all<Record<string,unknown>>();
+  // Comparable cells use the full selected cohort, independently of evidence pagination.
+  const readings = `WITH readings AS (
+    SELECT e.run_id,r.engine,COALESCE(p.unit_id,p.id) prompt_id,r.created_at,
+      json_extract(x.value,'$.brand') brand,json_extract(x.value,'$.attribute') attribute,
+      json_extract(x.value,'$.state') state,json_extract(x.value,'$.score') score
+      ${from},json_each(e.assessment_json,'$.readings') x
+      WHERE ${where}${brand ? ` AND json_extract(x.value,'$.brand')=?` : ''}
+  ), valid AS (SELECT * FROM readings WHERE state='assessed' AND typeof(score) IN ('integer','real') AND score BETWEEN 0 AND 100),
+  brand_counts AS (SELECT attribute,COUNT(DISTINCT brand) brands FROM valid GROUP BY attribute),
+  shared AS (SELECT v.attribute,v.run_id,v.engine FROM valid v JOIN brand_counts b ON b.attribute=v.attribute
+    GROUP BY v.attribute,v.run_id,v.engine HAVING COUNT(DISTINCT v.brand)=MAX(b.brands)),
+  comparable AS (SELECT v.* FROM valid v JOIN shared s ON s.attribute=v.attribute AND s.run_id=v.run_id AND s.engine=v.engine)`;
+  const aggregateBindings = [...bindings, ...(brand ? [brand] : [])];
+  const cellsPromise = analytics.prepare(`${readings}
+    SELECT r.brand,r.attribute,AVG(c.score) score,COUNT(c.score) samples,
+      AVG(CASE WHEN r.state='assessed' AND typeof(r.score) IN ('integer','real') AND r.score BETWEEN 0 AND 100 THEN r.score END) observed_score,
+      SUM(r.state='assessed' AND typeof(r.score) IN ('integer','real') AND r.score BETWEEN 0 AND 100) observed_samples,COUNT(*) observations,
+      SUM(r.state='insufficient') insufficient,SUM(r.state='ambiguous') ambiguous
+    FROM readings r LEFT JOIN comparable c ON c.brand=r.brand AND c.attribute=r.attribute AND c.run_id=r.run_id AND c.engine=r.engine
+    GROUP BY r.brand,r.attribute ORDER BY r.brand,r.attribute`)
+    .bind(...aggregateBindings)
+    .all<Record<string,unknown>>();
+  const contextPromise = analytics.prepare(`${readings} SELECT COUNT(DISTINCT prompt_id) prompts,
+    json_group_array(DISTINCT engine) engines,MAX(created_at) date FROM valid`)
+    .bind(...aggregateBindings)
+    .first<{ prompts: number; engines: string; date: string | null }>();
   const cursor = q.get('cursor');
   let cursorValues: string[] = [];
   if (cursor) {
@@ -114,7 +153,45 @@ export async function semanticReport(projectId: string, ownerId: string, q: URLS
     ...row, readings: (JSON.parse(String(assessment_json)).readings as Array<{ brand: string }>).filter((reading) => !brand || reading.brand === brand),
   }));
   const last = page.length > 20 ? page[19] : null;
+  const [eligible, evaluated, summaryResult, cellsResult, context] =
+    await Promise.all([
+      eligiblePromise,
+      evaluatedPromise,
+      summaryPromise,
+      cellsPromise,
+      contextPromise,
+    ]);
+  const summary = summaryResult.results;
+  const competitors = JSON.parse(String(project.competitors_json)) as {
+    name: string;
+    domain: string;
+  }[];
+  const brands = [
+    { name: String(project.name), domain: String(project.domain) },
+    ...competitors,
+  ];
+  for (const row of summary)
+    if (!brands.some((item) => item.name === row.brand))
+      brands.push({ name: String(row.brand), domain: '' });
   return {
+    association: {
+      ownBrand: String(project.name),
+      brands,
+      cells: cellsResult.results.map((row) => ({
+        brand: String(row.brand),
+        attribute: String(row.attribute),
+        score: row.score == null ? null : Number(row.score),
+        samples: Number(row.samples),
+        observedScore: row.observed_score == null ? null : Number(row.observed_score),
+        observedSamples: Number(row.observed_samples),
+        observations: Number(row.observations),
+        insufficient: Number(row.insufficient),
+        ambiguous: Number(row.ambiguous),
+      })),
+      prompts: Number(context?.prompts || 0),
+      engines: JSON.parse(context?.engines || '[]'),
+      date: context?.date ?? null,
+    },
     configuration,
     coverage: { eligible: Number(eligible?.count || 0), evaluated: Number(evaluated?.count || 0), unassessed: Math.max(0,Number(eligible?.count || 0)-Number(evaluated?.count || 0)) },
     summary,

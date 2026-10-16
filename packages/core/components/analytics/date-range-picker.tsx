@@ -24,14 +24,15 @@ import {
   getDateRange,
   isValidDateRange,
   parseISODate,
+  type DateRangeBounds,
 } from './date-range';
 
 type Period = Pick<DemoFilters, 'days' | 'from' | 'to'>;
 type Preset = Period & { id: string; en: string; pt: string };
-const lastDate = parseISODate(DEMO_LAST_DATE)!;
-const firstAllowedDate = parseISODate('2000-01-01')!;
-const presets: Preset[] = [
-  { id: '1', days: '1', en: 'Yesterday', pt: 'Ontem' },
+const presetsFor = (lastDateKey: string, live: boolean): Preset[] => {
+  const lastDate = parseISODate(lastDateKey)!;
+  return [
+  { id: '1', days: '1', en: live ? 'Today' : 'Yesterday', pt: live ? 'Hoje' : 'Ontem' },
   ...['7', '14', '28', '30'].map((days) => ({
     id: days,
     days,
@@ -44,7 +45,7 @@ const presets: Preset[] = [
     from: dateKey(
       new Date(Date.UTC(lastDate.getUTCFullYear(), lastDate.getUTCMonth(), 1)),
     ),
-    to: DEMO_LAST_DATE,
+    to: lastDateKey,
     en: 'This month',
     pt: 'Este mês',
   },
@@ -62,20 +63,27 @@ const presets: Preset[] = [
     en: 'Last month',
     pt: 'Mês passado',
   },
-];
+  ];
+};
 
 export function DateRangePicker({
   value,
   onChange,
+  bounds,
 }: {
   value: Period;
   onChange: (period: Period) => void;
+  bounds?: DateRangeBounds;
 }) {
   const l = useCopy();
   const { locale, number } = useNumbers();
   const mobile = useIsMobile();
   const id = useId();
-  const applied = getDateRange(value);
+  const limits = bounds ?? { lastDate: DEMO_LAST_DATE, firstDate: '2000-01-01', maxDays: 366 };
+  const firstAllowedDate = parseISODate(limits.firstDate)!;
+  const lastDate = parseISODate(limits.lastDate)!;
+  const presets = presetsFor(limits.lastDate, !!bounds);
+  const applied = getDateRange(value, limits);
   const [open, setOpen] = useState(false);
   const formatInput = (key: string) => {
     const [year, month, day] = key.split('-');
@@ -94,10 +102,10 @@ export function DateRangePicker({
     return parseISODate(key) ? key : undefined;
   };
   const selectedPreset = (period: Period) => {
-    const range = getDateRange(period);
+    const range = getDateRange(period, limits);
     return (
       presets.find((preset) => {
-        const option = getDateRange(preset);
+        const option = getDateRange(preset, limits);
         return range.from === option.from && range.to === option.to;
       })?.id ?? 'custom'
     );
@@ -110,8 +118,8 @@ export function DateRangePicker({
   const [month, setMonth] = useState(() => parseISODate(applied.from)!);
   const from = parseInput(draft.from);
   const to = parseInput(draft.to);
-  const valid = !!from && !!to && isValidDateRange(from, to);
-  const draftRange = valid ? getDateRange({ days: 'custom', from, to }) : null;
+  const valid = !!from && !!to && isValidDateRange(from, to, limits);
+  const draftRange = valid ? getDateRange({ days: 'custom', from, to }, limits) : null;
   const selected = from
     ? {
         from: parseISODate(from),
@@ -129,10 +137,11 @@ export function DateRangePicker({
       ? dateFormat.format(parseISODate(applied.from))
       : `${dateFormat.format(parseISODate(applied.from))} – ${dateFormat.format(parseISODate(applied.to))}`;
   const triggerPreset = presets.find((p) => p.id === value.days);
-  const triggerLabel =
-    triggerPreset && !value.from && !value.to
-      ? l(triggerPreset.en, triggerPreset.pt)
-      : summary;
+  const numericDays = Number(value.days);
+  const validNumericDays = Number.isInteger(numericDays) && numericDays >= 1 && numericDays <= limits.maxDays;
+  const triggerLabel = !value.from && !value.to && validNumericDays
+    ? triggerPreset ? l(triggerPreset.en, triggerPreset.pt) : l(`Last ${numericDays} days`, `Últimos ${numericDays} dias`)
+    : summary;
 
   const openChange = (next: boolean) => {
     if (next) {
@@ -146,7 +155,7 @@ export function DateRangePicker({
     setOpen(next);
   };
   const choosePreset = (preset: Preset) => {
-    const range = getDateRange(preset);
+    const range = getDateRange(preset, limits);
     setDraft({ from: formatInput(range.from), to: formatInput(range.to) });
     setPresetId(preset.id);
     setMonth(parseISODate(range.from)!);
@@ -163,8 +172,8 @@ export function DateRangePicker({
             'A data final deve ser igual ou posterior à inicial.',
           )
         : l(
-            'Choose up to 366 days, starting in 2000 or later and ending by the latest available date.',
-            'Escolha até 366 dias, a partir de 2000 e até a última data disponível.',
+            `Choose up to ${limits.maxDays} days, ending by the latest available date.`,
+            `Escolha até ${limits.maxDays} dias, até a última data disponível.`,
           );
 
   return (
@@ -280,7 +289,7 @@ export function DateRangePicker({
               month={month}
               onMonthChange={setMonth}
               selected={selected}
-              today={parseISODate(DEMO_TODAY)}
+              today={bounds ? lastDate : parseISODate(DEMO_TODAY)}
               startMonth={firstAllowedDate}
               endMonth={lastDate}
               disabled={[{ before: firstAllowedDate }, { after: lastDate }]}
@@ -327,9 +336,7 @@ export function DateRangePicker({
         </div>
         <div className="date-range-footer">
           <p>
-            {l('Sample data', 'Dados de exemplo')}:{' '}
-            {dateFormat.format(parseISODate(DEMO_FIRST_DATE))} –{' '}
-            {dateFormat.format(lastDate)}
+            {bounds ? l(`Up to ${limits.maxDays} days`, `Até ${limits.maxDays} dias`) : <>{l('Sample data', 'Dados de exemplo')}: {dateFormat.format(parseISODate(DEMO_FIRST_DATE))} – {dateFormat.format(lastDate)}</>}
           </p>
           <div>
             <Button variant="ghost" onClick={() => setOpen(false)}>

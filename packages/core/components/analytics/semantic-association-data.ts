@@ -3,7 +3,6 @@ import {
   demoModels,
   demoSources,
   type DemoResponse,
-  type DemoModel,
 } from './demo-data.ts';
 import type { BrandEntity, LocalizedText } from './semantic-data.ts';
 import {
@@ -17,7 +16,7 @@ export type SemanticAssessment = {
   attributeId: string;
   attributeFingerprint: string;
   brandId: string;
-  model: DemoModel;
+  model: string;
   date: string;
   contextPromptId: string;
   cohortId: string;
@@ -281,6 +280,8 @@ export function semanticAssociationReport(
       );
       return {
         ...cell,
+        observedValue: cell.value,
+        observedDenominator: cell.denominator,
         inconclusive: scoped.filter(
           (item) =>
             item.status !== 'scored' &&
@@ -313,9 +314,14 @@ export function semanticAssociationReport(
   );
   const leader = ranking[0];
   const reference = leader?.entity.id === own?.entity.id ? ranking[1] : leader;
-  const ownValues = own?.attributes.filter((item) => item.value !== null) ?? [];
-  const strongest = [...ownValues].sort((a, b) => b.value! - a.value!)[0];
-  const priority = [...ownValues].sort((a, b) => a.value! - b.value!)[0];
+  const ownValues =
+    own?.attributes.filter((item) => item.observedValue !== null) ?? [];
+  const strongest = [...ownValues].sort(
+    (a, b) => b.observedValue! - a.observedValue!,
+  )[0];
+  const priority = [...ownValues].sort(
+    (a, b) => a.observedValue! - b.observedValue!,
+  )[0];
   return {
     configuration,
     brands,

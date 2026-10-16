@@ -1,3 +1,4 @@
+import { cachedAnalyticsQuery } from './analytics-query-cache';
 import { ensureProjectStore, syncProjectStore } from './project-store';
 import { projectStoreRpc } from './project-store-transport';
 import { ApiError } from './http';
@@ -20,18 +21,32 @@ export class AnalyticsStatement {
 }
 export class AnalyticsDatabase {
   readonly mode = 'project';
-  constructor(private scope: StoreScope) {}
+  get cacheKey() {
+    return JSON.stringify([this.scope, this.revision]);
+  }
+  constructor(
+    private scope: StoreScope,
+    private revision = 'uncached',
+  ) {}
   prepare(sql: string) {
     return new AnalyticsStatement(this, sql);
   }
   batch<T = Record<string, unknown>>(
     statements: AnalyticsStatement[],
   ): Promise<{ results: T[] }[]> {
-    return projectStoreRpc({
-      scope: this.scope,
-      action: 'query',
-      statements: statements.map((s) => ({ sql: s.sql, params: s.params })),
-    });
+    const query = statements.map((s) => ({ sql: s.sql, params: s.params }));
+    const load = () =>
+      projectStoreRpc<{ results: T[] }[]>({
+        scope: this.scope,
+        action: 'query',
+        statements: query,
+      });
+    return this.revision === 'uncached'
+      ? load()
+      : cachedAnalyticsQuery(
+          JSON.stringify([this.scope, this.revision, query]),
+          load,
+        );
   }
 }
 export async function projectReadDatabase(projectId: string, ownerId: string) {
@@ -46,9 +61,17 @@ export async function projectReadDatabase(projectId: string, ownerId: string) {
     }
     registry = await ensureProjectStore(projectId, ownerId);
   }
-  return new AnalyticsDatabase({
+  const scope = {
     ownerId,
     projectId,
     generation: registry.generation,
-  });
+  };
+  const status = await projectStoreRpc<{
+    analysisRevision: string | null;
+    analysisMutationRevision: number;
+  }>({ scope, action: 'status' });
+  return new AnalyticsDatabase(
+    scope,
+    `${registry.source_revision}:${registry.applied_revision}:${status.analysisRevision}:${status.analysisMutationRevision}`,
+  );
 }

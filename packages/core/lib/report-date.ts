@@ -49,3 +49,22 @@ export function parseCustomDateRange(
     return { valid: false, error: 'range', start, end: endDateMs + 86400000 };
   return { valid: true, error: '', start, end: endDateMs + 86400000 };
 }
+
+export function relativeReportDate(
+  value: string,
+  locale: string,
+  clock = Date.now(),
+) {
+  const stamp = Date.parse(value);
+  if (!Number.isFinite(stamp)) return '—';
+  const minutes = Math.round((stamp - clock) / 60_000);
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  if (Math.abs(minutes) < 60) return formatter.format(minutes, 'minute');
+  if (Math.abs(minutes) < 1440)
+    return formatter.format(Math.round(minutes / 60), 'hour');
+  if (Math.abs(minutes) < 10_080)
+    return formatter.format(Math.round(minutes / 1440), 'day');
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
+    new Date(stamp),
+  );
+}

@@ -140,6 +140,14 @@ void test('raw bucket provisioning confirms creation, resumes idempotently and p
       exists = true;
       return '';
     }
+    if (args[2] === 'info')
+      return exists
+        ? JSON.stringify({ name: args[3], object_count: '0' })
+        : (() => {
+            throw Object.assign(new Error('missing'), {
+              output: 'The specified bucket does not exist. [code: 10006]',
+            });
+          })();
     return exists
       ? `name: ${bucket}\ncreation_date: today\n`
       : 'No buckets found.';
@@ -183,8 +191,36 @@ void test('configured raw archives are verified and never silently replaced or d
   });
   assert.equal(verified, config);
   assert.throws(
-    () => provisionRawStorage(config, { runCommand: () => '' }),
+    () =>
+      provisionRawStorage(config, {
+        runCommand: (args: string[]) => {
+          if (args[2] === 'info')
+            throw Object.assign(new Error('missing'), {
+              output: '[code: 10006]',
+            });
+          return '';
+        },
+      }),
     /Refusing to replace/,
+  );
+  // A bucket beyond the first page of `bucket list` is found by name.
+  const paged = provisionRawStorage(config, {
+    runCommand: (args: string[]) =>
+      args[2] === 'info'
+        ? JSON.stringify({ name: 'preserved-original' })
+        : 'name: another-bucket\n',
+  });
+  assert.equal(paged, config);
+  assert.throws(
+    () =>
+      provisionRawStorage(config, {
+        runCommand: (args: string[]) => {
+          if (args[2] === 'info')
+            throw Object.assign(new Error('denied'), { output: '10000' });
+          return '';
+        },
+      }),
+    /could not be verified/,
   );
   assert.throws(
     () =>
@@ -206,17 +242,77 @@ void test('configured raw archives are verified and never silently replaced or d
   );
 });
 
+void test('a bucket left by an interrupted run or beyond the first list page is adopted, not an error', () => {
+  const bucket = rawBucketName(installation);
+  const crowded = 'name: other-1\nname: other-2\n';
+  // Already exists but the (single-page) list does not show it.
+  const commands: string[][] = [];
+  const adopted = provisionRawStorage(installation, {
+    runCommand: (args: string[]) => {
+      commands.push(args);
+      if (args[2] === 'create')
+        throw Object.assign(new Error('exists'), {
+          output:
+            'The bucket you tried to create already exists, and you own it. [code: 10004]',
+        });
+      if (args[2] === 'info') return JSON.stringify({ name: args[3] });
+      return crowded;
+    },
+  });
+  assert.deepEqual(adopted.r2_buckets, [
+    { binding: 'RAW_RESPONSES', bucket_name: bucket },
+  ]);
+  // Created, and the lookup is briefly behind: retried until it appears.
+  let lookups = 0;
+  const retried = provisionRawStorage(installation, {
+    sleep: () => undefined,
+    runCommand: (args: string[]) => {
+      if (args[2] === 'info') {
+        if (++lookups < 3)
+          throw Object.assign(new Error('missing'), {
+            output: '[code: 10006]',
+          });
+        return JSON.stringify({ name: args[3] });
+      }
+      return crowded;
+    },
+  });
+  assert.equal(retried.r2_buckets?.length, 1);
+  assert.equal(lookups, 3);
+  // Other create failures are never swallowed.
+  assert.throws(
+    () =>
+      provisionRawStorage(installation, {
+        runCommand: (args: string[]) => {
+          if (args[2] === 'create')
+            throw Object.assign(new Error('denied'), { output: '10000' });
+          return crowded;
+        },
+      }),
+    /denied/,
+  );
+});
+
 void test('bucket names remain within R2 limits and unconfirmed creates do not produce a binding', () => {
   const name = rawBucketName({ ...installation, name: 'a'.repeat(51) });
   assert.equal(name.length, 63);
   assert.match(name, /-raw-12345678$/);
+  const waits: number[] = [];
   assert.throws(
     () =>
       provisionRawStorage(installation, {
-        runCommand: () => 'No buckets found.',
+        sleep: (ms: number) => waits.push(ms),
+        runCommand: (args: string[]) => {
+          if (args[2] === 'info')
+            throw Object.assign(new Error('missing'), {
+              output: 'The specified bucket does not exist. [code: 10006]',
+            });
+          return 'No buckets found.';
+        },
       }),
     /creation was not confirmed/,
   );
+  assert.equal(waits.length, 4);
   assert.throws(
     () => rawBucketName({ ...installation, d1_databases: [] }),
     /Create the installation database/,

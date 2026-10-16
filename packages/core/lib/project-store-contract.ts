@@ -33,7 +33,7 @@ export const RUN_STORE_COLUMNS = [
   'analysis_targets_json',
   'analysis_mentions_json',
 ] as const;
-export const PROMPT_STORE_COLUMNS = [
+export const LEGACY_PROMPT_STORE_COLUMNS = [
   'id',
   'project_id',
   'text',
@@ -45,6 +45,7 @@ export const PROMPT_STORE_COLUMNS = [
   'archived',
   'created_at',
 ] as const;
+export const PROMPT_STORE_COLUMNS = [...LEGACY_PROMPT_STORE_COLUMNS, 'unit_id', 'engines_override_json', 'subscribed'] as const;
 export const SEMANTIC_STORE_COLUMNS = [
   'id', 'owner_id', 'project_id', 'run_id', 'config_revision',
   'assessment_json', 'answer_sha256', 'rubric', 'model', 'coverage',
@@ -99,9 +100,10 @@ export const storeIdentity = (scope: StoreScope) =>
 export function canonicalStoreRow(
   entity: StoreEntity,
   row: StoreRow,
-  schema: 1 | 2 | 3 = 1,
+  schema: 1 | 2 | 3 | 4 = 1,
 ) {
   const columns =
+    entity === 'prompts' && schema < 4 ? LEGACY_PROMPT_STORE_COLUMNS :
     entity === 'runs' && schema === 1
       ? COLLECTION_RUN_STORE_COLUMNS
       : storeColumns(entity);
@@ -111,7 +113,7 @@ export async function extendStoreDigest(
   previous: string,
   entity: StoreEntity,
   rows: StoreRow[],
-  schema: 1 | 2 | 3 = 1,
+  schema: 1 | 2 | 3 | 4 = 1,
 ) {
   const bytes = new TextEncoder().encode(
     previous +

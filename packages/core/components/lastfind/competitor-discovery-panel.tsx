@@ -16,12 +16,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 type Candidate = {
   name: string;
   domain: string | null;
-  score: number;
+  score?: number;
+  requiresVerification?: boolean;
   answerCount: number;
   evidence: Array<{ runId: string; excerpt: string; createdAt: string }>;
 };
 
-type AnalysisStatus = {
+export type AnalysisStatus = {
   revision: string | null;
   mutationRevision: number;
   status: 'idle' | 'pending' | 'running' | 'complete' | 'failed';
@@ -46,7 +47,11 @@ export function CompetitorDiscoveryPanel({
   onAdd,
   onEvidence,
   onCompleted,
+  research,
+  sample,
 }: {
+  sample?: AnalysisStatus;
+  research?: { name: string; domain: string | null; answerCount: number; verifiedPrompts: number; rejectedPrompts: number; ambiguousPrompts: number; evidence: Candidate['evidence'] }[];
   project: Project;
   readOnly: boolean;
   busy: boolean;
@@ -61,10 +66,11 @@ export function CompetitorDiscoveryPanel({
   const [working, setWorking] = useState('');
   const [actionError, setActionError] = useState('');
   const [domains, setDomains] = useState<Record<string, string>>({});
-  const url = readOnly
+  const url = sample
     ? null
     : `/api/projects/${project.id}/competitor-analysis`;
-  const analysis = useReport<AnalysisStatus>(url, `${refresh}:${poll}`);
+  const remote = useReport<AnalysisStatus>(url, `${refresh}:${poll}`);
+  const analysis = sample ? { data: sample, loading: false, error: undefined } : remote;
   const ensureRequest = useRef<{
     url: string;
     controller: AbortController;
@@ -80,7 +86,7 @@ export function CompetitorDiscoveryPanel({
     [url],
   );
   useEffect(() => {
-    if (!url || !analysis.data?.needsEnsure || ensureRequest.current) return;
+    if (readOnly || !url || !analysis.data?.needsEnsure || ensureRequest.current) return;
     const active = { url, controller: new AbortController() };
     ensureRequest.current = active;
     // One idempotent POST may outlive several status polls. Only changing the
@@ -107,6 +113,7 @@ export function CompetitorDiscoveryPanel({
       });
   }, [
     url,
+    readOnly,
     analysis.data?.needsEnsure,
     analysis.data?.publicationPending,
     refresh,
@@ -145,7 +152,7 @@ export function CompetitorDiscoveryPanel({
   ]);
 
   async function refreshSuggestions() {
-    if (!url) return;
+    if (readOnly || !url) return;
     setWorking('refresh');
     setActionError('');
     try {
@@ -165,7 +172,9 @@ export function CompetitorDiscoveryPanel({
     }
   }
 
-  const candidates = (analysis.data?.suggestions || []).filter(
+  const localCandidates = analysis.data?.suggestions || [];
+  const hybridCandidates = (research || []).filter((candidate) => !localCandidates.some((local) => local.name === candidate.name && local.domain === candidate.domain)).map((candidate) => ({ ...candidate, requiresVerification: true }));
+  const candidates: Candidate[] = [...localCandidates, ...hybridCandidates].filter((candidate) => !research || research.some((reading) => reading.name === candidate.name && reading.domain === candidate.domain && reading.verifiedPrompts > 0)).filter(
     (candidate) =>
       !project.competitors.some(
         (tracked) =>
@@ -206,7 +215,7 @@ export function CompetitorDiscoveryPanel({
         <Button
           variant="outline"
           size="sm"
-          disabled={readOnly || busy || working === 'refresh' || processing}
+          disabled={!!sample || readOnly || busy || working === 'refresh' || processing}
           onClick={() => void refreshSuggestions()}
         >
           <RefreshCw className={processing ? 'animate-spin' : ''} />
@@ -218,9 +227,9 @@ export function CompetitorDiscoveryPanel({
           {actionError}
         </p>
       )}
-      {analysis.loading ? (
+      {analysis.loading && !candidates.length ? (
         <Skeleton className="m-5 h-28" />
-      ) : analysis.error || analysis.data?.status === 'failed' ? (
+      ) : (analysis.error || analysis.data?.status === 'failed') && !candidates.length ? (
         <p role="alert" className="px-5 py-6 text-sm text-destructive">
           {analysis.error ||
             analysis.data?.error ||
@@ -229,7 +238,7 @@ export function CompetitorDiscoveryPanel({
               'Não foi possível concluir a análise.',
             )}
         </p>
-      ) : processing ? (
+      ) : processing && !candidates.length ? (
         <div className="space-y-3 px-5 py-6">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span>
@@ -261,22 +270,25 @@ export function CompetitorDiscoveryPanel({
       ) : candidates.length ? (
         <div className="divide-y">
           {candidates.map((candidate) => {
-            const domain = domains[candidate.name] ?? candidate.domain ?? '';
+            const candidateKey = JSON.stringify([candidate.name, candidate.domain]);
+            const verified = research?.find((item) => item.name === candidate.name && item.domain === candidate.domain);
+            const domain = domains[candidateKey] ?? candidate.domain ?? '';
             const atLimit = project.competitors.length >= 5;
             return (
-              <div key={candidate.name} className="space-y-3 px-5 py-4">
+              <div key={candidateKey} className="space-y-3 px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">{candidate.name}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {candidate.answerCount.toLocaleString(locale)}{' '}
+                      {verified ? verified.answerCount.toLocaleString(locale) : research ? '0' : '—'}{' '}
                       {text(
-                        'answers with comparable mentions',
-                        'respostas com menções comparáveis',
+                        'distinct prepared questions in the selected filters',
+                        'perguntas distintas preparadas nos filtros selecionados',
                       )}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{verified?.verifiedPrompts ? text(`${verified.verifiedPrompts} questions verified by the selected evaluator`, `${verified.verifiedPrompts} perguntas verificadas pelo avaliador selecionado`) : verified?.rejectedPrompts ? text('Evaluator did not confirm this competitor', 'O avaliador não confirmou este concorrente') : text('Local shortlist; evaluator verification pending', 'Shortlist local; verificação do avaliador pendente')}{verified?.rejectedPrompts ? text(` · ${verified.rejectedPrompts} conflicting role verdicts`, ` · ${verified.rejectedPrompts} classificações de papel conflitantes`) : ''}{verified?.ambiguousPrompts ? text(` · ${verified.ambiguousPrompts} ambiguous`, ` · ${verified.ambiguousPrompts} ambíguas`) : ''}</p>
                   </div>
-                  <div className="flex min-w-64 flex-1 items-center justify-end gap-2 sm:flex-none">
+                  {!readOnly && <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
                     <Input
                       aria-label={text(
                         `Domain for ${candidate.name}`,
@@ -288,15 +300,15 @@ export function CompetitorDiscoveryPanel({
                       onChange={(event) =>
                         setDomains((current) => ({
                           ...current,
-                          [candidate.name]: event.target.value,
+                          [candidateKey]: event.target.value,
                         }))
                       }
                     />
                     <Button
                       size="sm"
-                      disabled={busy || !!working || !domain.trim() || atLimit}
+                      disabled={busy || !!working || !domain.trim() || atLimit || (candidate.requiresVerification && !verified?.verifiedPrompts)}
                       onClick={() => {
-                        setWorking(candidate.name);
+                        setWorking(candidateKey);
                         setActionError('');
                         void onAdd({
                           name: candidate.name,
@@ -317,7 +329,7 @@ export function CompetitorDiscoveryPanel({
                     >
                       {text('Add', 'Adicionar')}
                     </Button>
-                  </div>
+                  </div>}
                 </div>
                 {!!candidate.evidence.length && (
                   <div className="space-y-2">
@@ -348,8 +360,8 @@ export function CompetitorDiscoveryPanel({
       ) : (
         <p className="px-5 py-8 text-center text-sm text-muted-foreground">
           {text(
-            'No strong new candidates were found in the analyzed answers.',
-            'Nenhum novo candidato forte foi encontrado nas respostas analisadas.',
+            research ? 'No new competitors have been confirmed with sufficient evidence in this scope.' : 'No strong new candidates were found in the analyzed answers.',
+            research ? 'Nenhum novo concorrente foi confirmado com evidência suficiente neste recorte.' : 'Nenhum novo candidato forte foi encontrado nas respostas analisadas.',
           )}
         </p>
       )}

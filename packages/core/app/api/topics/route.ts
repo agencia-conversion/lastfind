@@ -1,3 +1,5 @@
+import { engineSelection, reconcileInheritedPrompts } from '@/lib/server/prompts';
+import { accountCapabilities } from '@/lib/server/capabilities';
 import { requireUser } from '@/lib/server/auth';
 import { db, now } from '@/lib/server/env';
 import { ownedProject } from '@/lib/server/workspace';
@@ -38,19 +40,25 @@ export async function PATCH(request: Request) {
     const u = await requireUser(),
       data = await body(request);
     const id = textField(data.id, 'Tópico', 1, 100),
-      name = textField(data.name, 'Nome', 1, 40);
+      rawName = data.name;
     const topic = await db()
       .prepare(
         'SELECT t.* FROM topics t JOIN projects p ON p.id=t.project_id WHERE t.id=? AND p.owner_id=? AND p.archived=0',
       )
       .bind(id, u.id)
-      .first<{ project_id: string; name: string }>();
+      .first<{ project_id: string; name: string; engines_override_json: string | null }>();
     if (!topic) throw new ApiError(404, 'Tópico não encontrado.');
+    const name = rawName === undefined ? topic.name : textField(rawName, 'Name', 1, 40);
+    const project = await ownedProject(topic.project_id, u.id);
+    const override = 'engines' in data ? data.engines === null ? null : JSON.stringify(engineSelection(data.engines, String(project.language_code), (await accountCapabilities(u.id)).engines)) : topic.engines_override_json;
+    const inherited = await reconcileInheritedPrompts(topic.project_id, u.id, topic.name, project, override);
     await db().batch([
-      db().prepare('UPDATE topics SET name=? WHERE id=?').bind(name, id),
+      ...inherited,
+      db().prepare('UPDATE topics SET name=?,engines_override_json=? WHERE id=?').bind(name, override, id),
       db()
         .prepare('UPDATE prompts SET tag=? WHERE project_id=? AND tag=?')
         .bind(name, topic.project_id, topic.name),
+      ...capacityGuards(u.id),
     ]);
     return json({ ok: true });
   } catch (e) {

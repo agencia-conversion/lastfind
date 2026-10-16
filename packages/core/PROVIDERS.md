@@ -28,7 +28,7 @@ A instalação pessoal inclui todas as plataformas acima; limites de idioma e ta
 
 ## Identidade visual
 
-Ícones locais da distribuição `@lobehub/icons-static-svg@1.91.0`: OpenAI, Gemini, Claude, Perplexity e Google. [Lobe Icons](https://github.com/lobehub/lobe-icons), licença MIT preservada em `public/icons/ai/LICENSE`. Os nomes/logotipos pertencem aos respectivos titulares; seu uso identifica as plataformas.
+Ícones locais da distribuição `@lobehub/icons-static-svg@1.91.0`: OpenAI, Gemini, Claude, Perplexity e Google. O ícone de AI Mode (`ai-mode.svg`) é um desenho original do Lastfind (lupa com brilho), sem a marca do Google. [Lobe Icons](https://github.com/lobehub/lobe-icons), licença MIT preservada em `public/icons/ai/LICENSE`. Os nomes/logotipos pertencem aos respectivos titulares; seu uso identifica as plataformas.
 
 Favicons usam o domínio público informado pelo usuário via Google S2. A imagem é carregada pelo navegador sem referrer, com fallback para a inicial da marca. O servidor Lastfind não faz fetch de URLs arbitrárias.
 

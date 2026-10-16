@@ -37,6 +37,7 @@ export const projects = sqliteTable(
     languageCode: text('language_code').notNull().default('en'),
     dailyEnabled: integer('daily_enabled').notNull().default(0),
     intervalHours: integer('interval_hours').notNull().default(24),
+    enginesJson: text('engines_json').notNull().default('["chat_gpt"]'),
     category: text('category').notNull().default(''),
     audience: text('audience').notNull().default(''),
     archived: integer('archived').notNull().default(0),
@@ -52,6 +53,9 @@ export const prompts = sqliteTable(
       .notNull()
       .references(() => projects.id),
     text: text('text').notNull(),
+    unitId: text('unit_id'),
+    enginesOverrideJson: text('engines_override_json'),
+    subscribed: integer('subscribed').notNull().default(1),
     engine: text('engine').notNull(),
     tag: text('tag').notNull().default('Geral'),
     tagsJson: text('tags_json').notNull().default('[]'),
@@ -142,6 +146,7 @@ export const topics = sqliteTable(
       .notNull()
       .references(() => projects.id),
     name: text('name').notNull(),
+    enginesOverrideJson: text('engines_override_json'),
     createdAt: text('created_at').notNull(),
   },
   (t) => [uniqueIndex('idx_topics_name').on(t.projectId, t.name)],

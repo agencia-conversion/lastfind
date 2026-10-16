@@ -175,8 +175,51 @@ try {
   const current = (await req('/api/workspace?project=' + project)).data;
   assert.equal(current.runs.length, 0);
   assert.equal(current.prompts[0].next_run_at.slice(11), '07:00:00.000Z');
+  // Immediate collection needs monitoring on, which makes the edition submit the
+  // run at once. That is a paid call against a real installation, so it is only
+  // exercised on the isolated loopback runtime, which has no provider configured.
+  if (testing) {
+    // A new prompt is due now and its first collection is queued immediately.
+    await req('/api/projects/' + project, 'PATCH', { daily_enabled: true });
+    const usedBefore = (await req('/api/workspace?project=' + project)).data.usage.used;
+    const immediate = (
+      await req(
+        '/api/prompts',
+        'POST',
+        {
+          project_id: project,
+          text: 'An installation verification prompt collected right away',
+          engine: 'chat_gpt',
+        },
+        201,
+      )
+    ).data;
+    assert.equal(immediate.monitoring.queued, true);
+    // The Worker submits the run right after the response, and with no provider
+    // configured that attempt fails within milliseconds, so "pending" is a race.
+    // The run existing proves it was queued; leaving the queue proves it was
+    // submitted at once instead of waiting for the scheduler.
+    const queued = (await req('/api/workspace?project=' + project)).data;
+    assert.equal(queued.usage.used, usedBefore + 1);
+    let settled = queued.monitoring.pending;
+    for (let i = 0; settled > 0 && i < 40; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      settled = (await req('/api/workspace?project=' + project)).data.monitoring.pending;
+    }
+    assert.equal(settled, 0);
+    await req('/api/prompts/' + immediate.id, 'DELETE');
+  }
   const report = (await req('/api/reports?project=' + project)).data;
   assert.equal(report.metrics.responses, 0);
+  // Source types: an empty project reports an honest, unclassified state and never calls a provider.
+  const types = (await req('/api/reports?view=source-types&project=' + project)).data;
+  assert.equal(types.citations, 0);
+  assert.equal(types.classifier.state, 'disabled');
+  assert.equal((await req('/api/reports?view=sources&project=' + project)).data.classifier.state, 'disabled');
+  const domain = (await req('/api/reports?view=domain-detail&key=absent.test&project=' + project)).data;
+  assert.equal(domain.metrics.citing, 0);
+  assert.equal(domain.sourceType, 'unclassified');
+  await req('/api/projects/' + project + '/source-types', 'POST', { kind: 'domain' }, 403);
   await req('/api/prompts/' + prompt, 'DELETE');
   await req('/api/projects/' + project, 'DELETE');
   project = null;

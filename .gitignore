@@ -13,4 +13,3 @@ __pycache__/
 .vinext/
 .next/
 next-env.d.ts
-.conductor/settings.local.toml

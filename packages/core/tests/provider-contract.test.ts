@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ENGINES } from '../lib/engines.ts';
 import {
   providerBase,
+  providerTaskPending,
   providerPayload,
   providerResultPath,
   providerResultCost,
@@ -143,4 +144,9 @@ void test('daily reservation keys converge across retries and UTC midnight', () 
     scheduleWindow('2026-09-06T02:00:00Z'),
     '2026-09-05T07:00:00.000Z',
   );
+});
+
+void test('accepted Standard queue codes are pending, terminal provider errors are not',()=>{
+  for(const code of [20100,40601,40602]) assert.equal(providerTaskPending(code),true);
+  for(const code of [20000,40001,40401,40501,50000]) assert.equal(providerTaskPending(code),false);
 });

@@ -99,9 +99,14 @@ await test('the analytics prototype renders its mock workspace without importing
       'Server implementations stay outside the client bundle',
     );
     assert.deepEqual(
-      dependencies.filter((path) =>
-        /\/(?:components\/lastfind|hooks\/use-report)\b/.test(path),
-      ),
+      dependencies.filter((path) => {
+        const normalizedPath = path.replaceAll('\\', '/');
+        return (
+          /\/hooks\/use-report\b/.test(normalizedPath) ||
+          (/\/components\/lastfind(?:\/|$)/.test(normalizedPath) &&
+            !/\/components\/lastfind\/presentation\//.test(normalizedPath))
+        );
+      }),
       [],
       'The prototype must not retain the former connected shell',
     );
@@ -460,23 +465,13 @@ await test('the analytics prototype renders its mock workspace without importing
         },
       ],
     };
-    assert.equal(
-      fixture.getTrendPoints(trendReport, 'shareOfVoice')[0].conversion,
-      null,
-    );
-    assert.equal(
-      fixture.getTrendPoints(trendReport, 'shareOfVoice')[1].conversion,
-      0,
-    );
-    assert.equal(
-      fixture.getTrendPoints(trendReport, 'shareOfVoice')[1].mestre,
-      100,
-    );
-    assert.equal(
-      fixture.getTrendPoints(trendReport, 'position')[1].conversion,
-      null,
-    );
-    assert.equal(fixture.getTrendPoints(trendReport, 'position')[1].mestre, 1);
+    const sparseSov = fixture.getTrendPoints(trendReport, 'shareOfVoice');
+    assert.equal(sparseSov.length, 1, 'days without responses do not create chart categories');
+    assert.equal(sparseSov[0].conversion, 0);
+    assert.equal(sparseSov[0].mestre, 100);
+    const sparsePosition = fixture.getTrendPoints(trendReport, 'position');
+    assert.equal(sparsePosition[0].conversion, null);
+    assert.equal(sparsePosition[0].mestre, 1);
 
     const base = {
       promptId: 'p1',

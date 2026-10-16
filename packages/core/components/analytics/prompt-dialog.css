@@ -1,0 +1,127 @@
+.pd-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90dvh;
+  padding: 20px 20px 0;
+  overflow: hidden;
+}
+@media (min-width: 640px) {
+  .pd-dialog {
+    max-width: 560px;
+  }
+}
+.pd-dialog [data-slot='dialog-title'] {
+  font-size: 18px;
+  line-height: 26px;
+}
+.pd-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.pd-body {
+  flex: 1;
+  min-height: 0;
+  margin: 0 -20px;
+  padding: 4px 20px 20px;
+  overflow-y: auto;
+}
+.pd-dialog .pd-footer {
+  margin: 0 -20px;
+  padding: 14px 20px;
+}
+.pd-dialog .pd-footer button {
+  min-height: 40px;
+}
+@media (max-width: 639px) {
+  .pd-dialog {
+    max-width: calc(100% - 1.5rem);
+    padding: 16px 16px 0;
+  }
+  .pd-body {
+    margin: 0 -16px;
+    padding-inline: 16px;
+  }
+  .pd-dialog .pd-footer {
+    margin: 0 -16px;
+    padding-inline: 16px;
+  }
+  .pd-dialog .pd-footer button {
+    min-height: 44px;
+  }
+}
+.pd-help-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pd-count {
+  flex: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.pd-count-over {
+  color: var(--destructive);
+}
+.pd-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 639px) {
+  .pd-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pd-optional {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+.pd-models {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.pd-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin-top: 4px;
+}
+@media (max-width: 639px) {
+  .pd-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pd-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 14px;
+  font-weight: 400;
+}
+.pd-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.pd-notice svg {
+  flex: none;
+  margin-top: 3px;
+}
+.pd-notice-warn {
+  color: var(--foreground);
+}
+.pd-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 13px;
+}

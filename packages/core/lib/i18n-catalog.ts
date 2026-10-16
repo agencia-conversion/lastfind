@@ -428,6 +428,12 @@ export const translations: Record<string, string> = {
   'Salvando…': 'Saving…',
   Retomar: 'Resume',
   Geral: 'General',
+  'Não foi possível entrar.': 'Unable to sign in.',
+  'Chave de acesso da sua instalação': 'Your installation’s access key',
+  'Use a chave gerada durante a instalação. Você pode guardá-la no seu gerenciador de senhas.':
+    'Use the key generated during setup. Keep it in your password manager.',
+  'Entrar na minha instalação': 'Sign in to my installation',
+  'Entrando…': 'Signing in…',
   Restaurar: 'Restore',
   '{count} respostas': '{count} responses',
   'Próxima: {time}': 'Next: {time}',

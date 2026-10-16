@@ -24,8 +24,8 @@ export default function Documentation() {
         <h2 className="text-xl font-semibold">{l('Setup', 'Configuração')}</h2>
         <p className="mt-3">
           {l(
-            'Run the installer from your checkout. It guides you through Cloudflare and DataForSEO configuration, deployment and the owner key.',
-            'Execute o instalador no seu checkout. Ele orienta a configuração da Cloudflare e do DataForSEO, a publicação e a chave do proprietário.',
+            'Run the installer from your checkout. It checks your DataForSEO and OpenRouter keys, connects Cloudflare, deploys and shows where your owner key is saved. Run it again any time to update.',
+            'Execute o instalador no seu checkout. Ele confere suas chaves do DataForSEO e do OpenRouter, conecta a Cloudflare, publica e mostra onde está a sua chave de proprietário. Rode de novo quando quiser para atualizar.',
           )}
         </p>
         <pre className="mt-4 overflow-x-auto rounded-lg bg-muted p-4">
@@ -33,7 +33,7 @@ export default function Documentation() {
         </pre>
         <a
           className="mt-4 inline-block text-primary"
-          href="https://github.com/agencia-conversion/lastfind#readme"
+          href={`https://github.com/agencia-conversion/lastfind/blob/main/docs/${locale === 'en' ? 'install.md' : 'install.pt-BR.md'}`}
         >
           {l(
             'Complete installation instructions',
