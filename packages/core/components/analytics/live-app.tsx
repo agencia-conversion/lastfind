@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type ReactNode,
 } from 'react';
 import { createAnalyticsRequest } from '@/lib/analytics-cache';
 import {
@@ -54,11 +55,12 @@ import type { SemanticAggregate } from '@/lib/semantic-report';
 import { relativeReportDate } from '@/lib/report-date';
 import { SourceEntityPage } from './source-entity-page';
 import { ExportButton } from './export-button';
-import { SectionSidebar } from './section-sidebar';
+import { SectionLayout, SectionSidebar } from './section-sidebar';
+import { FitList } from './fit-list';
 import { PromptDialog } from './prompt-dialog';
-import { ClassifierNotice, SourceTypeBadge, SourceTypesPanel, sourceTypeLabel, unknownDomainHint, unknownDomainLabel } from './source-types-ui';
+import { ClassifierNotice, ContentTypesPanel, OwnerBadge, SourceTypeBadge, SourceTypesPanel, TopSourcesList, sourceOwnerLabel, sourceTypeLabel, unknownDomainHint, unknownDomainLabel } from './source-types-ui';
 import { DrillLink, type DrillTarget, type Linker } from './drill-link';
-import { DOMAIN_TYPES, PAGE_TYPES, SOURCE_TYPE_COLORS, UNCLASSIFIED, type DomainType } from '@/lib/source-types';
+import { DOMAIN_TYPES, PAGE_TYPES, SOURCE_OWNERS, UNCLASSIFIED, sourceFiltersFromQuery } from '@/lib/source-types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { getTrendScale, rankTrendSeries, summaryTrend, type TrendMetric, type TrendResolution } from '@/lib/report-trend';
@@ -101,6 +103,8 @@ import {
   Info,
   ChevronRight,
   MoreVertical,
+  Globe,
+  FileText,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -129,6 +133,7 @@ import type {
   PromptDetail,
   SourceDetail,
   SourceTypesReport,
+  ContentTypesReport,
 } from '@/lib/report-types';
 import './live-app.css';
 
@@ -256,6 +261,7 @@ type NavState = {
   listScroll: number;
   entity: SourceEntity | null;
   typeFilter: string;
+  ownerFilter: string;
   runRoute: string | null;
   brandFilter: string;
 };
@@ -283,6 +289,7 @@ function writeSearch(params: URLSearchParams, state: NavState) {
     ['kind', state.sourceKind],
     ['group', state.sourceGroup],
     ['type', tab === 'sources' ? state.typeFilter : ''],
+    ['owner', tab === 'sources' ? state.ownerFilter : ''],
     ['brand', tab === 'responses' ? state.brandFilter : ''],
     ['run', tab === 'responses' ? state.runRoute ?? '' : ''],
     ['entity', tab === 'sources' ? state.entity?.kind ?? '' : ''],
@@ -364,6 +371,10 @@ export function LiveAnalyticsApp({
   const [reportKey, setReportKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [networkReportLoading, setReportLoading] = useState(false);
+  // Path whose request has finished (loaded or failed): until then the report is still pending,
+  // so the skeleton stays on screen through the render between "workspace ready" and "request sent".
+  const [reportSettledPath, setReportSettledPath] = useState<string | null>(null);
+  const [reportAttempt, setReportAttempt] = useState(0);
   const [overviewSourcesData, setOverviewSources] = useState<SourcesPage | null>(null,
   );
   const [overviewHistoryData, setOverviewHistory] = useState<HistoryPage | null>(null,
@@ -411,7 +422,8 @@ export function LiveAnalyticsApp({
       key = query.get('key');
     return initialTab === 'sources' && (kind === 'domain' || kind === 'url') && key ? { kind, key } : null;
   });
-  const [typeFilter, setTypeFilter] = useState(initialTab === 'sources' ? query.get('type') || '' : '');
+  const [typeFilter, setTypeFilter] = useState(initialTab === 'sources' ? sourceFiltersFromQuery(query).type : '');
+  const [ownerFilter, setOwnerFilter] = useState(initialTab === 'sources' ? sourceFiltersFromQuery(query).owner : '');
   const [runRoute, setRunRoute] = useState<string | null>(initialTab === 'responses' ? query.get('run') : null);
   const [brandFilter, setBrandFilter] = useState(initialTab === 'responses' ? query.get('brand') || '' : '');
   const [typesReport, setTypesReport] = useState<SourceTypesReport | null>(null);
@@ -647,6 +659,7 @@ export function LiveAnalyticsApp({
     responseMention,
     brandFilter,
     typeFilter,
+    ownerFilter,
     tab,
   ]);
   const filterQuery = useMemo(() => {
@@ -668,6 +681,7 @@ export function LiveAnalyticsApp({
       params.set('group', sourceGroup);
       params.set('page', String(sourcePage));
       if (typeFilter) params.set('type', typeFilter);
+      if (ownerFilter) params.set('owner', ownerFilter);
     }
     return params;
   }, [
@@ -687,10 +701,11 @@ export function LiveAnalyticsApp({
     serverPage,
     brandFilter,
     typeFilter,
+    ownerFilter,
   ]);
   const detailFilters = useMemo(() => {
     const params = new URLSearchParams(filterQuery);
-    for (const key of ['page', 'kind', 'group', 'type', 'query']) params.delete(key);
+    for (const key of ['page', 'kind', 'group', 'type', 'owner', 'query']) params.delete(key);
     return params.toString();
   }, [filterQuery]);
   const reportPath = useMemo(() => {
@@ -705,10 +720,12 @@ export function LiveAnalyticsApp({
     return { sources, history: `${api}/reports?${params}` };
   }, [filterQuery, api]);
   const overviewSources = cache.peek<SourcesPage>(overviewPaths.sources) ?? (overviewSourcesKey === overviewPaths.sources ? overviewSourcesData : null);
+  // null is both "still loading" and "failed"; the key says which: a settled key with no data is a failure.
+  const overviewSourcesState = overviewSources ? 'ready' : overviewSourcesKey === overviewPaths.sources ? 'failed' : 'loading';
   const overviewHistory = cache.peek<HistoryPage>(overviewPaths.history) ?? (overviewHistoryKey === overviewPaths.history ? overviewHistoryData : null);
   const cachedReport = reportPath ? cache.peek<NonNullable<typeof report>>(reportPath) : undefined;
-  const reportLoading = networkReportLoading && !cachedReport;
   const workspaceReady = Boolean(workspace);
+  const reportLoading = (networkReportLoading || (workspaceReady && Boolean(reportPath) && reportSettledPath !== reportPath)) && !cachedReport;
   useEffect(() => {
     if (
       !workspaceReady ||
@@ -756,7 +773,7 @@ export function LiveAnalyticsApp({
         if (active && cause.name !== 'AbortError') setError(cause.message);
       })
       .finally(() => {
-        if (active) setReportLoading(false);
+        if (active) { setReportLoading(false); setReportSettledPath(reportPath); }
       });
     return () => {
       active = false;
@@ -772,6 +789,7 @@ export function LiveAnalyticsApp({
     promptRoute,
     reportPath,
     cache,
+    reportAttempt,
   ]);
   useEffect(() => {
     if (!workspaceReady || !projectId || tab !== 'overview') return;
@@ -805,6 +823,33 @@ export function LiveAnalyticsApp({
       active = false;
     };
   }, [workspaceReady, dataRevision, projectId, tab, typesPath, request, cache, typesAttempt]);
+  const contentPath = useMemo(() => {
+    const params = new URLSearchParams(filterQuery);
+    params.set('view', 'content-types');
+    return `${api}/reports?${params}`;
+  }, [filterQuery, api]);
+  const [contentReport, setContentReport] = useState<ContentTypesReport | null>(null);
+  const [contentState, setContentState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [contentAttempt, setContentAttempt] = useState(0);
+  useEffect(() => {
+    if (!workspaceReady || !projectId || tab !== 'overview') return;
+    let active = true;
+    queueMicrotask(() => {
+      if (active) setContentState(cache.peek(contentPath) ? 'ready' : 'loading');
+    });
+    request<ContentTypesReport>(contentPath)
+      .then((data) => {
+        if (!active) return;
+        setContentReport(data);
+        setContentState('ready');
+      })
+      .catch((cause) => {
+        if (active && cause?.name !== 'AbortError') setContentState('failed');
+      });
+    return () => {
+      active = false;
+    };
+  }, [workspaceReady, dataRevision, projectId, tab, contentPath, request, cache, contentAttempt]);
   const classifySources = async (kind: 'domain' | 'url') => {
     if (!projectId || demoMode) return;
     setClassifying(true);
@@ -893,7 +938,8 @@ export function LiveAnalyticsApp({
       const entityKind = next.get('entity'),
         entityKey = next.get('key');
       setEntity(nextTab === 'sources' && (entityKind === 'domain' || entityKind === 'url') && entityKey ? { kind: entityKind, key: entityKey } : null);
-      setTypeFilter(nextTab === 'sources' ? next.get('type') || '' : '');
+      setTypeFilter(nextTab === 'sources' ? sourceFiltersFromQuery(next).type : '');
+      setOwnerFilter(nextTab === 'sources' ? sourceFiltersFromQuery(next).owner : '');
       setRunRoute(nextTab === 'responses' ? next.get('run') : null);
       setBrandFilter(nextTab === 'responses' ? next.get('brand') || '' : '');
     };
@@ -920,6 +966,7 @@ export function LiveAnalyticsApp({
     listScroll: 0,
     entity,
     typeFilter,
+    ownerFilter,
     runRoute,
     brandFilter,
   };
@@ -978,6 +1025,7 @@ export function LiveAnalyticsApp({
       responseMention: target.mention ?? (changing ? 'all' : responseMention),
       engineFilter: target.engine ?? engineFilter,
       typeFilter: 'type' in target ? (target.type ?? '') : changing ? '' : typeFilter,
+      ownerFilter: 'owner' in target ? (target.owner ?? '') : changing ? '' : ownerFilter,
       sourceGroup: target.group ?? sourceGroup,
       sourceKind: target.kind ?? sourceKind,
       settingsSection: (target.section as SettingsSection | undefined) ?? settingsSection,
@@ -994,11 +1042,12 @@ export function LiveAnalyticsApp({
     setResponseMention(next.responseMention);
     setEngineFilter(next.engineFilter);
     setTypeFilter(next.typeFilter);
+    setOwnerFilter(next.ownerFilter);
     setSourceGroup(next.sourceGroup);
     setSourceKind(next.sourceKind);
     setSettingsSection(next.settingsSection);
     setBrandView(next.brandView);
-    if (next.tab !== tab || next.typeFilter !== typeFilter || next.sourceGroup !== sourceGroup) setSourcePage(1);
+    if (next.tab !== tab || next.typeFilter !== typeFilter || next.ownerFilter !== ownerFilter || next.sourceGroup !== sourceGroup) setSourcePage(1);
     setMobileFiltersOpen(false);
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
@@ -1416,6 +1465,12 @@ export function LiveAnalyticsApp({
       <col style={{ width: 48 }} />
     </colgroup>
   );
+  // Per-question metrics come from a slower report than the prompt list: "—" means "no response in the period", never "still loading" or "failed".
+  const promptMetricsLoading = tab === 'prompts' && reportLoading;
+  const promptMetricsFailed = tab === 'prompts' && !promptRoute && workspaceReady && Boolean(reportPath) && !reportLoading && !promptStats;
+  const promptMetricCell = (value: ReactNode, size = 'w-10') =>
+    promptMetricsLoading ? <output aria-busy="true" className={`ml-auto block h-4 animate-pulse rounded bg-muted ${size}`}><span className="sr-only">{t('Loading…', 'Carregando…')}</span></output>
+    : promptMetricsFailed ? <span className="sr-only">{t('Unavailable', 'Indisponível')}</span> : value;
   const promptHeader = (hidden = false) => <TableHeader className={hidden ? 'sr-only' : undefined}><TableRow><TableHead className="w-10 pl-4">{hidden ? <span className="sr-only">{t('Select', 'Selecionar')}</span> : <Checkbox aria-label={t('Select all visible prompts', 'Selecionar todos os prompts visíveis')} checked={visiblePrompts.length > 0 && selectedVisiblePrompts.length === visiblePrompts.length} indeterminate={selectedVisiblePrompts.length > 0 && selectedVisiblePrompts.length < visiblePrompts.length} onCheckedChange={(checked) => setSelectedPrompts(checked ? visiblePrompts.map((item) => item.id) : [])} />}</TableHead><TableHead>{t('Prompt', 'Prompt')}</TableHead>{Object.entries(promptColumnLabels).filter(([column]) => showPromptColumn(column)).map(([column, label]) => <TableHead key={column} className={['visibility', 'position'].includes(column) ? 'text-right' : undefined}>{label}</TableHead>)}<TableHead><span className="sr-only">{t('Actions', 'Ações')}</span></TableHead></TableRow></TableHeader>;
   const syncPromptScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
@@ -2173,25 +2228,7 @@ export function LiveAnalyticsApp({
                             <div className="overview-stack">
                               <section className="analytics-panel">
                                 <div className="panel-heading"><h2>{t('Top sources', 'Principais fontes')}</h2><Button variant="ghost" size="sm" onClick={() => setTab('sources')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button></div>
-                                {overviewSources?.rows.length ? (
-                                  <div className="live-frequency" aria-label={t('Citation frequency by source', 'Frequência de citação por fonte')}>
-                                    {overviewSources.rows.slice(0, 5).map((item) => (
-                                      <DrillLink key={item.key} link={link} to={{ tab: 'sources', entity: { kind: 'domain', key: item.key } }} disabled={!item.key} title={item.key ? undefined : unknownDomainHint(t)}>
-                                        <span className="flex min-w-0 flex-col gap-0.5">
-                                          <span className="flex min-w-0 items-center gap-2">
-                                            {item.domain && <SiteFavicon domain={item.domain} name={item.domain} />}
-                                            <span className="truncate">{item.domain || unknownDomainLabel(t)}</span>
-                                          </span>
-                                          <span className="st-type-text"><span className="st-dot" style={{ background: SOURCE_TYPE_COLORS[(item.sourceType as DomainType) ?? UNCLASSIFIED] ?? SOURCE_TYPE_COLORS.other }} aria-hidden="true" />{sourceTypeLabel(item.sourceType, t)}</span>
-                                        </span>
-                                        <i style={{ width: `${(100 * item.responses) / Math.max(1, overviewSources.rows[0].responses)}%` }} />
-                                        <b>{item.responses}</b>
-                                      </DrillLink>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="p-5 text-muted-foreground">{t('No cited sources in this period.', 'Sem fontes citadas neste período.')}</p>
-                                )}
+                                <TopSourcesList state={overviewSourcesState} rows={overviewSources?.rows ?? []} link={link} t={t} />
                               </section>
                               <SourceTypesPanel
                                 report={typesReport}
@@ -2201,18 +2238,32 @@ export function LiveAnalyticsApp({
                                 t={t}
                                 classifying={classifying}
                                 actionError={classifyError}
-                                onSelectType={(type) => navigate({ tab: 'sources', group: 'domain', type })}
+                                onSelectType={(type) => navigate({ tab: 'sources', group: 'domain', type, owner: null, entity: null })}
                                 onClassify={demoMode ? undefined : () => void classifySources('domain')}
                                 onConfigure={demoMode ? undefined : () => { setSettingsSection('competitors'); setTab('settings'); }}
-                                onViewAll={() => setTab('sources')}
+                                onViewAll={() => navigate({ tab: 'sources', group: 'domain', type: null, owner: null, entity: null })}
                                 onRetry={() => setTypesAttempt((value) => value + 1)}
+                              />
+                              <ContentTypesPanel
+                                report={contentReport}
+                                loading={contentState === 'loading' && !contentReport}
+                                failed={contentState === 'failed'}
+                                locale={locale}
+                                t={t}
+                                classifying={classifying}
+                                actionError={classifyError}
+                                onSelectType={(type) => navigate({ tab: 'sources', group: 'url', type, owner: null, entity: null })}
+                                onClassify={demoMode ? undefined : () => void classifySources('url')}
+                                onConfigure={demoMode ? undefined : () => { setSettingsSection('competitors'); setTab('settings'); }}
+                                onViewAll={() => navigate({ tab: 'sources', group: 'url', type: null, owner: null, entity: null })}
+                                onRetry={() => setContentAttempt((value) => value + 1)}
                               />
                             </div>
                             <section className="analytics-panel live-recent-panel">
                               <div className="panel-heading"><h2>{t('Recent responses', 'Respostas recentes')}</h2><Button variant="ghost" size="sm" onClick={() => setTab('responses')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button></div>
                               {overviewHistory?.runs.length ? (
-                                <ul className="live-list">
-                                  {overviewHistory.runs.slice(0, 4).map((run) => (
+                                <FitList className="live-list">
+                                  {overviewHistory.runs.map((run) => (
                                     <li key={run.id}>
                                       <div className="min-w-0">
                                         <DrillLink link={link} to={{ tab: 'responses', run: run.id }} className="live-run-title"><strong>{run.prompt_text}</strong></DrillLink>
@@ -2234,7 +2285,7 @@ export function LiveAnalyticsApp({
                                       </DrillLink>
                                     </li>
                                   ))}
-                                </ul>
+                                </FitList>
                               ) : (
                                 <p className="p-5 text-muted-foreground">{t('No responses in this period.', 'Sem respostas neste período.')}</p>
                               )}
@@ -2479,6 +2530,12 @@ export function LiveAnalyticsApp({
                               )} onClick={() => setSelectedPrompts([])}><X /></Button>
                           </div>
                         )}
+                        {promptMetricsFailed && (
+                          <p role="alert" className="flex flex-wrap items-center gap-2 border-b px-4 py-2 text-sm text-destructive">
+                            {t('Could not load visibility and position.', 'Não foi possível carregar visibilidade e posição.')}
+                            <Button variant="outline" size="xs" onClick={() => setReportAttempt((value) => value + 1)}>{t('Try again', 'Tentar de novo')}</Button>
+                          </p>
+                        )}
                         {visiblePrompts.length ? (
                           <>
                             {promptsSticky && <div className="live-sticky-column-header"><Table ref={promptStickyTable} className="analytics-table live-prompt-table" aria-label={t('Prompt table controls', 'Controles da tabela de prompts')}>{promptColumns}{promptHeader()}</Table></div>}
@@ -2516,11 +2573,11 @@ export function LiveAnalyticsApp({
                                           </div>
                                         </TableCell>
                                       )}
-                                      {showPromptColumn('visibility') && <TableCell className="text-right tabular-nums" data-label={promptColumnLabels.visibility}>{metric?.responses ? <DrillLink link={link} to={{ tab: 'prompts', prompt: item.id }}>{`${metric.visibility.toFixed(1)}%`}</DrillLink> : '—'}</TableCell>}
+                                      {showPromptColumn('visibility') && <TableCell className="text-right tabular-nums" data-label={promptColumnLabels.visibility}>{promptMetricCell(metric?.responses ? <DrillLink link={link} to={{ tab: 'prompts', prompt: item.id }}>{`${metric.visibility.toFixed(1)}%`}</DrillLink> : '—')}</TableCell>}
                                       {showPromptColumn('position') && <TableCell className="text-right tabular-nums" data-label={promptColumnLabels.position}>
-                                      {metric?.position != null
+                                      {promptMetricCell(metric?.position != null
                                         ? metric.position.toFixed(1)
-                                        : '—'}
+                                        : '—')}
                                     </TableCell>}
                                       {showPromptColumn('country') && <TableCell className="text-muted-foreground" data-label={promptColumnLabels.country}>{project.location_code === 2076 ? '🇧🇷' : project.location_code === 2840 ? '🇺🇸' : ''}{' '} {project.location_code === 2076 ? t('Brazil', 'Brasil') : project.location_code === 2840 ? t('United States', 'Estados Unidos') : t('Project country', 'País do projeto',
                                             )}</TableCell>}
@@ -2534,9 +2591,11 @@ export function LiveAnalyticsApp({
                                                   <EngineIcon engine={engine} />
                                                   <span className="flex-1">{ENGINE_LABELS[engine]}</span>
                                                   <span className="tabular-nums" title={t('Visibility · Position', 'Visibilidade · Posição')}>
+                                                    {promptMetricCell(<>
                                                     {channel?.responses ? `${channel.visibility.toFixed(1)}%` : '—'}{' '}
                                                     · {' '}
                                                     {channel?.position != null ? channel.position.toFixed(1) : '—'}
+                                                    </>, 'w-16')}
                                                   </span>
                                                 </div>
                                               );
@@ -3029,6 +3088,21 @@ export function LiveAnalyticsApp({
                 {project && !creatingProject && tab === 'sources' && (
                   <>
                     <h2 className="sr-only">{t('Sources', 'Fontes')}</h2>
+                    <SectionLayout
+                      className="sources-layout"
+                      label={t('Source views', 'Visões de fontes')}
+                      title={t('Sources', 'Fontes')}
+                      icon={<Globe size={13} />}
+                      groups={[{
+                        id: 'sources',
+                        items: [
+                          { id: 'domain', label: t('Domains', 'Domínios'), icon: <Globe size={15} /> },
+                          { id: 'url', label: t('Content', 'Conteúdos'), icon: <FileText size={15} />, title: t('Cited pages (URLs)', 'Páginas citadas (URLs)') },
+                        ],
+                      }]}
+                      value={entity ? entity.kind : sourceGroup}
+                      onChange={(id) => navigate({ tab: 'sources', group: id as 'domain' | 'url', entity: null, type: null, owner: null })}
+                    >
                     {entity ? (
                       <SourceEntityPage
                         api={api}
@@ -3048,19 +3122,24 @@ export function LiveAnalyticsApp({
                       />
                     ) : (
                     <div className="analytics-panel">
-                      <div className="live-collection-toolbar">
-                        <div className="live-status-tabs" role="tablist" aria-label={t('Source grouping', 'Agrupamento de fontes')}>
-                          {(['domain', 'url'] as const).map((group) => (
-                            <Button key={group} role="tab" aria-selected={sourceGroup === group} variant="ghost" size="sm" className={sourceGroup === group ? 'live-status-active' : ''} onClick={() => { setSourceGroup(group); setSourcePage(1); setTypeFilter(''); }}>{group === 'domain' ? t('Domains', 'Domínios') : 'URLs'}</Button>))}
-                        </div>
+                      <div className="live-collection-toolbar live-sources-toolbar">
                         <FilterSelect
-                          label={sourceGroup === 'domain' ? t('Source type', 'Tipo de fonte') : t('Page type', 'Tipo de página')}
+                          label={sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo')}
                           value={typeFilter || 'all'}
                           onChange={(value) => { setTypeFilter(value === 'all' ? '' : value); setSourcePage(1); }}
                           options={[
-                            { value: 'all', label: sourceGroup === 'domain' ? t('All source types', 'Todos os tipos de fonte') : t('All page types', 'Todos os tipos de página') },
+                            { value: 'all', label: sourceGroup === 'domain' ? t('All site types', 'Todos os tipos de site') : t('All content types', 'Todos os tipos de conteúdo') },
                             ...(sourceGroup === 'domain' ? DOMAIN_TYPES : PAGE_TYPES).map((type) => ({ value: type, label: sourceTypeLabel(type, t) })),
                             { value: UNCLASSIFIED, label: sourceTypeLabel(UNCLASSIFIED, t) },
+                          ]}
+                        />
+                        <FilterSelect
+                          label={t('Owner', 'Dono')}
+                          value={ownerFilter || 'all'}
+                          onChange={(value) => { setOwnerFilter(value === 'all' ? '' : value); setSourcePage(1); }}
+                          options={[
+                            { value: 'all', label: t('All owners', 'Todos os donos') },
+                            ...SOURCE_OWNERS.map((owner) => ({ value: owner, label: `${t('Owner', 'Dono')}: ${sourceOwnerLabel(owner, t, true)}` })),
                           ]}
                         />
                         <FilterSelect
@@ -3081,7 +3160,7 @@ export function LiveAnalyticsApp({
                           {t('Consulted sources are unavailable for these answers.', 'Fontes consultadas indisponíveis para estas respostas.')}
                         </p>
                       )}
-                      {sources?.classifier && sources.rows.some((row) => row.sourceType === UNCLASSIFIED && row.ownership === 'third-party') && (
+                      {sources?.classifier && sources.rows.some((row) => row.sourceType === UNCLASSIFIED) && (
                         <div className="st-list-notice">
                           <ClassifierNotice
                             classifier={sources.classifier}
@@ -3103,13 +3182,16 @@ export function LiveAnalyticsApp({
                             <TableHeader>
                               <TableRow>
                                 <TableHead data-mobile="hide">#</TableHead>
-                                <TableHead>{sourceGroup === 'domain' ? t('Domain', 'Domínio') : 'URL'}</TableHead>
-                                <TableHead>{sourceGroup === 'domain' ? t('Type', 'Tipo') : t('Page type', 'Tipo de página')}</TableHead>
-                                <TableHead className="text-right">
+                                <TableHead>{sourceGroup === 'domain' ? t('Domain', 'Domínio') : t('Page', 'Página')}</TableHead>
+                                <TableHead>{sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo')}</TableHead>
+                                <TableHead className="text-right live-wrap-head">
                                   {sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas')}
                                 </TableHead>
-                                <TableHead className="text-right">
+                                <TableHead className="text-right live-wrap-head">
                                   {sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta')}
+                                </TableHead>
+                                <TableHead className="text-right live-wrap-head" title={sourceKind === 'cited' ? t('Average times it is cited in a response that cites it.', 'Média de vezes em que é citada numa resposta que a cita.') : t('Average times it is consulted in a response that consults it.', 'Média de vezes em que é consultada numa resposta que a consulta.')}>
+                                  {sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias')}
                                 </TableHead>
                                 <TableHead>{t('Models', 'Modelos')}</TableHead>
                               </TableRow>
@@ -3119,17 +3201,20 @@ export function LiveAnalyticsApp({
                                 <TableRow key={source.key}>
                                   <TableCell data-mobile="hide">{(sourcePage - 1) * 50 + index + 1}</TableCell>
                                   <TableCell data-mobile="title">
-                                    <DrillLink link={link} to={{ tab: 'sources', entity: { kind: sourceGroup, key: source.key } }} className="flex items-center gap-2" disabled={!source.key}>
-                                      {source.domain && <SiteFavicon domain={source.domain} name={source.domain} />}
-                                      <strong className="truncate">{source.title || source.domain || unknownDomainLabel(t)}</strong>
-                                    </DrillLink>
+                                    <div className="st-name-line">
+                                      <DrillLink link={link} to={{ tab: 'sources', entity: { kind: sourceGroup, key: source.key } }} className="flex min-w-0 items-center gap-2" disabled={!source.key}>
+                                        {source.domain && <SiteFavicon domain={source.domain} name={source.domain} />}
+                                        <strong className="truncate">{source.title || source.domain || unknownDomainLabel(t)}</strong>
+                                      </DrillLink>
+                                      <OwnerBadge owner={source.ownership} t={t} />
+                                    </div>
                                     {sourceGroup === 'url' ? (
                                       <small className="st-url">{source.domain || unknownDomainLabel(t)}</small>
                                     ) : !source.key && (
                                       <small className="st-url">{unknownDomainHint(t)}</small>
                                     )}
                                   </TableCell>
-                                  <TableCell data-label={sourceGroup === 'domain' ? t('Type', 'Tipo') : t('Page type', 'Tipo de página')}>
+                                  <TableCell data-label={sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo')}>
                                     <span className="flex flex-wrap items-center gap-1.5">
                                       <SourceTypeBadge type={source.sourceType} t={t} />
                                       {sourceGroup === 'url' && source.domainType && source.domainType !== UNCLASSIFIED && <SourceTypeBadge type={source.domainType} t={t} className="st-badge-quiet" />}
@@ -3137,6 +3222,7 @@ export function LiveAnalyticsApp({
                                   </TableCell>
                                   <TableCell className="text-right" data-label={sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas')}>{source.responses}</TableCell>
                                   <TableCell className="text-right" data-label={sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta')}>{sources.complete ? `${((100 * source.responses) / sources.complete).toFixed(1)}%` : '—'}</TableCell>
+                                  <TableCell className="st-avg text-right" data-label={sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias')}>{source.citations && source.responses ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(source.citations / source.responses) : '—'}</TableCell>
                                   <TableCell data-label={t('Models', 'Modelos')} data-mobile="wide">
                                     <div className="live-model-icons">
                                       {source.engines.map((engine) => <span key={engine} title={ENGINE_LABELS[engine]} aria-label={ENGINE_LABELS[engine]}><EngineIcon engine={engine} /></span>)}
@@ -3149,8 +3235,8 @@ export function LiveAnalyticsApp({
                         </div>
                       ) : error ? null : (
                         <p className="live-card">
-                          {typeFilter
-                            ? t('No sources of this type in this period.', 'Nenhuma fonte deste tipo neste período.')
+                          {typeFilter || ownerFilter
+                            ? t('No sources match these filters in this period.', 'Nenhuma fonte corresponde a estes filtros neste período.')
                             : t('No cited sources in this period.', 'Sem fontes citadas neste período.')}
                         </p>
                       )}
@@ -3168,6 +3254,7 @@ export function LiveAnalyticsApp({
                       )}
                     </div>
                     )}
+                    </SectionLayout>
                   </>
                 )}
                 {project && !creatingProject && tab === 'settings' && (

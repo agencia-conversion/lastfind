@@ -1,5 +1,5 @@
 import type { Citation, Engine, Run } from './types';
-import type { DomainType, PageType, SourceTypeClassifier, SourceTypeKind, UNCLASSIFIED } from './source-types.ts';
+import type { DomainType, PageType, SourceOwner, SourceTypeClassifier, SourceTypeKind, UNCLASSIFIED } from './source-types.ts';
 /** Cached type of a cited domain or URL; `unclassified` means no result exists for the active evaluator. */
 export type SourceTypeValue = DomainType | PageType | typeof UNCLASSIFIED;
 export type Metrics = {
@@ -132,12 +132,14 @@ export type SourceRow = {
   domain: string;
   title: string;
   responses: number;
+  /** Times the source is cited, counting repeats inside one response. */
+  citations: number;
   pages: number;
   engines: Engine[];
   mentions: number;
   visibility: number;
-  ownership: 'own' | 'competitor' | 'third-party';
-  /** Domain type (domain grouping) or page type (URL grouping). */
+  ownership: SourceOwner;
+  /** Site type (domain grouping) or content type (URL grouping); ownership is a separate mark. */
   sourceType?: SourceTypeValue;
   /** URL grouping only: the type of the page's domain. */
   domainType?: SourceTypeValue;
@@ -150,6 +152,7 @@ export type SourcesPage = {
   classifier?: SourceTypeClassifier;
 };
 export type SourceTypeShare = { type: SourceTypeValue; citations: number; domains: number; share: number };
+export type ContentTypeShare = { type: SourceTypeValue; citations: number; urls: number; share: number };
 export type SourceTypesReport = {
   classifier: SourceTypeClassifier;
   /** Responses citing a domain, summed over domains: one citation per response and domain. */
@@ -161,12 +164,24 @@ export type SourceTypesReport = {
   truncated: boolean;
   pendingBatches: number;
 };
+/** Citations by content (page) type of the cited URLs; the part without a type is declared. */
+export type ContentTypesReport = {
+  classifier: SourceTypeClassifier;
+  /** Responses citing a URL, summed over URLs: one citation per response and URL. */
+  citations: number;
+  classified: number;
+  unclassified: number;
+  types: ContentTypeShare[];
+  /** URLs beyond the aggregation ceiling count as unclassified. */
+  truncated: boolean;
+  pendingBatches: number;
+};
 export type SourceEntityDetail = {
   kind: SourceTypeKind;
   key: string;
   domain: string;
   title: string | null;
-  ownership: 'own' | 'competitor' | 'third-party';
+  ownership: SourceOwner;
   sourceType: SourceTypeValue;
   /** URL detail: the type of its domain. */
   domainType?: SourceTypeValue;

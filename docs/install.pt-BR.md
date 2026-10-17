@@ -13,10 +13,10 @@ Você paga cada serviço diretamente. O Lastfind em si é gratuito (Apache-2.0) 
 | Serviço | Para que serve | Custo |
 | --- | --- | --- |
 | [Cloudflare](https://www.cloudflare.com) | Hospeda o site e guarda seus dados | Os limites gratuitos cobrem uma instalação pequena. A Cloudflare pode pedir um meio de pagamento para ativar o R2 (armazenamento de arquivos); ela só cobra o que passar do limite gratuito. Se aparecerem erros de "exceeded CPU" ou tempo esgotado com muitos prompts, passe para o Workers Paid (cerca de US$ 5 por mês). |
-| [DataForSEO](https://dataforseo.com) | Coleta as respostas das IAs | Pré-pago; a recarga mínima é de US$ 50 (confirme na [página de preços](https://dataforseo.com/pricing)). Cada resposta coletada custa cerca de US$ 0,0012 no ChatGPT, Gemini, Google AI Mode e AI Overviews, cerca de US$ 0,02 no Perplexity e cerca de US$ 0,06 no Claude. |
+| [DataForSEO](https://dataforseo.com) | Coleta as respostas das IAs | Pré-pago; a recarga mínima é de US$ 50 (confirme na [página de preços](https://dataforseo.com/pricing)). Cada resposta coletada custa cerca de US$ 0,0012 no ChatGPT, Gemini, Google AI Mode e AI Overviews, cerca de US$ 0,006 no Perplexity e cerca de US$ 0,018 no Claude (medido em uma execução real em outubro de 2026; o DataForSEO pode mudar os preços). |
 | [OpenRouter](https://openrouter.ai) (opcional) | Avalia o quanto as respostas falam bem da sua marca (sentimento) | Crédito pré-pago; uma fração de centavo por resposta avaliada. Você pode pular. |
 
-**Exemplo.** 20 prompts só no ChatGPT, coletados uma vez por dia: 600 respostas por mês, cerca de US$ 0,72. Os mesmos 20 prompts nas seis assistentes custam cerca de US$ 50 por mês, quase tudo Claude e Perplexity. Comece só com o ChatGPT e acrescente modelos quando vir valor.
+**Exemplo.** 20 prompts só no ChatGPT, coletados uma vez por dia: 600 respostas por mês, cerca de US$ 0,72. Os mesmos 20 prompts nas seis assistentes custam cerca de US$ 17 por mês, quase tudo Claude e Perplexity. Comece só com o ChatGPT e acrescente modelos quando vir valor.
 
 **Limites de segurança.** A instalação limita a coleta a 1.500 respostas por mês e 1.000 por dia, para que um engano não esgote seu saldo. Para mudar, edite `SELF_HOST_MONTHLY_LIMIT` e `GLOBAL_DAILY_RUN_LIMIT` em `vars` no arquivo `wrangler.selfhost.json` e rode `npm run deploy:selfhost`.
 
@@ -89,12 +89,12 @@ Abra o endereço, cole a chave e clique em **Entrar na minha instalação**. Gua
 
 ## Passo 7. Primeiro projeto e prompts
 
-1. Depois de entrar, preencha **Marca** (por exemplo *Conversion*), **Domínio** (`conversion.com.br`), idioma e país e clique em **Criar projeto**.
+1. Depois de entrar, preencha **Marca** (por exemplo *Conversion*), **Domínio** (`conversion.com.br`), idioma e país e clique em **Criar projeto**. O formulário começa em *English* e *United States*: para uma marca brasileira escolha *Português* e *Brasil*. O Gemini só funciona em projetos em inglês.
 2. Abra **Prompts** → **Adicionar prompt**. Um prompt é uma pergunta que seus clientes poderiam fazer a uma IA, por exemplo *Quais são as melhores agências de otimização de conversão do Brasil?* Escolha os modelos de IA (o ChatGPT vem marcado) e salve. Dá para colar até 100 prompts de uma vez.
-3. **Quando os dados aparecem.** Adicionar um prompt inicia a primeira coleta na hora (isso gasta saldo do DataForSEO). Os resultados costumam aparecer em 2 a 5 minutos: abra **Visão geral** e veja a linha *Monitoramento: diário · 1 pendentes* virar *0 pendentes*. Depois disso cada prompt é coletado todo dia por volta das 04:00 de Brasília.
+3. **Quando os dados aparecem.** Adicionar um prompt inicia a primeira coleta na hora (isso gasta saldo do DataForSEO). As respostas chegam conforme cada modelo termina, não todas juntas: Google AI Overviews e AI Mode em cerca de um minuto, ChatGPT, Gemini e Perplexity normalmente em poucos minutos, Claude em cerca de 30 minutos. Nas nossas duas rodadas de teste com 17 prompts, a fila do DataForSEO fez ChatGPT, Perplexity ou Gemini levarem até 45 minutos uma vez e o Gemini cerca de duas horas uma vez. Abra **Visão geral** e veja a linha *Monitoramento: diário · 1 pendentes* virar *0 pendentes* quando todos os modelos responderem. Enquanto isso, as respostas que já chegaram aparecem na tela. Depois disso cada prompt é coletado todo dia por volta das 04:00 de Brasília.
 4. Tela vazia significa "ainda sem dados", nunca "zero". Se *pendente* não diminuir em 15 minutos, veja a Solução de problemas.
 
-**Sentimento opcional (precisa do OpenRouter).** Abra **Configurações → Concorrentes → Descoberta de marcas e sentimento**, marque **Habilitar avaliação**, **Salvar configuração** e depois **Avaliar até 20 respostas**. Os resultados aparecem em **Marcas → Sentimentos** depois da próxima execução do agendador (em cerca de 5 minutos; a Cloudflare pode levar até 15 minutos para iniciar o agendador de uma instalação nova, então no primeiro dia pode demorar mais). Sem a chave do OpenRouter, essa seção pede para adicionar a chave à configuração do servidor: rode `npm run setup` de novo e cole a chave.
+**Sentimento opcional (precisa do OpenRouter).** Abra **Configurações → Concorrentes → Descoberta de marcas e sentimento**, marque **Habilitar avaliação**, **Salvar configuração** e depois **Avaliar até 20 respostas**. Os resultados aparecem em **Marcas → Sentimentos** conforme o agendador avança pela fila. Ele avalia duas respostas por execução, a cada 5 minutos (cerca de 24 respostas por hora, então 80 respostas levam umas três horas; cada uma custa uma fração de centavo). Os primeiros resultados aparecem em cerca de 5 minutos (a Cloudflare pode levar até 15 minutos para iniciar o agendador de uma instalação nova, então no primeiro dia pode demorar mais). Sem a chave do OpenRouter, essa seção pede para adicionar a chave à configuração do servidor: rode `npm run setup` de novo e cole a chave.
 
 ## Atualizar
 
@@ -141,7 +141,7 @@ Depois apague a pasta e revogue as chaves do DataForSEO/OpenRouter e o token da 
 | `Esta pasta já tem a instalação …` | Uma pasta guarda uma instalação. Use esse nome para atualizá-la, ou clone/descompacte uma cópia nova para outra. |
 | A entrada diz que a chave é inválida | Cole a linha inteira de `.lastfind/access-key.txt`, sem espaços. |
 | A página fica em "Carregando seu workspace…" logo após instalar ou atualizar | Espere um minuto e atualize a página (Ctrl/Cmd+Shift+R). A Cloudflare leva um instante para servir os arquivos novos em todo lugar. |
-| A Visão geral fica em "pendente" | Confira o saldo do DataForSEO e depois `https://seu-endereço/api/health`. O agendador roda a cada 5 minutos; a primeira resposta pode levar até 15 minutos. |
+| A Visão geral fica em "pendente" | Confira o saldo do DataForSEO e depois `https://seu-endereço/api/health`. O agendador roda a cada 5 minutos; a primeira resposta pode levar até 15 minutos e algumas respostas (o Gemini em um dos nossos testes) levaram cerca de duas horas, então um pouco de *pendente* por um tempo é normal. |
 | "Monitoring is temporarily unavailable" | Faltam as credenciais do DataForSEO no Worker. Rode `npm run setup` de novo. |
 | Muitos prompts dão tempo esgotado ou "exceeded CPU" | Limites gratuitos da Cloudflare. Passe para o Workers Paid (cerca de US$ 5 por mês) ou acompanhe menos prompts. |
 | As coletas pararam no meio do mês | Você atingiu o limite de segurança (veja *Quanto custa*). Aumente-o em `wrangler.selfhost.json` e rode `npm run deploy:selfhost`. |

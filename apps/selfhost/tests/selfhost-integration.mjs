@@ -216,6 +216,10 @@ try {
   assert.equal(types.citations, 0);
   assert.equal(types.classifier.state, 'disabled');
   assert.equal((await req('/api/reports?view=sources&project=' + project)).data.classifier.state, 'disabled');
+  const content = (await req('/api/reports?view=content-types&project=' + project)).data;
+  assert.equal(content.citations, 0);
+  assert.equal(content.classifier.state, 'disabled');
+  await req('/api/reports?view=sources&owner=bogus&project=' + project, 'GET', undefined, 400);
   const domain = (await req('/api/reports?view=domain-detail&key=absent.test&project=' + project)).data;
   assert.equal(domain.metrics.citing, 0);
   assert.equal(domain.sourceType, 'unclassified');

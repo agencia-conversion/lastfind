@@ -46,6 +46,21 @@ void test('six adapters use documented method, normal priority, prompt size, cou
     undefined,
   );
 });
+void test('Google AI Mode asks for pt-BR, the other scrapers keep pt (DataForSEO rejects pt in AI Mode)', () => {
+  const language = (engine: 'google_ai_mode' | 'chat_gpt', code: string) =>
+    (
+      providerPayload({
+        id: 'x',
+        prompt_text: 'test',
+        engine,
+        language_code: code,
+        location_code: 2076,
+      }) as Record<string, unknown>
+    ).language_code;
+  assert.equal(language('google_ai_mode', 'pt'), 'pt-BR');
+  assert.equal(language('google_ai_mode', 'en'), 'en');
+  assert.equal(language('chat_gpt', 'pt'), 'pt');
+});
 void test('cited and consulted evidence are separate; null is different from an empty returned list', () => {
   const r = extractResponse({
     markdown: 'Answer',

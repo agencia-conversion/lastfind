@@ -38,7 +38,7 @@ const fixtureImports = {
   './competitor-analysis': `export const competitorAnalysisStatus=async()=>({status:'complete',needsEnsure:false,suggestions:[]});`,
   './reports': `export const parseReportFilter=(q)=>({engine:'all',cutoff:'2020-01-01T00:00:00.000Z',end:'2099-01-01T00:00:00.000Z'});
 export const reportContext=async()=>({project:{id:'project'}});
-export const sourcesReport=async(ctx,q,size=50)=>{const rows=globalThis.sourceFixture.sources[q.get('group')||'domain']||[];return {rows:rows.slice(0,size),hasMore:rows.length>size,available:0,complete:rows.length};};
+export const sourcesReport=async(ctx,q,size=50)=>{const owner=q.get('owner');const rows=(globalThis.sourceFixture.sources[q.get('group')||'domain']||[]).filter((row)=>!owner||(owner==='own'?row.ownership==='own':owner==='competitor'?row.ownership==='competitor':row.ownership==='third-party'));return {rows:rows.slice(0,size),hasMore:rows.length>size,available:0,complete:rows.length};};
 export const citationTotal=async()=>globalThis.sourceFixture.citations;
 export const sourceEntityReport=async()=>{throw new Error('not used');};`,
 };
@@ -131,26 +131,27 @@ test('no key or disabled evaluator never reaches the provider', async () => {
   await assert.rejects(worker.enqueueSourceTypes('project', 'wrong-owner', new URLSearchParams(), 'domain'), /not found/);
 });
 
-test('classifies each third-party domain once, keeps own and competitor from project data, and reuses the cache', async () => {
+test('classifies every cited domain once, own and competitor included, and reuses the cache', async () => {
   const { sqlite } = setup({ domains: [row('news.example', 5), row('forum.example', 3), row('gov.example', 1)] });
-  const calls = provider(['editorial', 'ugc', 'institutional']);
+  const calls = provider(['corporate', 'corporate', 'editorial', 'ugc', 'institutional']);
   const first = await classify();
-  assert.equal(first.queued, 3);
+  assert.equal(first.queued, 5, 'your own and competitor domains are typed too');
   assert.equal(first.batches, 1);
   assert.equal(first.processed, 1);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, 'https://openrouter.ai/api/alpha/decisions');
   assert.equal(calls[0].payload.model, 'typesafe/jev-1.14');
-  assert.deepEqual(Object.keys(calls[0].payload.questions), ['s0', 's1', 's2']);
+  assert.deepEqual(Object.keys(calls[0].payload.questions), ['s0', 's1', 's2', 's3', 's4']);
   assert.equal(Object.hasOwn(calls[0].payload.questions.s0.criteria, 'competitor'), false);
   assert.equal(Object.hasOwn(calls[0].payload.questions.s0.criteria, 'you'), false);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM source_classifications").get().n, 3);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM source_classifications").get().n, 5);
   const job = sqlite.prepare('SELECT status,cost_usd FROM brand_research_jobs').get();
   assert.deepEqual({ ...job }, { status: 'completed', cost_usd: 0.001 });
   const page = await worker.typedSourcesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
   assert.deepEqual(
-    page.rows.map((item) => [item.domain, item.sourceType]),
-    [['acme.example', 'you'], ['rival.example', 'competitor'], ['news.example', 'editorial'], ['forum.example', 'ugc'], ['gov.example', 'institutional']],
+    page.rows.map((item) => [item.domain, item.ownership, item.sourceType]),
+    [['acme.example', 'own', 'corporate'], ['rival.example', 'competitor', 'corporate'], ['news.example', 'third-party', 'editorial'], ['forum.example', 'third-party', 'ugc'], ['gov.example', 'third-party', 'institutional']],
+    'the site type is cached for every domain; ownership is a separate mark',
   );
   const again = await classify();
   assert.equal(again.queued, 0);
@@ -158,7 +159,7 @@ test('classifies each third-party domain once, keeps own and competitor from pro
 });
 
 test('limits one request to bounded batches and leaves the remainder to the scheduler', async () => {
-  const domains = Array.from({ length: 130 }, (_, index) => row(`site${String(index).padStart(3, '0')}.example`, 500 - index));
+  const domains = Array.from({ length: 128 }, (_, index) => row(`site${String(index).padStart(3, '0')}.example`, 500 - index));
   const { sqlite } = setup({ domains });
   const calls = provider();
   const result = await classify();
@@ -175,6 +176,16 @@ test('limits one request to bounded batches and leaves the remainder to the sche
   assert.equal(await worker.processBrandResearchJobs(), 0);
   assert.equal(await worker.processSourceTypeJobs(), 2);
   assert.equal(calls.length, 6);
+});
+
+test('BRAND_RESEARCH_PROJECTS=* (independent edition) lets the scheduler pick up pending source batches', async () => {
+  const domains = Array.from({ length: 128 }, (_, index) => row(`site${String(index).padStart(3, '0')}.example`, 500 - index));
+  const { settings, sqlite } = setup({ domains });
+  settings.BRAND_RESEARCH_PROJECTS = '*';
+  provider();
+  assert.equal((await classify()).processed, 2);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM brand_research_jobs WHERE status='pending'").get().n, 3);
+  assert.equal(await worker.processSourceTypeJobs(), 2, 'the scheduler used to select none of them with *');
 });
 
 test('an uncertain provider outcome is not resent and a changed evaluator uses a separate cache', async () => {
@@ -202,26 +213,100 @@ test('an uncertain provider outcome is not resent and a changed evaluator uses a
   assert.equal(calls.length, 0, 'reading and changing configuration never call the provider');
 });
 
-test('distribution reports shares, partial classification and the type filter', async () => {
+test('distribution reports site-type shares, partial classification and the type and owner filters', async () => {
   const { sqlite } = setup({ domains: [row('news.example', 6), row('forum.example', 4), row('new.example', 2)] });
   const stamp = '2026-01-01';
-  for (const [key, type] of [['news.example', 'editorial'], ['forum.example', 'ugc']])
+  for (const [key, type] of [['news.example', 'editorial'], ['forum.example', 'ugc'], ['acme.example', 'corporate']])
     sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain',?,'jev','typesafe/jev-1.14','source-types-v1',?,?)").run(key, type, stamp);
   globalThis.sourceFixture.citations = 9 + 8 + 6 + 4 + 2;
   const report = await worker.sourceTypesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
   assert.equal(report.citations, 29);
-  assert.equal(report.unclassified, 2);
-  assert.equal(report.classified, 27);
+  // The competitor has no cached type yet: it stays visibly unclassified instead of being counted as "Competitor".
+  assert.equal(report.unclassified, 10);
+  assert.equal(report.classified, 19);
   assert.deepEqual(
     report.types.map((item) => [item.type, item.citations]),
-    [['you', 9], ['competitor', 8], ['editorial', 6], ['ugc', 4], ['unclassified', 2]],
+    [['corporate', 9], ['editorial', 6], ['ugc', 4], ['unclassified', 10]],
   );
   assert.ok(Math.abs(report.types.reduce((sum, item) => sum + item.share, 0) - 100) < 1e-9);
-  const filtered = await worker.typedSourcesReport('owner', new URLSearchParams('type=ugc'), { project: { id: 'project' } });
+  const ctx = { project: { id: 'project' } };
+  const filtered = await worker.typedSourcesReport('owner', new URLSearchParams('type=ugc'), ctx);
   assert.deepEqual(filtered.rows.map((item) => item.domain), ['forum.example']);
-  const missing = await worker.typedSourcesReport('owner', new URLSearchParams('type=unclassified'), { project: { id: 'project' } });
-  assert.deepEqual(missing.rows.map((item) => item.domain), ['new.example']);
-  const own = await worker.typedSourcesReport('owner', new URLSearchParams('type=you'), { project: { id: 'project' } });
-  assert.deepEqual(own.rows.map((item) => item.domain), ['acme.example']);
-  await assert.rejects(worker.typedSourcesReport('owner', new URLSearchParams('type=bogus'), { project: { id: 'project' } }), /Invalid source type/);
+  const missing = await worker.typedSourcesReport('owner', new URLSearchParams('type=unclassified'), ctx);
+  assert.deepEqual(missing.rows.map((item) => item.domain), ['rival.example', 'new.example']);
+  // Owner filter is independent of the type; the legacy You/Competitor types map to it.
+  const own = await worker.typedSourcesReport('owner', new URLSearchParams('owner=own'), ctx);
+  assert.deepEqual(own.rows.map((item) => [item.domain, item.ownership, item.sourceType]), [['acme.example', 'own', 'corporate']]);
+  const rivals = await worker.typedSourcesReport('owner', new URLSearchParams('owner=competitor'), ctx);
+  assert.deepEqual(rivals.rows.map((item) => [item.domain, item.sourceType]), [['rival.example', 'unclassified']]);
+  const third = await worker.typedSourcesReport('owner', new URLSearchParams('owner=third-party&type=editorial'), ctx);
+  assert.deepEqual(third.rows.map((item) => item.domain), ['news.example']);
+  const none = await worker.typedSourcesReport('owner', new URLSearchParams('owner=competitor&type=editorial'), ctx);
+  assert.deepEqual(none.rows, []);
+  for (const legacy of ['type=you', 'type=competitor']) {
+    const page = await worker.typedSourcesReport('owner', new URLSearchParams(legacy), ctx);
+    assert.deepEqual(page.rows.map((item) => item.ownership), [legacy === 'type=you' ? 'own' : 'competitor']);
+  }
+  // The same old link must not fail in the content (URL) group either.
+  globalThis.sourceFixture.sources.url = [{ ...row('acme.example', 2, 'own'), key: 'https://acme.example/a' }, { ...row('rival.example', 1, 'competitor'), key: 'https://rival.example/b' }];
+  const legacyUrls = await worker.typedSourcesReport('owner', new URLSearchParams('group=url&type=competitor'), ctx);
+  assert.deepEqual(legacyUrls.rows.map((item) => item.ownership), ['competitor']);
+  await assert.rejects(worker.typedSourcesReport('owner', new URLSearchParams('type=bogus'), ctx), /Invalid source type/);
+  await assert.rejects(worker.typedSourcesReport('owner', new URLSearchParams('owner=bogus'), ctx), /Invalid source owner/);
+});
+
+const urlRow = (url, responses, domain = new URL(url).hostname) => ({ ...row(domain, responses), key: url, title: url.split('/').pop() });
+
+test('content types report shares of cited URLs, declares the unclassified part and honors the window', async () => {
+  const { sqlite } = setup();
+  globalThis.sourceFixture.sources.url = [
+    urlRow('https://news.example/top-10', 6),
+    urlRow('https://news.example/a-vs-b', 4),
+    urlRow('https://forum.example/t/1', 3),
+    urlRow('https://new.example/x', 2),
+  ];
+  for (const [key, type] of [['https://news.example/top-10', 'listicle'], ['https://news.example/a-vs-b', 'comparison']])
+    sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('url',?,'jev','typesafe/jev-1.14','source-types-v1',?,'2026-01-01')").run(key, type);
+  globalThis.sourceFixture.citations = 15;
+  const report = await worker.contentTypesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
+  assert.equal(report.citations, 15);
+  assert.equal(report.classified, 10);
+  assert.equal(report.unclassified, 5);
+  assert.equal(report.truncated, false);
+  assert.deepEqual(report.types.map((item) => [item.type, item.citations, item.urls]), [['listicle', 6, 1], ['comparison', 4, 1], ['unclassified', 5, 2]]);
+  assert.ok(Math.abs(report.types.reduce((sum, item) => sum + item.share, 0) - 100) < 1e-9);
+  assert.equal(report.classifier.state, 'ready');
+  // Citations not covered by the URL window are declared unclassified, never dropped.
+  globalThis.sourceFixture.citations = 40;
+  const tail = await worker.contentTypesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
+  assert.equal(tail.unclassified, 30);
+  assert.equal(tail.types.at(-1).type, 'unclassified');
+});
+
+test('page types are cached separately from site types and URL rows carry the site type of their domain', async () => {
+  const { sqlite } = setup();
+  globalThis.sourceFixture.sources.url = [urlRow('https://news.example/top-10', 6)];
+  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('url','https://news.example/top-10','jev','typesafe/jev-1.14','source-types-v1','listicle','2026-01-01')").run();
+  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain','news.example','jev','typesafe/jev-1.14','source-types-v1','editorial','2026-01-01')").run();
+  const page = await worker.typedSourcesReport('owner', new URLSearchParams('group=url'), { project: { id: 'project' } });
+  assert.deepEqual(page.rows.map((item) => [item.sourceType, item.domainType]), [['listicle', 'editorial']]);
+  const filtered = await worker.typedSourcesReport('owner', new URLSearchParams('group=url&type=listicle'), { project: { id: 'project' } });
+  assert.equal(filtered.rows.length, 1);
+  await assert.rejects(worker.typedSourcesReport('owner', new URLSearchParams('group=url&type=editorial'), { project: { id: 'project' } }), /Invalid source type/);
+});
+
+test('the public demo reads the fixed evaluator cache and never reports a disabled evaluator', async () => {
+  const { sqlite } = setup({ enabled: 0, domains: [row('news.example', 6), row('gone.example', 1)] });
+  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain','news.example','jev','typesafe/jev-1.14','source-types-v1','editorial','2026-01-01')").run();
+  const calls = provider();
+  const ctx = { project: { id: 'project' } };
+  const demo = await worker.typedSourcesReport('owner', new URLSearchParams(), ctx, true);
+  assert.equal(demo.classifier.state, 'demo');
+  assert.deepEqual(demo.rows.filter((item) => item.ownership === 'third-party').map((item) => [item.domain, item.sourceType]), [['news.example', 'editorial'], ['gone.example', 'unclassified']]);
+  const customer = await worker.typedSourcesReport('owner', new URLSearchParams(), ctx);
+  assert.equal(customer.classifier.state, 'disabled', 'customers keep classifying only by explicit action');
+  assert.equal((await worker.sourceTypesReport('owner', new URLSearchParams(), ctx, true)).classifier.state, 'demo');
+  assert.equal((await worker.contentTypesReport('owner', new URLSearchParams(), ctx, true)).classifier.state, 'demo');
+  assert.notEqual(await worker.sourceTypeRevision('project', 'owner', true), await worker.sourceTypeRevision('project', 'owner'));
+  assert.equal(calls.length, 0, 'reading never calls the provider');
 });

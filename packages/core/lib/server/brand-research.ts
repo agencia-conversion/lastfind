@@ -76,6 +76,15 @@ function researchProjects() {
     .map((id) => id.trim())
     .filter(Boolean);
 }
+// SQL bindings for `(? OR project_id IN (SELECT value FROM json_each(?)))`: the
+// scheduler's project filter, with the independent edition's `*` honoured.
+export function researchProjectBindings() {
+  const projects = researchProjects();
+  return [
+    Number(researchAllProjects && projects.includes(ALL_PROJECTS)),
+    JSON.stringify(projects),
+  ];
+}
 export function researchAllowed(projectId: string) {
   const projects = researchProjects();
   return (

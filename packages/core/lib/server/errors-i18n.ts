@@ -24,6 +24,7 @@ const messages: readonly (readonly [string, string, ...string[]])[] = [
   ['Configure the OpenRouter server key before evaluating.', 'Configure a chave OpenRouter no servidor antes de avaliar.'],
   ['Research budget is full.', 'O orçamento de pesquisa está esgotado.'],
   ['Invalid source type.', 'Tipo de fonte inválido.'],
+  ['Invalid source owner.', 'Dono da fonte inválido.'],
   ['Choose domains or URLs.', 'Escolha domínios ou URLs.'],
   ['Enable the evaluator in Settings before classifying sources.', 'Ative o avaliador em Configurações antes de classificar as fontes.'],
   ['Configure the OpenRouter server key before classifying sources.', 'Configure a chave do OpenRouter no servidor antes de classificar as fontes.'],

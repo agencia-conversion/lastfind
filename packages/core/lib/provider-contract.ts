@@ -64,7 +64,11 @@ export function providerPayload(
   return {
     ...common,
     keyword: row.prompt_text.replace(/%/g, '%25').replace(/\+/g, '%2B'),
-    language_code: row.language_code,
+    // AI Mode lists Brazilian Portuguese as `pt-BR` and rejects `pt` (40501).
+    language_code:
+      engine === 'google_ai_mode' && row.language_code === 'pt'
+        ? 'pt-BR'
+        : row.language_code,
     location_code: row.location_code,
     priority: 1,
     ...(engine === 'chat_gpt' ? { force_web_search: true } : {}),

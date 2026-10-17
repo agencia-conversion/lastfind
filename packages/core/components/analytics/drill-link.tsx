@@ -15,6 +15,8 @@ export type DrillTarget = {
   mention?: 'all' | 'mentioned' | 'missing';
   engine?: string;
   type?: string | null;
+  /** Owner mark filter: own | competitor | third-party. */
+  owner?: string | null;
   group?: 'domain' | 'url';
   kind?: 'cited' | 'consulted';
   section?: string;

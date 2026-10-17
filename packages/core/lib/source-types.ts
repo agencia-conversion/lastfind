@@ -1,8 +1,10 @@
 // Single source-type taxonomy for cited domains and URLs (ARCHITECTURE.md,
-// "Source types"). Domain types follow Peec AI's Source Types and page types
-// follow its URL Types; Profound's Owned/Competition/Earned/PR wire/Institution/
-// Social/Other categories map onto the same set (PR wire is Editorial).
-// `you` and `competitor` come from the project's tracked brands, never from a model.
+// "Source types"). Domain types describe the kind of site and follow Peec AI's
+// Source Types; page types describe the content and follow its URL Types.
+// Profound's Earned/PR wire/Institution/Social/Other categories map onto the same
+// set (PR wire is Editorial). Whether a domain is the project's own or a tracked
+// competitor's is a separate mark (`SourceOwner`) that comes from the project's
+// brands, never from a model, and never replaces the site type.
 import type { ResearchProvider } from './brand-research.ts';
 
 export const SOURCE_TYPE_RUBRIC = 'source-types-v1';
@@ -14,7 +16,7 @@ export const SOURCE_TYPE_RESERVE_USD = 0.02;
 export const SOURCE_TYPE_CONTEXT_PREFIX = 'source-types:';
 
 export const MODEL_DOMAIN_TYPES = ['corporate', 'editorial', 'institutional', 'ugc', 'reference', 'other'] as const;
-export const DOMAIN_TYPES = ['you', 'competitor', ...MODEL_DOMAIN_TYPES] as const;
+export const DOMAIN_TYPES = MODEL_DOMAIN_TYPES;
 export const PAGE_TYPES = [
   'homepage', 'category', 'product', 'listicle', 'comparison', 'profile',
   'alternative', 'discussion', 'how_to', 'article', 'other',
@@ -24,6 +26,27 @@ export type ModelDomainType = (typeof MODEL_DOMAIN_TYPES)[number];
 export type PageType = (typeof PAGE_TYPES)[number];
 export type SourceTypeKind = 'domain' | 'url';
 export type SourceType = DomainType | PageType;
+/** Who a cited domain belongs to, from the project's tracked brands. Independent of the site type. */
+export const SOURCE_OWNERS = ['own', 'competitor', 'third-party'] as const;
+export type SourceOwner = (typeof SOURCE_OWNERS)[number];
+export const isSourceOwner = (value: unknown): value is SourceOwner =>
+  typeof value === 'string' && (SOURCE_OWNERS as readonly string[]).includes(value);
+/**
+ * Type and owner filters of a Sources link. Older links used You/Competitor as a source type;
+ * they now mean the owner filter, for both the domain and the URL group.
+ */
+export function sourceFiltersFromQuery(query: URLSearchParams): { type: string; owner: string } {
+  const type = query.get('type') || '';
+  const owner = query.get('owner');
+  if (type === 'you' || type === 'competitor')
+    return { type: '', owner: isSourceOwner(owner) ? owner : type === 'you' ? 'own' : 'competitor' };
+  return { type, owner: isSourceOwner(owner) ? owner : '' };
+}
+export const SOURCE_OWNER_LABELS: Record<SourceOwner, { label: [string, string]; plural: [string, string] }> = {
+  own: { label: ['You', 'Você'], plural: ['You', 'Você'] },
+  competitor: { label: ['Competitor', 'Concorrente'], plural: ['Competitors', 'Concorrentes'] },
+  'third-party': { label: ['Third party', 'Terceiro'], plural: ['Third parties', 'Terceiros'] },
+};
 /** Display state of a source that has no cached classification. */
 export const UNCLASSIFIED = 'unclassified' as const;
 
@@ -31,8 +54,7 @@ const modelDomain = new Set<string>(MODEL_DOMAIN_TYPES);
 const pages = new Set<string>(PAGE_TYPES);
 export const isModelDomainType = (value: unknown): value is ModelDomainType =>
   typeof value === 'string' && modelDomain.has(value);
-export const isDomainType = (value: unknown): value is DomainType =>
-  value === 'you' || value === 'competitor' || isModelDomainType(value);
+export const isDomainType = isModelDomainType;
 export const isPageType = (value: unknown): value is PageType =>
   typeof value === 'string' && pages.has(value);
 export const isSourceType = (kind: SourceTypeKind, value: unknown) =>
@@ -40,8 +62,6 @@ export const isSourceType = (kind: SourceTypeKind, value: unknown) =>
 
 /** Rubric text: sent to the evaluator as criteria and shown in the UI as help. */
 export const SOURCE_TYPE_DEFINITIONS: Record<SourceType, { label: [string, string]; description: [string, string] }> = {
-  you: { label: ['You', 'Você'], description: ['Your brand domains.', 'Domínios da sua marca.'] },
-  competitor: { label: ['Competitor', 'Concorrente'], description: ['Domains of tracked competitors.', 'Domínios dos concorrentes monitorados.'] },
   corporate: { label: ['Corporate', 'Corporativo'], description: ['Official company, product, SaaS, e-commerce and marketplace sites.', 'Sites oficiais de empresas, produtos, SaaS, e-commerce e marketplaces.'] },
   editorial: { label: ['Editorial', 'Editorial'], description: ['News sites, blogs, magazines, trade press, review and comparison publishers, press-release wires.', 'Notícias, blogs, revistas, imprensa especializada, sites de avaliação e comparação e agências de comunicados.'] },
   institutional: { label: ['Institutional', 'Institucional'], description: ['Government, education, research and non-profit organizations.', 'Governo, educação, pesquisa e organizações sem fins lucrativos.'] },
@@ -62,15 +82,23 @@ export const SOURCE_TYPE_DEFINITIONS: Record<SourceType, { label: [string, strin
 export const UNCLASSIFIED_LABEL: [string, string] = ['Not classified', 'Não classificado'];
 
 /** Fixed hues keep a type recognizable across charts and lists; labels always accompany them. */
-export const SOURCE_TYPE_COLORS: Record<DomainType | typeof UNCLASSIFIED, string> = {
-  you: '#1649ff',
-  competitor: '#e5484d',
+export const SOURCE_TYPE_COLORS: Record<DomainType | PageType | typeof UNCLASSIFIED, string> = {
   corporate: '#6e56cf',
   editorial: '#12a594',
   institutional: '#f5a524',
   ugc: '#d6409f',
   reference: '#30a46c',
   other: '#8b95a5',
+  homepage: '#1649ff',
+  category: '#0b8ea8',
+  product: '#6e56cf',
+  listicle: '#12a594',
+  comparison: '#f5a524',
+  profile: '#8e4ec6',
+  alternative: '#e5484d',
+  discussion: '#d6409f',
+  how_to: '#30a46c',
+  article: '#3e63dd',
   unclassified: '#cbd5e1',
 };
 
@@ -152,8 +180,11 @@ export function parseSourceTypeResponse(value: unknown, items: SourceTypeItem[],
 }
 
 export type SourceTypeClassifier = {
-  /** `ready` classifies on request; every other state keeps cached results readable. */
-  state: 'ready' | 'disabled' | 'unconfigured' | 'unavailable';
+  /**
+   * `ready` classifies on request; every other state keeps cached results readable.
+   * `demo` is the public demo: types come from a fixed operation, never from a visitor's action.
+   */
+  state: 'ready' | 'disabled' | 'unconfigured' | 'unavailable' | 'demo';
   provider: ResearchProvider;
   model: string;
   rubric: string;

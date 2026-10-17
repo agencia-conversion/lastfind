@@ -1,5 +1,6 @@
 import { sourceKey } from './source-sql';
 import { ENGINES, ENGINE_LABELS, isEngine } from '@/lib/engines';
+import { isSourceOwner } from '@/lib/source-types';
 import type { Engine, Citation } from '@/lib/types';
 import type {
   Metrics,
@@ -1077,6 +1078,18 @@ export async function sourcesReport(
   const ownOnly = q.get('own') === '1';
   if (q.get('own') && !ownOnly)
     throw new ApiError(400, 'Invalid source filter.');
+  // Owner is a mark computed per group (a group is yours if any cited page is on your domains).
+  const owner = q.get('owner');
+  if (owner && !isSourceOwner(owner)) throw new ApiError(400, 'Invalid source owner.');
+  const ownerHaving = owner
+    ? ` HAVING ${
+        owner === 'own'
+          ? 'own_snapshot=1'
+          : owner === 'competitor'
+            ? 'own_snapshot=0 AND competitor_snapshot=1'
+            : 'own_snapshot=0 AND competitor_snapshot=0'
+      }`
+    : '';
   const ownershipWhere = ownOnly
     ? ` AND EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('s', 'domain')})`
     : '';
@@ -1085,14 +1098,14 @@ export async function sourcesReport(
   >([
     ctx.database
       .prepare(`${ctx.withClause} SELECT ${sourceKey('s', group)} key,${sourceKey('s', 'domain')} domain,
-      MIN(json_extract(s.value,'$.title')) title,COUNT(DISTINCT r.id) responses,
+      MIN(json_extract(s.value,'$.title')) title,COUNT(DISTINCT r.id) responses,COUNT(*) citations,
       COUNT(DISTINCT CASE WHEN ${ctx.mentionExpression} THEN r.id END) mentions,
       COUNT(DISTINCT json_extract(s.value,'$.url')) pages,group_concat(DISTINCT r.engine) engines,
       MAX(CASE WHEN EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) own_target,json_each(CASE WHEN json_type(own_target.value,'$.domains')='array' THEN json_extract(own_target.value,'$.domains') ELSE json_array(json_extract(own_target.value,'$.domain')) END) own_domain WHERE CAST(own_target.key AS INTEGER)=0 AND own_domain.value=${sourceKey('s', 'domain')}) THEN 1 ELSE 0 END) own_snapshot,
       MAX(CASE WHEN EXISTS(SELECT 1 FROM json_each(${EFFECTIVE_TARGETS_SQL}) competitor_target,json_each(CASE WHEN json_type(competitor_target.value,'$.domains')='array' THEN json_extract(competitor_target.value,'$.domains') ELSE json_array(json_extract(competitor_target.value,'$.domain')) END) competitor_domain WHERE CAST(competitor_target.key AS INTEGER)>0 AND competitor_domain.value=json_extract(s.value,'$.domain')) THEN 1 ELSE 0 END) competitor_snapshot
       FROM runs r,json_each(${column}) s WHERE ${ctx.where} AND ${complete}
       AND (?='' OR instr(lower(COALESCE(json_extract(s.value,'$.url'),'') || ' ' || COALESCE(json_extract(s.value,'$.title'),'')),lower(?))>0)
-      ${ownershipWhere} GROUP BY ${sourceKey('s', group)} ORDER BY responses DESC,key LIMIT ${size + 1} OFFSET ?`)
+      ${ownershipWhere} GROUP BY ${sourceKey('s', group)}${ownerHaving} ORDER BY responses DESC,key LIMIT ${size + 1} OFFSET ?`)
       .bind(ctx.brandBinding, ...ctx.bindings, search, search, (page - 1) * size),
     ctx.database
       .prepare(`${ctx.withClause} SELECT COUNT(*) complete,SUM(CASE WHEN r.consulted_sources_json IS NOT NULL THEN 1 ELSE 0 END) available
@@ -1105,6 +1118,7 @@ export async function sourcesReport(
       domain: String(r.domain),
       title: group === 'domain' ? String(r.domain) : String(r.title || r.key),
       responses: Number(r.responses),
+      citations: Number(r.citations),
       pages: Number(r.pages),
       engines: String(r.engines).split(',') as Engine[],
       mentions: Number(r.mentions),

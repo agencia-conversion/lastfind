@@ -8,6 +8,7 @@ import {
   SOURCE_TYPE_RESERVE_USD,
   SOURCE_TYPE_RUBRIC,
   UNCLASSIFIED,
+  isSourceOwner,
   isSourceType,
   type SourceTypeClassifier,
   type SourceTypeItem,
@@ -16,6 +17,8 @@ import {
 import { RESEARCH_MODELS } from '@/lib/brand-research-provider';
 import type { ResearchProvider } from '@/lib/brand-research';
 import type {
+  ContentTypeShare,
+  ContentTypesReport,
   SourceEntityDetail,
   SourceRow,
   SourceTypeShare,
@@ -30,6 +33,7 @@ import {
   brandResearchConfiguration,
   researchAllowed,
   researchBudgetCondition,
+  researchProjectBindings,
 } from './brand-research';
 import {
   citationTotal,
@@ -65,6 +69,18 @@ async function hash(value: string) {
 }
 
 /**
+ * The public demo reads one fixed evaluator cache. Its types are written only by
+ * the approved retroactive operation (ARCHITECTURE.md, "Public demo source types"),
+ * never by a visitor, so its classifier state is `demo` whatever the settings say.
+ */
+export const PUBLIC_DEMO_CLASSIFIER: Classifier = {
+  state: 'demo',
+  provider: 'jev',
+  model: RESEARCH_MODELS.jev,
+  rubric: SOURCE_TYPE_RUBRIC,
+};
+
+/**
  * Cached results stay readable in every state; `ready` only decides whether a
  * user may queue new paid work. Reading, saving settings and rendering never
  * call the provider.
@@ -72,7 +88,9 @@ async function hash(value: string) {
 export async function sourceTypeClassifier(
   projectId: string,
   ownerId: string,
+  demo = false,
 ): Promise<Classifier> {
+  if (demo) return PUBLIC_DEMO_CLASSIFIER;
   const configuration = await brandResearchConfiguration(projectId, ownerId);
   const base = {
     provider: configuration.provider,
@@ -114,15 +132,12 @@ export async function cachedSourceTypes(
   return found;
 }
 
-/** Domain type: tracked brands come from project data, everything else from the cache. */
-function domainType(
-  row: Pick<SourceRow, 'ownership' | 'domain'>,
-  cache: Map<string, string>,
-): SourceTypeValue {
-  if (row.ownership === 'own') return 'you';
-  if (row.ownership === 'competitor') return 'competitor';
-  return (cache.get(row.domain) as SourceTypeValue | undefined) ?? UNCLASSIFIED;
-}
+/**
+ * Site type of a domain comes only from the cache. Being yours or a competitor's
+ * is a separate mark (`ownership`) that never replaces it.
+ */
+const cachedType = (cache: Map<string, string>, key: string) =>
+  (cache.get(key) as SourceTypeValue | undefined) ?? UNCLASSIFIED;
 
 async function typedRows(
   rows: SourceRow[],
@@ -144,33 +159,42 @@ async function typedRows(
       : new Map<string, string>();
   return rows.map((row) => ({
     ...row,
-    sourceType:
-      group === 'domain'
-        ? domainType(row, domains)
-        : ((urls.get(row.key) as SourceTypeValue | undefined) ?? UNCLASSIFIED),
-    ...(group === 'url' ? { domainType: domainType(row, domains) } : {}),
+    sourceType: cachedType(group === 'domain' ? domains : urls, group === 'domain' ? row.domain : row.key),
+    ...(group === 'url' ? { domainType: cachedType(domains, row.domain) } : {}),
   }));
 }
 
-/** Sources list with a type per row and an optional `type` filter (a page size window is read when filtering). */
+/**
+ * Sources list with a type per row, an optional `type` filter and an `owner` filter
+ * (own | competitor | third-party). A type filter reads a page-size window and filters it.
+ */
 export async function typedSourcesReport(
   ownerId: string,
   q: URLSearchParams,
   ctx: Parameters<typeof sourcesReport>[0],
+  demo = false,
 ): Promise<SourcesPage> {
   const group = q.get('group') === 'url' ? 'url' : 'domain';
-  const classifier = await sourceTypeClassifier(String(ctx.project.id), ownerId);
-  const wanted = q.get('type');
+  const classifier = await sourceTypeClassifier(String(ctx.project.id), ownerId, demo);
+  let wanted = q.get('type');
+  const query = new URLSearchParams(q);
+  // Older links used You/Competitor as source types; they now mean the owner filter.
+  if (wanted === 'you' || wanted === 'competitor') {
+    query.set('owner', wanted === 'you' ? 'own' : 'competitor');
+    wanted = null;
+  }
+  query.delete('type');
+  if (query.get('owner') && !isSourceOwner(query.get('owner')))
+    throw new ApiError(400, 'Invalid source owner.');
   if (!wanted) {
-    const page = await sourcesReport(ctx, q);
+    const page = await sourcesReport(ctx, query);
     return { ...page, rows: await typedRows(page.rows, group, classifier), classifier };
   }
   if (wanted !== UNCLASSIFIED && !isSourceType(group, wanted))
     throw new ApiError(400, 'Invalid source type.');
   const window = group === 'domain' ? DOMAIN_WINDOW : URL_WINDOW;
-  const windowQuery = new URLSearchParams(q);
-  windowQuery.set('page', '1');
-  const all = await sourcesReport(ctx, windowQuery, window);
+  query.set('page', '1');
+  const all = await sourcesReport(ctx, query, window);
   const matching = (await typedRows(all.rows, group, classifier)).filter(
     (row) => row.sourceType === wanted,
   );
@@ -184,27 +208,55 @@ export async function typedSourcesReport(
   };
 }
 
+const pendingBatches = async (projectId: string, ownerId: string) =>
+  Number(
+    (
+      await db()
+        .prepare(
+          "SELECT COUNT(*) n FROM brand_research_jobs WHERE project_id=? AND owner_id=? AND context_key LIKE ? AND status IN ('pending','submitting')",
+        )
+        .bind(projectId, ownerId, `${SOURCE_TYPE_CONTEXT_PREFIX}%`)
+        .first<{ n: number }>()
+    )?.n || 0,
+  );
+
+/** Orders buckets by citations with the unclassified remainder last. */
+function shares<T extends string>(
+  byType: Map<SourceTypeValue, { citations: number } & Record<T, number>>,
+  total: number,
+) {
+  return [...byType.entries()]
+    .map(([type, bucket]) => ({
+      type,
+      ...bucket,
+      share: total ? (bucket.citations / total) * 100 : 0,
+    }))
+    .sort(
+      (left, right) =>
+        Number(left.type === UNCLASSIFIED) - Number(right.type === UNCLASSIFIED) ||
+        right.citations - left.citations ||
+        left.type.localeCompare(right.type),
+    );
+}
+
 export async function sourceTypesReport(
   ownerId: string,
   q: URLSearchParams,
   ctx: Parameters<typeof sourcesReport>[0],
+  demo = false,
 ): Promise<SourceTypesReport> {
   const domainQuery = new URLSearchParams(q);
   domainQuery.set('kind', 'cited');
   domainQuery.set('group', 'domain');
   domainQuery.set('page', '1');
   domainQuery.delete('type');
+  domainQuery.delete('owner');
   const projectId = String(ctx.project.id);
   const [classifier, window, total, pending] = await Promise.all([
-    sourceTypeClassifier(projectId, ownerId),
+    sourceTypeClassifier(projectId, ownerId, demo),
     sourcesReport(ctx, domainQuery, DOMAIN_WINDOW),
     citationTotal(ctx, domainQuery),
-    db()
-      .prepare(
-        "SELECT COUNT(*) n FROM brand_research_jobs WHERE project_id=? AND owner_id=? AND context_key LIKE ? AND status IN ('pending','submitting')",
-      )
-      .bind(projectId, ownerId, `${SOURCE_TYPE_CONTEXT_PREFIX}%`)
-      .first<{ n: number }>(),
+    pendingBatches(projectId, ownerId),
   ]);
   const rows = await typedRows(window.rows, 'domain', classifier);
   const byType = new Map<SourceTypeValue, { citations: number; domains: number }>();
@@ -223,18 +275,7 @@ export async function sourceTypesReport(
     bucket.citations += tail;
     byType.set(UNCLASSIFIED, bucket);
   }
-  const types: SourceTypeShare[] = [...byType.entries()]
-    .map(([type, bucket]) => ({
-      type,
-      ...bucket,
-      share: total ? (bucket.citations / total) * 100 : 0,
-    }))
-    .sort(
-      (left, right) =>
-        Number(left.type === UNCLASSIFIED) - Number(right.type === UNCLASSIFIED) ||
-        right.citations - left.citations ||
-        left.type.localeCompare(right.type),
-    );
+  const types: SourceTypeShare[] = shares(byType, total);
   const unclassified = byType.get(UNCLASSIFIED)?.citations ?? 0;
   return {
     classifier,
@@ -243,7 +284,58 @@ export async function sourceTypesReport(
     unclassified,
     types,
     truncated: window.hasMore,
-    pendingBatches: Number(pending?.n || 0),
+    pendingBatches: pending,
+  };
+}
+
+/** Citations by content (page) type of the cited URLs, with the unclassified part declared. */
+export async function contentTypesReport(
+  ownerId: string,
+  q: URLSearchParams,
+  ctx: Parameters<typeof sourcesReport>[0],
+  demo = false,
+): Promise<ContentTypesReport> {
+  const urlQuery = new URLSearchParams(q);
+  urlQuery.set('kind', 'cited');
+  urlQuery.set('group', 'url');
+  urlQuery.set('page', '1');
+  urlQuery.delete('type');
+  urlQuery.delete('owner');
+  const projectId = String(ctx.project.id);
+  const [classifier, window, total, pending] = await Promise.all([
+    sourceTypeClassifier(projectId, ownerId, demo),
+    sourcesReport(ctx, urlQuery, URL_WINDOW),
+    citationTotal(ctx, urlQuery),
+    pendingBatches(projectId, ownerId),
+  ]);
+  const cached = await cachedSourceTypes('url', window.rows.map((row) => row.key), classifier);
+  const byType = new Map<SourceTypeValue, { citations: number; urls: number }>();
+  let seen = 0;
+  for (const row of window.rows) {
+    const type = row.key ? cachedType(cached, row.key) : UNCLASSIFIED;
+    const bucket = byType.get(type) ?? { citations: 0, urls: 0 };
+    bucket.citations += row.responses;
+    bucket.urls += 1;
+    byType.set(type, bucket);
+    seen += row.responses;
+  }
+  // URLs beyond the window cannot be typed, so they remain visibly unclassified.
+  const tail = Math.max(0, total - seen);
+  if (tail || window.hasMore) {
+    const bucket = byType.get(UNCLASSIFIED) ?? { citations: 0, urls: 0 };
+    bucket.citations += tail;
+    byType.set(UNCLASSIFIED, bucket);
+  }
+  const types: ContentTypeShare[] = shares(byType, total);
+  const unclassified = byType.get(UNCLASSIFIED)?.citations ?? 0;
+  return {
+    classifier,
+    citations: total,
+    classified: total - unclassified,
+    unclassified,
+    types,
+    truncated: window.hasMore,
+    pendingBatches: pending,
   };
 }
 
@@ -251,11 +343,13 @@ export async function sourceEntityDetail(
   ownerId: string,
   q: URLSearchParams,
   kind: SourceTypeKind,
+  demo = false,
 ): Promise<SourceEntityDetail> {
   const base = await sourceEntityReport(ownerId, q, kind);
   const classifier = await sourceTypeClassifier(
     String(q.get('project')),
     ownerId,
+    demo,
   );
   const domains = await cachedSourceTypes('domain', [base.domain], classifier);
   const urls = await cachedSourceTypes(
@@ -263,19 +357,15 @@ export async function sourceEntityDetail(
     kind === 'url' ? [base.key] : base.urls.map((item) => item.url),
     classifier,
   );
-  const ownDomain = (): SourceTypeValue =>
-    domainType({ ownership: base.ownership, domain: base.domain }, domains);
+  const siteType = cachedType(domains, base.domain);
   return {
     ...base,
     classifier,
-    sourceType:
-      kind === 'domain'
-        ? ownDomain()
-        : ((urls.get(base.key) as SourceTypeValue | undefined) ?? UNCLASSIFIED),
-    ...(kind === 'url' ? { domainType: ownDomain() } : {}),
+    sourceType: kind === 'domain' ? siteType : cachedType(urls, base.key),
+    ...(kind === 'url' ? { domainType: siteType } : {}),
     urls: base.urls.map((item) => ({
       ...item,
-      pageType: (urls.get(item.url) as SourceTypeValue | undefined) ?? UNCLASSIFIED,
+      pageType: cachedType(urls, item.url),
     })),
   };
 }
@@ -305,11 +395,11 @@ export async function enqueueSourceTypes(
   query.set('group', kind);
   query.set('page', '1');
   query.delete('type');
+  query.delete('owner');
   const ctx = await reportContext(ownerId, query);
   const window = await sourcesReport(ctx, query, CANDIDATE_WINDOW);
-  const candidates = window.rows.filter(
-    (row) => row.key !== '' && (kind === 'url' || row.ownership === 'third-party'),
-  );
+  // Your own and competitors' domains are typed too: the site type is independent of ownership.
+  const candidates = window.rows.filter((row) => row.key !== '');
   const cached = await cachedSourceTypes(kind, candidates.map((row) => row.key), classifier);
   const contextKey = `${SOURCE_TYPE_CONTEXT_PREFIX}${SOURCE_TYPE_RUBRIC}:${classifier.provider}`;
   const active = new Set(
@@ -393,6 +483,58 @@ export async function enqueueSourceTypes(
   };
 }
 
+/** A provider failure. `unknown` means the request left and no usable cost came back, so it is never resent automatically. */
+export class SourceTypeProviderError extends Error {
+  constructor(
+    message: string,
+    readonly unknown: boolean,
+    readonly cost: number | null,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * One typed Decisions request for at most one batch. Shared by the explicit
+ * classification jobs and the public demo operation so both enforce the same
+ * request shape, response validation and "unknown outcome" rule.
+ */
+export async function requestSourceTypes(items: SourceTypeItem[], model: string) {
+  let sent = false,
+    cost: number | null = null;
+  try {
+    const payload = sourceTypeDecisionRequest(items, model);
+    sent = true;
+    const response = await fetch('https://openrouter.ai/api/alpha/decisions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${setting('OPENROUTER_API_KEY')}`,
+        'Content-Type': 'application/json',
+        'X-Title': 'Lastfind',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) {
+      if (response.status >= 400 && response.status < 500 && response.status !== 408)
+        sent = false;
+      throw new Error(`OpenRouter returned HTTP ${response.status}.`);
+    }
+    const raw = (await response.json()) as { usage?: { cost?: unknown } };
+    if (typeof raw.usage?.cost === 'number' && Number.isFinite(raw.usage.cost) && raw.usage.cost >= 0)
+      cost = raw.usage.cost;
+    const result = parseSourceTypeResponse(raw, items, model);
+    cost = result.cost;
+    return result;
+  } catch (error) {
+    throw new SourceTypeProviderError(
+      error instanceof Error ? error.message.slice(0, 200) : 'Source classification failed.',
+      sent && cost === null,
+      cost,
+    );
+  }
+}
+
 type Scope = { projectId: string; ownerId: string; provider: ResearchProvider };
 
 /**
@@ -413,9 +555,9 @@ export async function processSourceTypeJobs(scope?: Scope) {
   const jobs = (
     await database
       .prepare(
-        `SELECT * FROM brand_research_jobs WHERE status='pending' AND context_key LIKE ? AND project_id IN (SELECT value FROM json_each(?))${scopeSql} ORDER BY requested_at LIMIT 2`,
+        `SELECT * FROM brand_research_jobs WHERE status='pending' AND context_key LIKE ? AND (? OR project_id IN (SELECT value FROM json_each(?)))${scopeSql} ORDER BY requested_at LIMIT 2`,
       )
-      .bind(`${SOURCE_TYPE_CONTEXT_PREFIX}%`, JSON.stringify(projects), ...scopeParams)
+      .bind(`${SOURCE_TYPE_CONTEXT_PREFIX}%`, ...researchProjectBindings(), ...scopeParams)
       .all<Job>()
   ).results;
   let processed = 0;
@@ -431,32 +573,12 @@ export async function processSourceTypeJobs(scope?: Scope) {
       .run();
     if (!claimed.meta.changes) continue;
     processed++;
-    let sent = false,
-      cost: number | null = null;
+    let outcome: { unknown: boolean; cost: number | null } = { unknown: false, cost: null };
     try {
       const { items } = JSON.parse(job.input_json) as { items: SourceTypeItem[] };
-      const payload = sourceTypeDecisionRequest(items, job.model);
-      sent = true;
-      const response = await fetch('https://openrouter.ai/api/alpha/decisions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${setting('OPENROUTER_API_KEY')}`,
-          'Content-Type': 'application/json',
-          'X-Title': 'Lastfind',
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!response.ok) {
-        if (response.status >= 400 && response.status < 500 && response.status !== 408)
-          sent = false;
-        throw new Error(`OpenRouter returned HTTP ${response.status}.`);
-      }
-      const raw = (await response.json()) as { usage?: { cost?: unknown } };
-      if (typeof raw.usage?.cost === 'number' && Number.isFinite(raw.usage.cost) && raw.usage.cost >= 0)
-        cost = raw.usage.cost;
-      const result = parseSourceTypeResponse(raw, items, job.model);
-      cost = result.cost;
+      const result = await requestSourceTypes(items, job.model);
+      const cost = result.cost;
+      outcome = { unknown: false, cost };
       const done = now();
       await database.batch([
         database
@@ -479,7 +601,8 @@ export async function processSourceTypeJobs(scope?: Scope) {
         ),
       ]);
     } catch (error) {
-      const unknown = sent && cost === null;
+      if (error instanceof SourceTypeProviderError) outcome = { unknown: error.unknown, cost: error.cost };
+      const { unknown, cost } = outcome;
       await database
         .prepare("UPDATE brand_research_jobs SET status=?,reserved_usd=?,cost_usd=?,completed_at=?,error=? WHERE id=? AND status='submitting'")
         .bind(
@@ -498,8 +621,8 @@ export async function processSourceTypeJobs(scope?: Scope) {
 }
 
 /** Cache discriminator: reports with types change when a classification or evaluator setting does. */
-export async function sourceTypeRevision(projectId: string, ownerId: string) {
-  const classifier = await sourceTypeClassifier(projectId, ownerId);
+export async function sourceTypeRevision(projectId: string, ownerId: string, demo = false) {
+  const classifier = await sourceTypeClassifier(projectId, ownerId, demo);
   const row = await db()
     .prepare(
       'SELECT COUNT(*) n,MAX(classified_at) latest FROM source_classifications WHERE provider=? AND model=? AND rubric=?',
@@ -509,23 +632,26 @@ export async function sourceTypeRevision(projectId: string, ownerId: string) {
   return `${classifier.state}:${classifier.provider}:${row?.n ?? 0}:${row?.latest ?? ''}`;
 }
 
-export const SOURCE_TYPE_VIEWS = ['sources', 'source-types', 'domain-detail', 'url-detail'] as const;
+export const SOURCE_TYPE_VIEWS = ['sources', 'source-types', 'content-types', 'domain-detail', 'url-detail'] as const;
 /** Views that carry source types; the report routes dispatch them here. */
 export async function sourceTypeView(
   view: string,
   ownerId: string,
   ctx: Parameters<typeof sourcesReport>[0],
   q: URLSearchParams,
+  demo = false,
 ) {
   switch (view) {
     case 'sources':
-      return typedSourcesReport(ownerId, q, ctx);
+      return typedSourcesReport(ownerId, q, ctx, demo);
     case 'source-types':
-      return sourceTypesReport(ownerId, q, ctx);
+      return sourceTypesReport(ownerId, q, ctx, demo);
+    case 'content-types':
+      return contentTypesReport(ownerId, q, ctx, demo);
     case 'domain-detail':
-      return sourceEntityDetail(ownerId, q, 'domain');
+      return sourceEntityDetail(ownerId, q, 'domain', demo);
     case 'url-detail':
-      return sourceEntityDetail(ownerId, q, 'url');
+      return sourceEntityDetail(ownerId, q, 'url', demo);
     default:
       throw new ApiError(400, 'Invalid report.');
   }

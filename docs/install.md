@@ -13,10 +13,10 @@ You pay each provider directly. Lastfind itself is free (Apache-2.0) and adds no
 | Service | What it does | Cost |
 | --- | --- | --- |
 | [Cloudflare](https://www.cloudflare.com) | Runs the website and stores your data | Free allowances cover a small installation. Cloudflare may ask for a payment method to turn on R2 (file storage); it only charges above its free allowance. If you see "exceeded CPU" or timeout errors with many prompts, upgrade to Workers Paid (about US$ 5 a month). |
-| [DataForSEO](https://dataforseo.com) | Collects the AI answers | Prepaid; the minimum top-up is US$ 50 (confirm on their [pricing page](https://dataforseo.com/pricing)). Each answer collected costs about US$ 0.0012 for ChatGPT, Gemini, Google AI Mode and AI Overviews, about US$ 0.02 for Perplexity and about US$ 0.06 for Claude. |
+| [DataForSEO](https://dataforseo.com) | Collects the AI answers | Prepaid; the minimum top-up is US$ 50 (confirm on their [pricing page](https://dataforseo.com/pricing)). Each answer collected costs about US$ 0.0012 for ChatGPT, Gemini, Google AI Mode and AI Overviews, about US$ 0.006 for Perplexity and about US$ 0.018 for Claude (measured in a real run in October 2026; DataForSEO can change its prices). |
 | [OpenRouter](https://openrouter.ai) (optional) | Reviews how favourably answers talk about your brand (sentiment) | Prepaid credit; a fraction of a cent per reviewed answer. You can skip it. |
 
-**Worked example.** 20 prompts on ChatGPT only, collected once a day: 600 answers a month, about US$ 0.72. The same 20 prompts on all six assistants cost roughly US$ 50 a month, mostly Claude and Perplexity. Start with ChatGPT only and add models when you see value.
+**Worked example.** 20 prompts on ChatGPT only, collected once a day: 600 answers a month, about US$ 0.72. The same 20 prompts on all six assistants cost roughly US$ 17 a month, mostly Claude and Perplexity. Start with ChatGPT only and add models when you see value.
 
 **Built-in safety limits.** Setup caps collection at 1,500 answers a month and 1,000 a day so a mistake cannot drain your balance. To change them, edit `SELF_HOST_MONTHLY_LIMIT` and `GLOBAL_DAILY_RUN_LIMIT` under `vars` in `wrangler.selfhost.json`, then run `npm run deploy:selfhost`.
 
@@ -89,12 +89,12 @@ Open the address, paste the key and press **Sign in**. Save the key in your pass
 
 ## Step 7. Your first project and prompts
 
-1. After signing in, fill in **Brand** (for example *Conversion*), **Domain** (`conversion.com.br`), language and country, then **Create project**.
+1. After signing in, fill in **Brand** (for example *Conversion*), **Domain** (`conversion.com.br`), language and country, then **Create project**. The form starts as *English* and *United States*: for a Brazilian brand choose *Português* and *Brasil*. Gemini only works in English projects.
 2. Open **Prompts** → **Add prompt**. A prompt is a question your customers might ask an AI, for example *What are the best conversion rate optimisation agencies in Brazil?* Pick the AI models (ChatGPT is selected by default) and save. You can paste up to 100 prompts at once.
-3. **When data appears.** Adding a prompt starts its first collection right away (this spends DataForSEO balance). Results normally show within 2–5 minutes: open **Overview** and watch the line *Monitoring: daily · 1 pending* turn to *0 pending*. From then on each prompt is collected every day at about 04:00 Brasília time.
+3. **When data appears.** Adding a prompt starts its first collection right away (this spends DataForSEO balance). Answers arrive as the AI models finish, not all at once: Google AI Overviews and AI Mode in about a minute, ChatGPT, Gemini and Perplexity usually in a few minutes, Claude in about 30 minutes. In our two test rounds of 17 prompts, DataForSEO's queue made ChatGPT, Perplexity or Gemini take up to 45 minutes once and Gemini about two hours once. Open **Overview** and watch the line *Monitoring: daily · 1 pending* turn to *0 pending* once every model has answered. Meanwhile the answers that already arrived are on screen. From then on each prompt is collected every day at about 04:00 Brasília time.
 4. Empty screens mean "no data yet", never "zero". If *pending* does not go down after 15 minutes, see Troubleshooting.
 
-**Optional sentiment (needs OpenRouter).** Open **Settings → Competitors → Brand discovery and sentiment**, tick **Enable evaluation**, **Save settings**, then **Evaluate up to 20 answers**. Results appear under **Brands → Sentiment** after the next scheduler run (within about 5 minutes; Cloudflare can take up to 15 minutes to start the scheduler of a brand-new installation, so on the very first day this may take longer). Without an OpenRouter key this section asks you to add the key to the server configuration: run `npm run setup` again and paste it.
+**Optional sentiment (needs OpenRouter).** Open **Settings → Competitors → Brand discovery and sentiment**, tick **Enable evaluation**, **Save settings**, then **Evaluate up to 20 answers**. Results appear under **Brands → Sentiment** as the scheduler works through the queue. It evaluates two answers per run, every 5 minutes (about 24 answers an hour, so 80 answers take around three hours; each costs a fraction of a cent). The first results show within about 5 minutes (Cloudflare can take up to 15 minutes to start the scheduler of a brand-new installation, so on the very first day this may take longer). Without an OpenRouter key this section asks you to add the key to the server configuration: run `npm run setup` again and paste it.
 
 ## Update
 
@@ -141,7 +141,7 @@ Then delete the folder, and revoke your DataForSEO/OpenRouter keys and Cloudflar
 | `This folder already has the installation …` | One folder holds one installation. Use that name to update it, or unzip/clone a fresh copy for another one. |
 | Sign-in says the key is invalid | Paste the whole line from `.lastfind/access-key.txt` without spaces. |
 | The page stays on "Loading your workspace…" right after installing or updating | Wait a minute and refresh the page (Ctrl/Cmd+Shift+R). Cloudflare takes a moment to serve the new files everywhere. |
-| Overview stays on "pending" | Check DataForSEO balance, then `https://your-address/api/health`. The scheduler runs every 5 minutes; a first answer can take up to 15 minutes. |
+| Overview stays on "pending" | Check DataForSEO balance, then `https://your-address/api/health`. The scheduler runs every 5 minutes; a first answer can take up to 15 minutes, and a few answers (Gemini in one of our tests) took about two hours, so a small *pending* count for a while is normal. |
 | "Monitoring is temporarily unavailable" | DataForSEO credentials are missing on the Worker. Run `npm run setup` again. |
 | Many prompts time out or "exceeded CPU" | Free Cloudflare limits. Upgrade to Workers Paid (about US$ 5 a month) or track fewer prompts. |
 | Collections stopped mid-month | You reached the safety limit (see *What it costs*). Raise it in `wrangler.selfhost.json` and run `npm run deploy:selfhost`. |

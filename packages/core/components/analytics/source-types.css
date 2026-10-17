@@ -279,7 +279,7 @@
 }
 .live-app .live-frequency > a {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(150px, 38%) minmax(0, 1fr) 28px;
   align-items: center;
   gap: 10px;
   font-size: 12px;
@@ -289,16 +289,19 @@
   color: var(--primary);
 }
 .st-type-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  display: block;
+  overflow: hidden;
   font-size: 11px;
   color: var(--muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .st-dot {
+  display: inline-block;
   width: 7px;
   height: 7px;
-  flex: none;
+  margin-right: 5px;
+  vertical-align: middle;
   border-radius: 50%;
 }
 .overview-stack {
@@ -352,4 +355,42 @@
   border: 0;
   background: none;
   cursor: pointer;
+}
+
+/* Ownership seal: a mark beside the site type, never a type of its own. */
+.st-owner {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.st-owner-own {
+  background: color-mix(in srgb, #1649ff 12%, transparent);
+  color: #1649ff;
+}
+.st-owner-competitor {
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+  color: #c52a30;
+}
+.st-name-line {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.st-avg {
+  font-variant-numeric: tabular-nums;
+}
+.st-owner-text-own {
+  color: #1649ff;
+  font-weight: 600;
+}
+.st-owner-text-competitor {
+  color: #c52a30;
+  font-weight: 600;
 }

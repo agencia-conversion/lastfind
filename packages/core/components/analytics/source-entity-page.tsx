@@ -7,14 +7,13 @@ import type { requestJson } from '@/lib/client';
 import type { HistoryPage, SourceEntityDetail } from '@/lib/report-types';
 import { ENGINE_LABELS } from '@/lib/engines';
 import { relativeReportDate } from '@/lib/report-date';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EngineIcon } from '@/components/lastfind/identity-icons';
 import { SectionCard } from '@/components/lastfind/presentation/section-card';
 import { AnalyticsSkeleton, SiteFavicon } from './shared';
-import { ClassifierNotice, SourceTypeBadge } from './source-types-ui';
+import { ClassifierNotice, OwnerBadge, SourceTypeBadge } from './source-types-ui';
 import { DrillLink, type Linker } from './drill-link';
 
 type Translate = (en: string, pt: string) => string;
@@ -97,9 +96,9 @@ export function SourceEntityPage({
   const percent = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
   const day = (value: string) => new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T12:00:00Z`));
   const back = (
-    <DrillLink link={link} to={{ tab: 'sources', entity: null }} className="st-back">
+    <DrillLink link={link} to={{ tab: 'sources', entity: null, group: kind }} className="st-back">
       <ArrowLeft size={14} aria-hidden="true" />
-      {t('All sources', 'Todas as fontes')}
+      {kind === 'domain' ? t('All domains', 'Todos os domínios') : t('All content', 'Todos os conteúdos')}
     </DrillLink>
   );
   if (state === 'loading')
@@ -121,7 +120,6 @@ export function SourceEntityPage({
         </p>
       </div>
     );
-  const own = detail.ownership === 'own';
   const runs = [...detail.history.runs, ...more];
   const empty = detail.metrics.citing === 0;
   const trend = detail.daily.filter((row) => row.total > 0);
@@ -154,18 +152,17 @@ export function SourceEntityPage({
                 {detail.domain}
               </DrillLink>
             )}
-            {own && <Badge variant="secondary">{t('You', 'Você')}</Badge>}
-            {detail.ownership === 'competitor' && <Badge variant="secondary">{t('Competitor', 'Concorrente')}</Badge>}
+            <OwnerBadge owner={detail.ownership} t={t} />
           </p>
         </div>
         {kind === 'domain' && (
           <DrillLink link={link} to={{ tab: 'sources', entity: null, group: 'url' }} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-            {t('View all URLs', 'Ver todas as URLs')}
+            {t('View all content', 'Ver todos os conteúdos')}
             <ArrowUpRight size={13} />
           </DrillLink>
         )}
       </header>
-      {detail.sourceType === 'unclassified' && detail.ownership === 'third-party' && (
+      {detail.sourceType === 'unclassified' && (
         <ClassifierNotice
           classifier={detail.classifier}
           unclassified={1}
@@ -314,14 +311,14 @@ export function SourceEntityPage({
           {kind === 'domain' && (
             <SectionCard
               title={t('Most cited URLs', 'URLs mais citadas')}
-              description={t('Page types come from the same evaluator as source types.', 'Os tipos de página vêm do mesmo avaliador dos tipos de fonte.')}
+              description={t('Content types come from the same evaluator as site types.', 'Os tipos de conteúdo vêm do mesmo avaliador dos tipos de site.')}
             >
               <div className="live-table-scroll">
                 <Table className="analytics-table">
                   <TableHeader>
                     <TableRow>
                       <TableHead>URL</TableHead>
-                      <TableHead>{t('Page type', 'Tipo de página')}</TableHead>
+                      <TableHead>{t('Content type', 'Tipo de conteúdo')}</TableHead>
                       <TableHead className="text-right">{t('Citations', 'Citações')}</TableHead>
                     </TableRow>
                   </TableHeader>

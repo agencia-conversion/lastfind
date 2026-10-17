@@ -4,9 +4,14 @@ import {
   DOMAIN_TYPES,
   MODEL_DOMAIN_TYPES,
   PAGE_TYPES,
+  SOURCE_OWNERS,
+  SOURCE_OWNER_LABELS,
   SOURCE_TYPE_BATCH_SIZE,
+  SOURCE_TYPE_COLORS,
   SOURCE_TYPE_DEFINITIONS,
+  isSourceOwner,
   isSourceType,
+  sourceFiltersFromQuery,
   parseSourceTypeResponse,
   sourceTypeDecisionRequest,
 } from '../lib/source-types.ts';
@@ -17,6 +22,10 @@ const domains = [
 ] as const;
 const answer = (choice: string) => ({ type: 'choice', choice });
 
+void test('every site and content type has a fixed color for charts', () => {
+  for (const type of [...DOMAIN_TYPES, ...PAGE_TYPES]) assert.match(SOURCE_TYPE_COLORS[type], /^#[0-9a-f]{6}$/, type);
+});
+
 void test('every type has an English and Portuguese label and definition', () => {
   for (const type of [...DOMAIN_TYPES, ...PAGE_TYPES]) {
     const definition = SOURCE_TYPE_DEFINITIONS[type];
@@ -25,13 +34,22 @@ void test('every type has an English and Portuguese label and definition', () =>
   }
 });
 
-void test('the evaluator can choose neither You nor Competitor', () => {
+void test('site types do not include You or Competitor: ownership is a separate mark', () => {
+  assert.deepEqual([...DOMAIN_TYPES], [...MODEL_DOMAIN_TYPES]);
+  assert.deepEqual([...SOURCE_OWNERS], ['own', 'competitor', 'third-party']);
+  for (const owner of SOURCE_OWNERS) {
+    assert.ok(isSourceOwner(owner));
+    assert.ok(SOURCE_OWNER_LABELS[owner].label[0] && SOURCE_OWNER_LABELS[owner].plural[1], owner);
+  }
+  assert.equal(isSourceOwner('you'), false);
   const request = sourceTypeDecisionRequest([...domains], 'typesafe/jev-1.14');
   assert.deepEqual(Object.keys(request.questions.s0.criteria), [...MODEL_DOMAIN_TYPES]);
   const urls = sourceTypeDecisionRequest([{ kind: 'url', key: 'https://a.example/top-10', domain: 'a.example', title: 'Top 10' }], 'm');
   assert.deepEqual(Object.keys(urls.questions.s0.criteria), [...PAGE_TYPES]);
-  assert.equal(isSourceType('domain', 'competitor'), true);
-  assert.equal(isSourceType('url', 'competitor'), false);
+  assert.equal(isSourceType('domain', 'competitor'), false);
+  assert.equal(isSourceType('domain', 'you'), false);
+  assert.equal(isSourceType('domain', 'corporate'), true);
+  assert.equal(isSourceType('url', 'corporate'), false);
 });
 
 void test('batches are bounded and item text is clipped as untrusted evidence', () => {
@@ -55,4 +73,14 @@ void test('responses must answer every item with an allowed choice and a valid c
     [],
   ])
     assert.throws(() => parseSourceTypeResponse(bad, [...domains], 'typesafe/jev-1.14'));
+});
+
+void test('old You/Competitor type links become the owner filter in either group', () => {
+  const filters = (query: string) => sourceFiltersFromQuery(new URLSearchParams(query));
+  assert.deepEqual(filters('type=you'), { type: '', owner: 'own' });
+  assert.deepEqual(filters('group=url&type=competitor'), { type: '', owner: 'competitor' });
+  assert.deepEqual(filters('type=you&owner=third-party'), { type: '', owner: 'third-party' });
+  assert.deepEqual(filters('type=editorial&owner=competitor'), { type: 'editorial', owner: 'competitor' });
+  assert.deepEqual(filters('owner=bogus'), { type: '', owner: '' });
+  assert.deepEqual(filters(''), { type: '', owner: '' });
 });

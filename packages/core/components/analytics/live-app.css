@@ -69,7 +69,16 @@
 .live-app .live-frequency > div { display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; align-items: center; gap: 10px; font-size: 12px; color: var(--muted-foreground); }
 .live-app .live-frequency i { display: block; height: 7px; min-width: 2px; max-width: 100%; border-radius: 4px; background: var(--primary); }
 .live-app .live-frequency b { text-align: right; font-weight: 600; color: var(--foreground); }
-.live-app .live-recent-panel .live-list { padding: 0 16px; }
+.live-app .live-recent-panel { display: flex; flex-direction: column; }
+.live-app .live-recent-body { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.live-app .live-recent-panel .live-list { padding: 0 16px 16px; }
+.live-app .live-recent-panel .live-list li { padding: 14px 16px; }
+.live-app .live-recent-panel .live-list li[hidden] { display: none; }
+/* Two columns: the Recent responses card ends on the same line as the left column and its list fills that height. */
+@media (min-width: 1251px) {
+  .live-app .sources-grid { align-items: stretch; }
+  .live-app .sources-grid .live-recent-panel { contain: size; }
+}
 .live-app .live-card,
 .live-app .live-list li,
 .live-app .live-metrics article {
@@ -831,8 +840,37 @@
 .live-app .live-sources-table th:first-child {
   width: 44px;
 }
-.live-app .live-sources-table th:nth-child(n + 3) {
-  width: 145px;
+.live-app .live-sources-table th:nth-child(3) {
+  width: 150px;
+}
+.live-app .live-sources-table th:nth-child(n + 4):nth-child(-n + 6) {
+  width: 100px;
+}
+.live-app .live-sources-table th:nth-child(7) {
+  width: 110px;
+}
+.live-app .live-sources-table .live-model-icons {
+  flex-wrap: wrap;
+}
+.live-app .live-sources-table th.live-wrap-head {
+  height: auto;
+  min-height: 40px;
+  padding-block: 6px;
+  white-space: normal;
+  line-height: 1.25;
+  vertical-align: bottom;
+  overflow-wrap: break-word;
+}
+.live-app .live-sources-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+@media (max-width: 640px) {
+  .live-app .live-sources-toolbar > * {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+  }
 }
 @media (max-width: 850px) {
   .live-app .live-sources-table {
