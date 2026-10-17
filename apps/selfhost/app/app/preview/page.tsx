@@ -1,21 +1,15 @@
 import {
-  analyticsMetadata,
-  LegacyAnalyticsPage,
+  legacyPreviewRedirect,
   type AnalyticsSearchParams,
 } from '@edition/components/analytics-route-page';
 
 export const dynamic = 'force-dynamic';
-export const metadata = {
-  ...analyticsMetadata,
-  title: 'Lastfind · UI preview',
-};
-// Public preview contains only synthetic fixtures; authenticated APIs remain private.
-export default function PreviewPage({
+
+// The old mock copy of the app was removed; its URL opens the owner sign-in.
+export default async function PreviewPage({
   searchParams,
 }: {
   searchParams: Promise<AnalyticsSearchParams>;
 }) {
-  return (
-    <LegacyAnalyticsPage base="/app/preview" searchParams={searchParams} />
-  );
+  legacyPreviewRedirect({ target: '/app', searchParams: await searchParams });
 }

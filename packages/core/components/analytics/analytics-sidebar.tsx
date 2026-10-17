@@ -241,7 +241,9 @@ export function AnalyticsSidebar({
           >
             <SiteFavicon domain={project.domain} name={workspace.name} />
             <span>
-              <b>{project.name}</b>
+              <span className="block truncate text-body font-medium">
+                {project.name}
+              </span>
             </span>
             <ChevronsUpDown size={14} />
           </DropdownMenuTrigger>
@@ -420,7 +422,11 @@ export function AnalyticsSidebar({
           >
             <UserAvatar user={user} className="account-avatar" />
             <span className="user-menu-identity">
-              <b>{user.name}</b>
+              <span>
+                <span className="text-body font-medium text-foreground">
+                  {user.name}
+                </span>
+              </span>
               <span>{user.email}</span>
             </span>
             <ChevronsUpDown size={14} className="user-menu-chevron" />
@@ -433,7 +439,7 @@ export function AnalyticsSidebar({
             <div className="menu-user-header flex-row">
               <UserAvatar user={user} className="size-9" />
               <div className="grid min-w-0 gap-1">
-                <b>{user.name}</b>
+                <p className="truncate text-body font-medium">{user.name}</p>
                 <span className="truncate">{user.email}</span>
               </div>
             </div>
@@ -466,7 +472,7 @@ export function AnalyticsSidebar({
                 {logoutError && (
                   <p
                     role="alert"
-                    className="px-3 py-2 text-sm text-destructive"
+                    className="px-3 py-2 text-body text-destructive"
                   >
                     {l(
                       'Could not sign out. Please try again.',
@@ -493,7 +499,7 @@ export function AnalyticsSidebar({
                       key={u.id}
                       onClick={() => onContext({ userId: u.id })}
                     >
-                      <UserAvatar user={u} className="size-5 text-[8px]" />
+                      <UserAvatar user={u} size="xs" className="size-5" />
                       <span>{u.name}</span>
                       {u.id === user.id && <Check className="ml-auto" />}
                     </DropdownMenuItem>

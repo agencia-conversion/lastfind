@@ -6,8 +6,8 @@ import { createContext, useContext,
 import {
   ArrowDownRight,
   ArrowUpRight,
-  ChevronRight,
   SearchX,
+  CircleAlert,
   Cpu,
   ChevronDown,
   Search,
@@ -466,44 +466,25 @@ export function Change({ value }: { value: number }) {
     </span>
   );
 }
-export function PanelHeading({
-  title,
-  description,
-  action,
-  onAction,
-}: {
-  title: string;
-  description?: string;
-  action?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <div className="panel-heading">
-      <div>
-        <h2>{title}</h2>
-        {description && <p>{description}</p>}
-      </div>
-      {onAction && (
-        <Button variant="ghost" size="sm" onClick={onAction}>
-          {action}
-          <ChevronRight size={14} />
-        </Button>
-      )}
-    </div>
-  );
-}
+// The only empty / unavailable / error state. `bare` drops the card frame when
+// the state already sits inside a SectionCard.
 export function EmptyState({
   title,
   description,
   action,
+  tone = 'empty',
+  bare = false,
 }: {
-  title: string;
-  description?: string;
+  title: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
+  tone?: 'empty' | 'error';
+  bare?: boolean;
 }) {
+  const Icon = tone === 'error' ? CircleAlert : SearchX;
   return (
-    <div className="analytics-empty">
-      <SearchX size={24} />
+    <div className={bare ? 'analytics-empty' : 'analytics-empty analytics-panel'} role={tone === 'error' ? 'alert' : undefined}>
+      <Icon size={24} aria-hidden="true" />
       <h3>{title}</h3>
       {description && <p>{description}</p>}
       {action}

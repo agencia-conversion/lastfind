@@ -5,14 +5,6 @@ import type { BrandTarget, Project } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { SiteFavicon } from './shared';
 import { SectionCard } from '@/components/lastfind/presentation/section-card';
+import { DataTable } from '@/components/lastfind/presentation/data-table';
 
 type Props = {
   project: Project;
@@ -67,27 +60,34 @@ export function LiveCompetitorSettings({
           {t('Add competitor', 'Adicionar concorrente')}
         </Button>}
     >
-        <Table className="analytics-table" containerClassName="live-settings-table">
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('Brand', 'Marca')}</TableHead>
-              <TableHead>{t('Domain', 'Domínio')}</TableHead>
-              <TableHead className="text-right">
-                {t('Actions', 'Ações')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {project.competitors.map((target, index) => (
-              <TableRow key={target.domain}>
-                <TableCell>
+      <div className="live-settings-table">
+        {project.competitors.length ? (
+          <DataTable
+            rows={project.competitors}
+            rowKey={(target) => target.domain}
+            columns={[
+              {
+                key: 'brand',
+                header: t('Brand', 'Marca'),
+                mobile: 'title',
+                cell: (target) => (
                   <span className="flex items-center gap-2">
                     <SiteFavicon domain={target.domain} name={target.name} />
                     {target.name}
                   </span>
-                </TableCell>
-                <TableCell>{target.domain}</TableCell>
-                <TableCell>
+                ),
+              },
+              {
+                key: 'domain',
+                header: t('Domain', 'Domínio'),
+                label: t('Domain', 'Domínio'),
+                cell: (target) => target.domain,
+              },
+              {
+                key: 'actions',
+                header: t('Actions', 'Ações'),
+                align: 'end',
+                cell: (target, index) => (
                   <div className="flex justify-end gap-1">
                     <Button
                       variant="ghost"
@@ -114,24 +114,19 @@ export function LiveCompetitorSettings({
                       <Trash2 size={15} />
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {!project.competitors.length && (
-              <TableRow>
-                <TableCell
-                  colSpan={3}
-                  className="py-8 text-center text-muted-foreground"
-                >
-                  {t(
-                    'No competitors yet. Add a brand to start comparing.',
-                    'Ainda não há concorrentes. Adicione uma marca para começar a comparar.',
-                  )}
-                </TableCell>
-              </TableRow>
+                ),
+              },
+            ]}
+          />
+        ) : (
+          <p className="px-4 py-8 text-center text-body text-muted-foreground">
+            {t(
+              'No competitors yet. Add a brand to start comparing.',
+              'Ainda não há concorrentes. Adicione uma marca para começar a comparar.',
             )}
-          </TableBody>
-        </Table>
+          </p>
+        )}
+      </div>
       <Dialog
         open={editor !== null}
         onOpenChange={(open) => {
@@ -140,7 +135,7 @@ export function LiveCompetitorSettings({
       >
         <DialogContent className="live-settings-dialog">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-section leading-6 font-medium">
               {editor?.index === -1
                 ? t('Add competitor', 'Adicionar concorrente')
                 : t('Edit competitor', 'Editar concorrente')}
@@ -192,7 +187,7 @@ export function LiveCompetitorSettings({
                 />
               </label>
               {mutationError && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-body text-destructive">
                   {mutationError}
                 </p>
               )}
@@ -220,7 +215,7 @@ export function LiveCompetitorSettings({
       >
         <DialogContent className="live-settings-dialog">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-section leading-6 font-medium">
               {t('Remove competitor', 'Remover concorrente')}
             </DialogTitle>
             <DialogDescription>
@@ -232,7 +227,7 @@ export function LiveCompetitorSettings({
           </DialogHeader>
           <p>{remove !== null && project.competitors[remove]?.name}</p>
           {mutationError && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-body text-destructive">
               {mutationError}
             </p>
           )}

@@ -1,6 +1,6 @@
 # Lastfind requirements
 
-- Apache-2.0 reusable analytics core and simple personal installation.
+- AGPL-3.0-only reusable analytics core and simple personal installation.
 - DataForSEO runs only on the server; never expose credentials.
 - Personal owner authentication with a securely generated key and private sessions.
 - One native Cloudflare Worker serves UI, API and monitoring; control D1, private SQLite Durable Object per project and private R2 raw responses are required.

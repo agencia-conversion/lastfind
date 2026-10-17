@@ -3,6 +3,7 @@ import { withRequestContext } from '@edition/server/request-context';
 import { submitQueued, tick } from '../lib/server/monitor';
 import { setting } from '../lib/server/env';
 import { collectNewPromptsImmediately } from '../lib/server/capabilities';
+import { cachedBlogDocument, isBlogDocumentRequest } from '../lib/server/blog-edge-cache';
 
 // A new prompt in the independent edition is submitted right away: Cloudflare
 // can take up to 15 minutes to start a first deployment's scheduled runs, and
@@ -26,6 +27,18 @@ const worker = {
           status: 503,
           headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' },
         },
+      );
+    }
+    if (isBlogDocumentRequest(request)) {
+      return cachedBlogDocument(
+        request,
+        (publicRequest) =>
+          withRequestContext(publicRequest, (contextRequest) =>
+            handler.fetch(contextRequest, env, ctx),
+          ),
+        (caches as CacheStorage & { default: Cache }).default,
+        (promise) => ctx.waitUntil(promise),
+        env.WORKER_VERSION?.id,
       );
     }
     const response = await withRequestContext(request, (contextRequest) =>

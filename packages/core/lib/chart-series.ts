@@ -38,3 +38,34 @@ export function seriesColorToken(
   if (playerName === brandName) return 'chart-1';
   return `chart-${(competitorSlot(playerName, competitorRoster) + 2) as 2 | 3 | 4 | 5 | 6}`;
 }
+
+/**
+ * Single ordering rule for every multi-series chart (legend, drawing order and
+ * tooltip): biggest period total first. Series without a total (no data in the
+ * period) go last, ties keep the order they came in.
+ *
+ * `direction: 'asc'` is for metrics where a lower value is better (average
+ * position): the best series still comes first.
+ */
+export function orderSeriesByTotal<T>(
+  series: readonly T[],
+  total: (item: T) => number | null | undefined,
+  direction: 'desc' | 'asc' = 'desc',
+): T[] {
+  const sign = direction === 'desc' ? -1 : 1;
+  return series
+    .map((item, index) => {
+      const value = total(item);
+      return {
+        item,
+        index,
+        value: typeof value === 'number' && Number.isFinite(value) ? value : null,
+      };
+    })
+    .sort((a, b) => {
+      if (a.value === null || b.value === null)
+        return a.value === b.value ? a.index - b.index : a.value === null ? 1 : -1;
+      return sign * (a.value - b.value) || a.index - b.index;
+    })
+    .map((entry) => entry.item);
+}

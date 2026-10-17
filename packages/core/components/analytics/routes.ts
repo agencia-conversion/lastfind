@@ -13,7 +13,7 @@ import type {
 } from './workspace-data.ts';
 
 export type AnalyticsRoute = {
-  base: '/app' | '/app/preview';
+  base: '/app';
   workspaceSlug?: string;
   projectSlug?: string;
   tab: string;
@@ -102,8 +102,7 @@ export function parseAnalyticsRoute(pathname: string): AnalyticsRoute | null {
     return null;
   }
   if (parts.shift() !== 'app') return null;
-  const base = parts[0] === 'preview' ? '/app/preview' : '/app';
-  if (base === '/app/preview') parts.shift();
+  const base = '/app';
   if (parts.length === 1 && parts[0] === 'onboarding')
     return { base, tab: 'onboarding' };
   if (parts.length === 2 && parts[0] === 'account' && parts[1] === 'profile') {
@@ -154,7 +153,7 @@ export function parseAnalyticsRoute(pathname: string): AnalyticsRoute | null {
 }
 
 export function buildAnalyticsPath(route: AnalyticsRoute): string {
-  if (route.base !== '/app' && route.base !== '/app/preview')
+  if (route.base !== '/app')
     throw new Error('Invalid analytics base');
   if (route.tab === 'onboarding') return `${route.base}/onboarding`;
   if (route.tab === 'settings' && route.settingsSection === 'profile') {

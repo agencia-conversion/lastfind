@@ -60,7 +60,7 @@
     "wrangler": "4.129.0"
   },
   "type": "module",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "description": "Open-source AI visibility analytics, powered by DataForSEO",
   "overrides": {
     "sharp": "0.35.4"

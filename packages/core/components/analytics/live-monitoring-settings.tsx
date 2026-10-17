@@ -6,15 +6,6 @@ import { ENGINE_LABELS } from '@/lib/engines';
 import { EngineIcon } from '@/components/lastfind/identity-icons';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { AnalyticsSkeleton } from './shared';
 import { SectionCard } from '@/components/lastfind/presentation/section-card';
+import { DataTable } from '@/components/lastfind/presentation/data-table';
+import { TagBadge } from '@/components/lastfind/presentation/tag-badge';
 import type { requestJson } from '@/lib/client';
 
 type Props = {
@@ -116,12 +109,12 @@ export function LiveMonitoringSettings({
         ) : demo ? (
           <>
             <div className="live-settings-note">
-              <strong>
+              <span className="block font-medium">
                 {t(
                   'Demo configuration · Read only',
                   'Configuração da demo · Somente leitura',
                 )}
-              </strong>
+              </span>
               <p>
                 {t(
                   'Semantic Branding is read only in the demo to protect the published study. Create your own account and project to turn association evaluation on or off and define your attributes.',
@@ -144,11 +137,11 @@ export function LiveMonitoringSettings({
                   )}
                 </p>
               </div>
-              <Badge variant="secondary">
+              <TagBadge>
                 {configuration.enabled
                   ? t('Configured on', 'Configurada como ativa')
                   : t('Configured off', 'Configurada como inativa')}
-              </Badge>
+              </TagBadge>
             </div>
             <h3 className="mt-8">
               {t('Brand attributes', 'Atributos da marca')}
@@ -420,61 +413,57 @@ export function LiveMonitoringSettings({
           </Button>
         </div>
         {showTopics && (
-          <div className="live-table-scroll live-settings-table">
-            <Table className="analytics-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('Topic', 'Tópico')}</TableHead>
-                  <TableHead>
-                    {t('Model selection', 'Seleção de modelos')}
-                  </TableHead>
-                  <TableHead>{t('AI models', 'Modelos de IA')}</TableHead>
-                  <TableHead className="text-right">
-                    {t('Actions', 'Ações')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {workspace.topics.map((topic) => (
-                  <TableRow key={topic.id}>
-                    <TableCell>{topic.name}</TableCell>
-                    <TableCell>
-                      {topic.engines_override == null
-                        ? t('Inherits project', 'Herda do projeto')
-                        : t('Topic override', 'Seleção do tópico')}
-                    </TableCell>
-                    <TableCell>
-                      <span className="live-model-icons">
-                        {(
-                          topic.engines_override ??
-                          project.engines ?? ['chat_gpt']
-                        ).map((engine) => (
-                          <span key={engine} title={ENGINE_LABELS[engine]}>
-                            <EngineIcon engine={engine} />
-                          </span>
-                        ))}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          clearMutationError();
-                          setEditor({
-                            topic,
-                            inherit: topic.engines_override == null,
-                            selected: topic.engines_override ??
-                              project.engines ?? ['chat_gpt'],
-                          });
-                        }}
-                      >
-                        {t('Manage', 'Gerenciar')}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="live-settings-table">
+            <DataTable
+              rows={workspace.topics}
+              rowKey={(topic) => topic.id}
+              columns={[
+                { key: 'topic', header: t('Topic', 'Tópico'), mobile: 'title', cell: (topic) => topic.name },
+                {
+                  key: 'selection',
+                  header: t('Model selection', 'Seleção de modelos'),
+                  label: t('Model selection', 'Seleção de modelos'),
+                  cell: (topic) =>
+                    topic.engines_override == null
+                      ? t('Inherits project', 'Herda do projeto')
+                      : t('Topic override', 'Seleção do tópico'),
+                },
+                {
+                  key: 'models',
+                  header: t('AI models', 'Modelos de IA'),
+                  label: t('AI models', 'Modelos de IA'),
+                  cell: (topic) => (
+                    <span className="live-model-icons">
+                      {(topic.engines_override ?? project.engines ?? ['chat_gpt']).map((engine) => (
+                        <span key={engine} title={ENGINE_LABELS[engine]}>
+                          <EngineIcon engine={engine} />
+                        </span>
+                      ))}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'actions',
+                  header: t('Actions', 'Ações'),
+                  align: 'end',
+                  cell: (topic) => (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        clearMutationError();
+                        setEditor({
+                          topic,
+                          inherit: topic.engines_override == null,
+                          selected: topic.engines_override ?? project.engines ?? ['chat_gpt'],
+                        });
+                      }}
+                    >
+                      {t('Manage', 'Gerenciar')}
+                    </Button>
+                  ),
+                },
+              ]}
+            />
           </div>
         )}
       </div>
@@ -486,7 +475,7 @@ export function LiveMonitoringSettings({
       >
         <DialogContent className="live-settings-dialog">
           <DialogHeader>
-            <DialogTitle>{editor?.topic.name}</DialogTitle>
+            <DialogTitle className="text-section leading-6 font-medium">{editor?.topic.name}</DialogTitle>
             <DialogDescription>
               {t(
                 'Applies to questions that inherit their models. Questions with their own override keep their selection.',
@@ -559,7 +548,7 @@ export function LiveMonitoringSettings({
                 </div>
               </fieldset>
               {mutationError && (
-                <p role="alert" className="text-sm text-destructive">
+                <p role="alert" className="text-body text-destructive">
                   {mutationError}
                 </p>
               )}

@@ -1,8 +1,13 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowUpRight, ChevronDown, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable, type DataColumn } from '@/components/lastfind/presentation/data-table';
+import { MetricCard, MetricGrid } from '@/components/lastfind/presentation/metric-card';
+import { SectionCard } from '@/components/lastfind/presentation/section-card';
+import { SectionHeader } from '@/components/lastfind/presentation/section-header';
+import { TagBadge } from '@/components/lastfind/presentation/tag-badge';
 import { demoSources, type DemoPrompt, type DemoResponse } from './demo-data';
 import {
   FilterSelect,
@@ -32,6 +37,8 @@ type Props = {
     | ((selection: { brandId: string; attributeId: string }) => ReactNode);
   onEvidenceSelectionChange?: () => void;
 };
+const RADAR_VIEWBOX_WIDTH = 540;
+const RADAR_COMPACT_WIDTH = 520;
 const color = (id: string, report: Report) =>
   seriesColorVar(
     id,
@@ -229,6 +236,127 @@ export function SemanticAssociationReport({
     setBrandId(nextBrand);
     navigateSection('explanations');
   };
+  const evaluationsLabel = (count: number | undefined) =>
+    l(
+      count === 1 ? 'evaluation' : 'evaluations',
+      count === 1 ? 'avaliação' : 'avaliações',
+    );
+  const summaryItems: MetricItem[] =
+    report.own?.score != null
+      ? [
+          {
+            key: 'score',
+            label: l(
+              'Semantic association score',
+              'Score de associação semântica',
+            ),
+            value: (
+              <>
+                <span className="text-primary">{points(report.own?.score)}</span>
+                <small>/ 100</small>
+              </>
+            ),
+            note: l(
+              'Simple mean of configured attributes',
+              'Média simples dos atributos configurados',
+            ),
+            highlight: true,
+          },
+          ...(report.reference
+            ? [
+                {
+                  key: 'reference',
+                  label: l('Reference brand', 'Marca de referência'),
+                  value: report.reference.entity.name,
+                  note: `${points(report.reference.score)} / 100 · ${report.leader?.entity.id === report.own?.entity.id ? l('second place', 'segunda posição') : l('leader', 'líder')}`,
+                },
+              ]
+            : []),
+          ...(report.gap != null
+            ? [
+                {
+                  key: 'gap',
+                  label: l('Your difference', 'Sua diferença'),
+                  value: `${report.gap > 0 ? '+' : ''}${points(report.gap)}`,
+                  note: l(
+                    'points against the reference',
+                    'pontos em relação à referência',
+                  ),
+                },
+              ]
+            : []),
+          {
+            key: 'brands',
+            label: l('Brands evaluated', 'Marcas avaliadas'),
+            value: `${number(report.ranking.length)} / ${number(report.brands.length)}`,
+            note: l(
+              'with a comparable complete score',
+              'com score completo comparável',
+            ),
+          },
+        ]
+      : [
+          {
+            key: 'own-observed',
+            label: l('Your observed attributes', 'Seus atributos observados'),
+            value: `${number(ownObserved.length)} / ${number(report.configuration.attributes.length)}`,
+            note: l('with assessed evidence', 'com evidências avaliadas'),
+          },
+          {
+            key: 'brands-observed',
+            label: l('Brands with observations', 'Marcas com observações'),
+            value: `${number(observedBrands.length)} / ${number(report.brands.length)}`,
+            note: l(
+              'with at least one assessed attribute',
+              'com pelo menos um atributo avaliado',
+            ),
+          },
+          {
+            key: 'comparable',
+            label: l('Comparable attributes', 'Atributos comparáveis'),
+            value: `${number(report.comparableAttributes)} / ${number(report.configuration.attributes.length)}`,
+            note: l(
+              'with a shared sample between brands',
+              'com amostra comum entre marcas',
+            ),
+          },
+          {
+            key: 'coverage',
+            label: l('Report coverage', 'Cobertura do relatório'),
+            value: l(
+              observedBrands.length ? 'Partial' : 'Not assessed',
+              observedBrands.length ? 'Parcial' : 'Não avaliado',
+            ),
+            note: l(
+              observedBrands.length
+                ? 'Observed data available; overall comparison needs complete shared coverage.'
+                : 'No assessed evidence in this selected context.',
+              observedBrands.length
+                ? 'Dados observados disponíveis; a comparação geral exige cobertura comum completa.'
+                : 'Sem evidência avaliada neste contexto selecionado.',
+            ),
+          },
+        ];
+  const highlightItems: MetricItem[] = [
+    {
+      key: 'strongest',
+      label: l('Strongest attribute', 'Atributo mais forte'),
+      value: report.strongest?.attribute.name ?? '—',
+      note: `${points(report.strongest?.observedValue)} / 100 · ${number(report.strongest?.observedDenominator ?? 0)} ${evaluationsLabel(report.strongest?.observedDenominator)}`,
+    },
+    {
+      key: 'priority',
+      label: l('Attribute to develop', 'Atributo a desenvolver'),
+      value: report.priority?.attribute.name ?? '—',
+      note: `${points(report.priority?.observedValue)} / 100 · ${number(report.priority?.observedDenominator ?? 0)} ${evaluationsLabel(report.priority?.observedDenominator)}`,
+    },
+    {
+      key: 'context',
+      label: l('Selected context', 'Contexto selecionado'),
+      value: `${number(report.prompts)} ${l('base prompts', 'prompts base')}`,
+      note: `${report.date ? date + ' · ' : ''}${report.models.map((engine) => (isEngine(engine) ? ENGINE_LABELS[engine] : engine)).join(', ') || l('No evaluations', 'Sem avaliações')}`,
+    },
+  ];
   return (
     <div className="semantic-association-report">
       <div
@@ -270,178 +398,43 @@ export function SemanticAssociationReport({
         )}
         <div className="semantic-association-content">
           {!report.configuration.enabled ? (
-            <section className="analytics-panel semantic-association-empty">
-              <h2>
-                {l(
-                  'Choose the associations that matter',
-                  'Escolha as associações que importam',
-                )}
-              </h2>
-              <p>
-                {l(
-                  'Semantic branding is not enabled in this configuration. Choose the attributes you want your brand to be known for when you are ready.',
-                  'Branding semântico não está ativado nesta configuração. Escolha os atributos pelos quais sua marca quer ser reconhecida quando quiser começar.',
-                )}
-              </p>
-              {onConfigure && (
-                <Button variant="outline" size="sm" onClick={onConfigure}>
-                  {l('Configure attributes', 'Configurar atributos')}
-                </Button>
+            <SectionCard
+              title={l(
+                'Choose the associations that matter',
+                'Escolha as associações que importam',
               )}
-            </section>
+              description={l(
+                'Semantic branding is not enabled in this configuration. Choose the attributes you want your brand to be known for when you are ready.',
+                'Branding semântico não está ativado nesta configuração. Escolha os atributos pelos quais sua marca quer ser reconhecida quando quiser começar.',
+              )}
+            >
+              {onConfigure && (
+                <div className="semantic-association-empty-action">
+                  <Button variant="outline" size="sm" onClick={onConfigure}>
+                    {l('Configure attributes', 'Configurar atributos')}
+                  </Button>
+                </div>
+              )}
+            </SectionCard>
           ) : (
             <>
               <section
                 id={`${id}-summary`}
-                className="semantic-association-section"
+                className="semantic-association-section semantic-association-summary"
               >
-                <div className="semantic-association-intro">
-                  <h2>
-                    {l(
-                      'How AI connects your brand to its attributes',
-                      'Como a IA conecta sua marca aos seus atributos',
-                    )}
-                  </h2>
-                  <p>
-                    {l(
-                      publicReport ? 'Explore observed associations, sample counts and comparable coverage across brands.' : 'Understand the associations, compare competitors and inspect the reasoning behind each grade.',
-                      publicReport ? 'Explore associações observadas, contagens de amostras e cobertura comparável entre marcas.' : 'Entenda as associações, compare concorrentes e investigue a justificativa de cada nota.',
-                    )}
-                  </p>
-                </div>
-                <div className="semantic-summary">
-                  {report.own?.score != null ? (
-                    <>
-                      <div className="semantic-score">
-                        <div>
-                          <span>
-                            {l(
-                              'Semantic association score',
-                              'Score de associação semântica',
-                            )}
-                          </span>
-                          <Info size={14} aria-hidden="true" />
-                        </div>
-                        <strong>
-                          {points(report.own?.score)}
-                          <small>/ 100</small>
-                        </strong>
-                        <p>
-                          {l(
-                            report.own?.score == null
-                              ? 'Overall score unavailable: comparable coverage is incomplete.'
-                              : 'Simple mean of configured attributes',
-                            report.own?.score == null
-                              ? 'Score geral indisponível: cobertura comparável incompleta.'
-                              : 'Média simples dos atributos configurados',
-                          )}
-                        </p>
-                      </div>
-                      {report.reference && (
-                        <SummaryMetric
-                          label={l('Reference brand', 'Marca de referência')}
-                          value={report.reference?.entity.name ?? '—'}
-                          note={`${points(report.reference?.score)} / 100 · ${report.leader?.entity.id === report.own?.entity.id ? l('second place', 'segunda posição') : l('leader', 'líder')}`}
-                        />
-                      )}
-                      {report.gap != null && (
-                        <SummaryMetric
-                          label={l('Your difference', 'Sua diferença')}
-                          value={
-                            report.gap == null
-                              ? '—'
-                              : `${report.gap > 0 ? '+' : ''}${points(report.gap)}`
-                          }
-                          note={l(
-                            'points against the reference',
-                            'pontos em relação à referência',
-                          )}
-                        />
-                      )}
-                      <SummaryMetric
-                        label={l('Brands evaluated', 'Marcas avaliadas')}
-                        value={`${number(report.ranking.length)} / ${number(report.brands.length)}`}
-                        note={l(
-                          'with a comparable complete score',
-                          'com score completo comparável',
-                        )}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <SummaryMetric
-                        label={l(
-                          'Your observed attributes',
-                          'Seus atributos observados',
-                        )}
-                        value={`${number(ownObserved.length)} / ${number(report.configuration.attributes.length)}`}
-                        note={l(
-                          'with assessed evidence',
-                          'com evidências avaliadas',
-                        )}
-                      />
-                      <SummaryMetric
-                        label={l(
-                          'Brands with observations',
-                          'Marcas com observações',
-                        )}
-                        value={`${number(observedBrands.length)} / ${number(report.brands.length)}`}
-                        note={l(
-                          'with at least one assessed attribute',
-                          'com pelo menos um atributo avaliado',
-                        )}
-                      />
-                      <SummaryMetric
-                        label={l(
-                          'Comparable attributes',
-                          'Atributos comparáveis',
-                        )}
-                        value={`${number(report.comparableAttributes)} / ${number(report.configuration.attributes.length)}`}
-                        note={l(
-                          'with a shared sample between brands',
-                          'com amostra comum entre marcas',
-                        )}
-                      />
-                      <SummaryMetric
-                        label={l('Report coverage', 'Cobertura do relatório')}
-                        value={l(
-                          observedBrands.length ? 'Partial' : 'Not assessed',
-                          observedBrands.length ? 'Parcial' : 'Não avaliado',
-                        )}
-                        note={l(
-                          observedBrands.length
-                            ? 'Observed data available; overall comparison needs complete shared coverage.'
-                            : 'No assessed evidence in this selected context.',
-                          observedBrands.length
-                            ? 'Dados observados disponíveis; a comparação geral exige cobertura comum completa.'
-                            : 'Sem evidência avaliada neste contexto selecionado.',
-                        )}
-                      />
-                    </>
+                <SectionHeader
+                  className="px-0 pt-0"
+                  title={l(
+                    'How AI connects your brand to its attributes',
+                    'Como a IA conecta sua marca aos seus atributos',
                   )}
-                </div>
-                {ownObserved.length > 0 && (
-                  <div className="semantic-association-highlights">
-                    <SummaryMetric
-                      label={l('Strongest attribute', 'Atributo mais forte')}
-                      value={report.strongest?.attribute.name ?? '—'}
-                      note={`${points(report.strongest?.observedValue)} / 100 · ${number(report.strongest?.observedDenominator ?? 0)} ${l(report.strongest?.observedDenominator === 1 ? 'evaluation' : 'evaluations', report.strongest?.observedDenominator === 1 ? 'avaliação' : 'avaliações')}`}
-                    />
-                    <SummaryMetric
-                      label={l(
-                        'Attribute to develop',
-                        'Atributo a desenvolver',
-                      )}
-                      value={report.priority?.attribute.name ?? '—'}
-                      note={`${points(report.priority?.observedValue)} / 100 · ${number(report.priority?.observedDenominator ?? 0)} ${l(report.priority?.observedDenominator === 1 ? 'evaluation' : 'evaluations', report.priority?.observedDenominator === 1 ? 'avaliação' : 'avaliações')}`}
-                    />
-                    <SummaryMetric
-                      label={l('Selected context', 'Contexto selecionado')}
-                      value={`${number(report.prompts)} ${l('base prompts', 'prompts base')}`}
-                      note={`${report.date ? date + ' · ' : ''}${report.models.map((engine) => (isEngine(engine) ? ENGINE_LABELS[engine] : engine)).join(', ') || l('No evaluations', 'Sem avaliações')}`}
-                    />
-                  </div>
-                )}
+                  description={l(
+                    publicReport ? 'Explore observed associations, sample counts and comparable coverage across brands.' : 'Understand the associations, compare competitors and inspect the reasoning behind each grade.',
+                    publicReport ? 'Explore associações observadas, contagens de amostras e cobertura comparável entre marcas.' : 'Entenda as associações, compare concorrentes e investigue a justificativa de cada nota.',
+                  )}
+                />
+                <MetricStrip items={summaryItems} />
+                {ownObserved.length > 0 && <MetricStrip items={highlightItems} />}
                 <p className="semantic-association-note">
                   <Info size={14} aria-hidden="true" />
                   {l(
@@ -473,83 +466,77 @@ export function SemanticAssociationReport({
                           : 'Sem evidência avaliada neste contexto selecionado. A comparação geral está indisponível.',
                       )}
                     </p>
-                    <div className="semantic-brand-ranking">
-                      {observedBrands.map((brand) => (
-                        <div
-                          className="semantic-attribute-rank"
-                          key={brand.entity.id}
-                        >
-                          <span className="semantic-site">
-                            <SiteFavicon
-                              domain={brand.entity.domain}
-                              name={brand.entity.name}
-                            />
-                            {brand.entity.name}
-                          </span>
-                          <span>
-                            {number(
+                    <DataTable
+                      ariaLabel={l(
+                        'Observed attributes by brand',
+                        'Atributos observados por marca',
+                      )}
+                      rows={observedBrands}
+                      rowKey={(brand) => brand.entity.id}
+                      columns={[
+                        brandColumn(report, l('Brand', 'Marca')),
+                        {
+                          key: 'observed',
+                          header: l('Observed attributes', 'Atributos observados'),
+                          label: l('Observed attributes', 'Atributos observados'),
+                          align: 'end',
+                          cell: (brand) =>
+                            `${number(
                               brand.attributes.filter(
                                 (cell) => cell.observedValue !== null,
                               ).length,
-                            )}{' '}
-                            / {number(report.configuration.attributes.length)}{' '}
-                            {l('observed attributes', 'atributos observados')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                            )} / ${number(report.configuration.attributes.length)}`,
+                        },
+                      ]}
+                    />
                   </>
                 ) : (
-                  <div className="semantic-brand-ranking">
-                    {report.ranking.map((brand) => (
-                      <div
-                        className="semantic-brand-rank"
-                        key={brand.entity.id}
-                      >
-                        <span className="semantic-rank-position">
-                          {brand.score == null
-                            ? '—'
-                            : number(
-                                report.ranking.findIndex(
-                                  (row) => row.entity.id === brand.entity.id,
-                                ) + 1,
-                              )}
-                        </span>
-                        <div className="semantic-rank-brand">
-                          <SiteFavicon
-                            domain={brand.entity.domain}
-                            name={brand.entity.name}
-                          />
-                          <div>
-                            <strong>
-                              {brand.entity.name}
-                              {brand.entity.id === report.own?.entity.id && (
-                                <OwnBrandBadge />
-                              )}
-                            </strong>
-                            <small>{brand.entity.domain}</small>
-                          </div>
-                        </div>
-                        <div className="semantic-rank-bar">
-                          <i
-                            style={{
-                              width: `${brand.score ?? 0}%`,
-                              backgroundColor: color(brand.entity.id, report),
-                            }}
-                          />
-                        </div>
-                        <strong className="semantic-rank-score">
-                          {points(brand.score)}
-                          <small>/ 100</small>
-                        </strong>
-                        <span className="semantic-rank-count">
-                          {number(brand.assessedAttributes)}/
-                          {number(report.configuration.attributes.length)}{' '}
-                          {l('attributes', 'atributos')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <DataTable
+                    ariaLabel={l(
+                      'Overall ranking by semantic association score',
+                      'Ranking geral por score de associação semântica',
+                    )}
+                    rows={report.ranking}
+                    rowKey={(brand) => brand.entity.id}
+                    columns={[
+                      {
+                        key: 'position',
+                        header: '#',
+                        mobile: 'hide',
+                        width: '48px',
+                        cell: (brand, index) =>
+                          brand.score == null ? '—' : number(index + 1),
+                      },
+                      brandColumn(report, l('Brand', 'Marca')),
+                      {
+                        key: 'score',
+                        header: l('Score', 'Score'),
+                        label: l('Score', 'Score'),
+                        width: '36%',
+                        cell: (brand) => (
+                          <span className="semantic-rank-score">
+                            <span className="semantic-rank-bar" aria-hidden="true">
+                              <i
+                                style={{
+                                  width: `${brand.score ?? 0}%`,
+                                  backgroundColor: color(brand.entity.id, report),
+                                }}
+                              />
+                            </span>
+                            <span>{points(brand.score)} / 100</span>
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'attributes',
+                        header: l('Attributes', 'Atributos'),
+                        label: l('Attributes', 'Atributos'),
+                        align: 'end',
+                        cell: (brand) =>
+                          `${number(brand.assessedAttributes)} / ${number(report.configuration.attributes.length)}`,
+                      },
+                    ]}
+                  />
                 )}
                 <details className="semantic-association-method">
                   <summary>
@@ -648,7 +635,7 @@ export function SemanticAssociationReport({
                     )}
                   </p>
                 )}
-                <div className="semantic-brand-ranking">
+                <div className="semantic-attribute-ranking">
                   {byAttribute
                     .slice(0, expandedRanking ? undefined : 5)
                     .map(({ brand, cell }) => (
@@ -660,25 +647,11 @@ export function SemanticAssociationReport({
                           selectEvidence(attribute.id, brand.entity.id)
                         }
                       >
-                        <span className="semantic-rank-brand">
-                          <SiteFavicon
-                            domain={brand.entity.domain}
-                            name={brand.entity.name}
-                          />
-                          <span className="semantic-rank-identity">
-                            <strong>
-                              {brand.entity.name}
-                              {brand.entity.id === report.own?.entity.id && (
-                                <OwnBrandBadge />
-                              )}
-                            </strong>
-                            <small>{brand.entity.domain}</small>
-                          </span>
-                        </span>
+                        <BrandIdentity brand={brand} report={report} />
                         <span>{points(cell?.value)} / 100</span>
                         <small>
                           {number(cell?.denominator ?? 0)}{' '}
-                          {l(cell?.denominator === 1 ? 'evaluation' : 'evaluations', cell?.denominator === 1 ? 'avaliação' : 'avaliações')}
+                          {evaluationsLabel(cell?.denominator)}
                         </small>
                         <ArrowUpRight size={14} />
                       </button>
@@ -761,7 +734,7 @@ export function SemanticAssociationReport({
                 </div>
                 {attribute && (
                   <div className="semantic-attribute-intent">
-                    <strong>{attribute.name}</strong>
+                    <h3>{attribute.name}</h3>
                     <p>
                       {attribute.description ||
                         l(
@@ -799,20 +772,7 @@ export function SemanticAssociationReport({
                           }
                         >
                           <summary>
-                            <span className="semantic-rank-brand">
-                              <SiteFavicon
-                                domain={brand.entity.domain}
-                                name={brand.entity.name}
-                              />
-                              <span className="semantic-rank-identity">
-                                <strong>
-                                  {brand.entity.name}
-                                  {brand.entity.id ===
-                                    report.own?.entity.id && <OwnBrandBadge />}
-                                </strong>
-                                <small>{brand.entity.domain}</small>
-                              </span>
-                            </span>
+                            <BrandIdentity brand={brand} report={report} />
                             <span>{points(cell?.value)} / 100</span>
                           </summary>
                           <p>
@@ -826,7 +786,7 @@ export function SemanticAssociationReport({
                               className="semantic-association-note"
                               key={item.id}
                             >
-                              <strong>
+                              <span className="semantic-note-label">
                                 {item.status === 'ambiguous'
                                   ? l(
                                       'Ambiguous identity',
@@ -836,7 +796,7 @@ export function SemanticAssociationReport({
                                       'Insufficient evidence',
                                       'Evidência insuficiente',
                                     )}
-                              </strong>{' '}
+                              </span>{' '}
                               · {item.model} ·{' '}
                               {locale === 'pt-BR'
                                 ? item.explanation.pt
@@ -950,12 +910,12 @@ export function SemanticAssociationReport({
                                     )}
                                   </details>
                                   <div className="semantic-contextual-sources">
-                                    <strong>
+                                    <h3>
                                       {l(
                                         'Aggregated contextual sources',
                                         'Fontes agregadas de contexto',
                                       )}
-                                    </strong>
+                                    </h3>
                                     <p>
                                       {l(
                                         'Links from the context response; they do not determine the grade.',
@@ -1002,30 +962,73 @@ export function SemanticAssociationReport({
   );
 }
 
-function OwnBrandBadge() {
-  const l = useCopy();
-  return (
-    <span className="semantic-own-brand">{l('your brand', 'sua marca')}</span>
-  );
-}
-
-function SummaryMetric({
-  label,
-  value,
-  note,
-}: {
+type MetricItem = {
+  key: string;
   label: string;
-  value: string;
+  value: ReactNode;
   note: string;
-}) {
+  highlight?: boolean;
+};
+
+// Row of MetricCards; the column count follows the number of cards so a
+// missing optional metric never leaves an empty cell. Missing values are
+// rendered by the caller as an em dash, never as zero.
+function MetricStrip({ items }: { items: MetricItem[] }) {
   return (
-    <div className="semantic-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <p>{note}</p>
+    <div
+      className="semantic-metrics"
+      style={{ '--metric-cols': items.length } as CSSProperties}
+    >
+      <MetricGrid>
+        {items.map((item) => (
+          <MetricCard
+            key={item.key}
+            label={item.label}
+            value={item.value}
+            description={item.note}
+            highlight={item.highlight}
+          />
+        ))}
+      </MetricGrid>
     </div>
   );
 }
+
+function BrandIdentity({
+  brand,
+  report,
+}: {
+  brand: Report['brands'][number];
+  report: Report;
+}) {
+  const l = useCopy();
+  return (
+    <span className="semantic-rank-brand">
+      <SiteFavicon domain={brand.entity.domain} name={brand.entity.name} />
+      <span className="semantic-rank-identity">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {brand.entity.name}
+          {brand.entity.id === report.own?.entity.id && (
+            <TagBadge tone="primary">
+              {l('your brand', 'sua marca')}
+            </TagBadge>
+          )}
+        </span>
+        <small>{brand.entity.domain}</small>
+      </span>
+    </span>
+  );
+}
+
+function brandColumn(report: Report, header: string): DataColumn<Report['brands'][number]> {
+  return {
+    key: 'brand',
+    header,
+    mobile: 'title',
+    cell: (brand) => <BrandIdentity brand={brand} report={report} />,
+  };
+}
+
 function ReportSection({
   id,
   title,
@@ -1037,14 +1040,13 @@ function ReportSection({
   description: string;
   children: ReactNode;
 }) {
+  const titleId = useId();
   return (
-    <section id={id} className="analytics-panel semantic-association-section">
-      <header className="semantic-panel-heading">
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </header>
-      {children}
-    </section>
+    <div id={id} className="semantic-association-section">
+      <SectionCard title={title} description={description} titleId={titleId}>
+        {children}
+      </SectionCard>
+    </div>
   );
 }
 
@@ -1065,8 +1067,8 @@ function AttributeTable({
   /* eslint-disable jsx-a11y/no-noninteractive-tabindex */
   return (
     <Table
-      className={`semantic-table semantic-association-table${heatmap ? ' semantic-association-heatmap' : ''}`}
-      containerClassName="semantic-table-scroll semantic-association-table-scroll"
+      className={`semantic-association-table${heatmap ? ' semantic-association-heatmap' : ''}`}
+      containerClassName="semantic-association-table-scroll"
       containerProps={{
         role: 'region',
         tabIndex: 0,
@@ -1155,6 +1157,25 @@ function SemanticRadar({
   const chartRef = useRef<HTMLDivElement>(null);
   const [activeAttribute, setActiveAttribute] = useState<number | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ left: 12, top: 12 });
+  const svgRef = useRef<SVGSVGElement>(null);
+  // The SVG is drawn in a 540-unit box and scaled to its container. Measuring
+  // the rendered width lets labels keep a real 12 px minimum (user units are
+  // scaled up as the chart shrinks) and switches to numbered labels with a key
+  // when the full attribute names would no longer fit.
+  const [svgWidth, setSvgWidth] = useState(RADAR_VIEWBOX_WIDTH);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const width = svg.getBoundingClientRect().width;
+      if (width > 0) setSvgWidth(Math.round(width));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  const compact = svgWidth < RADAR_COMPACT_WIDTH;
   const attributes = report.configuration.attributes;
   const center = { x: 270, y: 205 };
   const radius = 130;
@@ -1194,6 +1215,10 @@ function SemanticRadar({
   return (
     <div
       className="semantic-radar"
+      data-compact={compact ? '' : undefined}
+      style={
+        { '--radar-unit': RADAR_VIEWBOX_WIDTH / svgWidth } as CSSProperties
+      }
       ref={chartRef}
       onPointerLeave={() => {
         if (!chartRef.current?.contains(document.activeElement))
@@ -1201,6 +1226,7 @@ function SemanticRadar({
       }}
     >
       <svg
+        ref={svgRef}
         viewBox="0 0 540 410"
         role="group"
         aria-label={l(
@@ -1256,7 +1282,7 @@ function SemanticRadar({
                   }
                 >
                   {lines.map((line, lineIndex) => (
-                    <tspan key={lineIndex} x={label.x} dy={lineIndex ? 15 : 0}>
+                    <tspan key={lineIndex} x={label.x} dy={lineIndex ? '1.3em' : 0}>
                       {line}
                     </tspan>
                   ))}
@@ -1364,7 +1390,7 @@ function SemanticRadar({
           className="semantic-radar-tooltip"
           style={tooltipPosition}
         >
-          <strong>{active.name}</strong>
+          <h3>{active.name}</h3>
           {brands.length ? (
             <ul>
               {brands.map((brand) => {
@@ -1380,11 +1406,11 @@ function SemanticRadar({
                       }}
                     />
                     <span>{brand.entity.name}</span>
-                    <b>
+                    <span className="semantic-radar-value">
                       {value == null
                         ? l('No evaluation', 'Sem avaliação')
                         : `${number(value, 1)} / 100 · ${number(cell?.observedDenominator ?? 0)} ${l(cell?.observedDenominator === 1 ? 'evaluation' : 'evaluations', cell?.observedDenominator === 1 ? 'avaliação' : 'avaliações')}`}
-                    </b>
+                    </span>
                   </li>
                 );
               })}

@@ -1,38 +1,36 @@
 'use client';
 import type { ReactNode } from 'react';
-import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { SectionHeader } from './section-header';
 
-// Shared panel shell for the dense analytics surfaces (Overview, Competitors,
-// Sources, Opportunities, Responses): a bordered card with a compact
-// title/description header and an optional right-aligned action, so every
-// table/chart panel gets the same header rhythm instead of each call site
-// re-declaring `<Card className="gap-0 py-0 ring-0 panel">` + a hand-rolled
-// `.panel-title` block.
+// The only panel shell of the app: a bordered card with a SectionHeader and
+// the content (chart, table, list). Every screen composes this instead of
+// re-declaring the border, radius and header spacing.
 export function SectionCard({
   title,
   description,
   action,
+  titleId,
   className,
+  padded = false,
   children,
 }: {
   title?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
+  /** Id of the title, so the section is a named landmark. */
+  titleId?: string;
   className?: string;
+  /** Inset the content like the header, for text and lists (tables and charts go edge to edge). */
+  padded?: boolean;
   children: ReactNode;
 }) {
   return (
-    <Card className={`gap-0 py-0 ring-0 panel${className ? ` ${className}` : ''}`}>
+    <section className={cn('analytics-panel', className)} aria-labelledby={title ? titleId : undefined}>
       {(title || description || action) && (
-        <div className="panel-title">
-          <div>
-            {title && <h2>{title}</h2>}
-            {description && <p>{description}</p>}
-          </div>
-          {action}
-        </div>
+        <SectionHeader title={title} description={description} action={action} titleId={titleId} />
       )}
-      {children}
-    </Card>
+      {padded ? <div className="px-5 pb-5">{children}</div> : children}
+    </section>
   );
 }

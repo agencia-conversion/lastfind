@@ -68,9 +68,10 @@ const bundle = await build({
 });
 const worker = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].contents).toString('base64')}`);
 const row = (domain, responses, ownership = 'third-party') => ({ key: domain, domain, title: domain, responses, pages: 1, engines: ['chat_gpt'], mentions: 0, visibility: 0, ownership });
-function setup({ provider = 'jev', enabled = 1, domains = [] } = {}) {
+function setup({ provider = 'jev', enabled = 1, domains = [], before = '9999' } = {}) {
   const sqlite = new DatabaseSync(':memory:');
-  for (const name of readdirSync(root + 'apps/selfhost/drizzle').filter((name) => name.endsWith('.sql')).sort())
+  // `before` stops short of a migration so a test can seed what production held before it.
+  for (const name of readdirSync(root + 'apps/selfhost/drizzle').filter((name) => name.endsWith('.sql') && name < before).sort())
     sqlite.exec(readFileSync(root + 'apps/selfhost/drizzle/' + name, 'utf8'));
   const stamp = new Date().toISOString();
   sqlite.prepare("INSERT INTO accounts(id,email,name,created_at) VALUES('owner','test@example.invalid','Test',?)").run(stamp);
@@ -144,7 +145,7 @@ test('classifies every cited domain once, own and competitor included, and reuse
   assert.deepEqual(Object.keys(calls[0].payload.questions), ['s0', 's1', 's2', 's3', 's4']);
   assert.equal(Object.hasOwn(calls[0].payload.questions.s0.criteria, 'competitor'), false);
   assert.equal(Object.hasOwn(calls[0].payload.questions.s0.criteria, 'you'), false);
-  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM source_classifications").get().n, 5);
+  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM source_catalog").get().n, 5);
   const job = sqlite.prepare('SELECT status,cost_usd FROM brand_research_jobs').get();
   assert.deepEqual({ ...job }, { status: 'completed', cost_usd: 0.001 });
   const page = await worker.typedSourcesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
@@ -188,7 +189,7 @@ test('BRAND_RESEARCH_PROJECTS=* (independent edition) lets the scheduler pick up
   assert.equal(await worker.processSourceTypeJobs(), 2, 'the scheduler used to select none of them with *');
 });
 
-test('an uncertain provider outcome is not resent and a changed evaluator uses a separate cache', async () => {
+test('an uncertain provider outcome is not resent and a changed evaluator keeps the classifications', async () => {
   const { sqlite } = setup({ domains: [row('news.example', 5)] });
   let outbound = 0;
   globalThis.fetch = async () => {
@@ -203,12 +204,13 @@ test('an uncertain provider outcome is not resent and a changed evaluator uses a
   assert.equal(outbound, 1);
   const calls = provider(['editorial']);
   sqlite.prepare("UPDATE brand_research_jobs SET status='completed'").run();
-  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain','news.example','jev','typesafe/jev-1.14','source-types-v1','editorial','2026-01-01')").run();
+  sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('domain','news.example','source-types-v1','editorial','jev','typesafe/jev-1.14','2026-01-01')").run();
   let page = await worker.typedSourcesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
   assert.equal(page.rows.find((item) => item.domain === 'news.example').sourceType, 'editorial');
   sqlite.prepare("UPDATE brand_research_configurations SET provider='decisions',revision=2").run();
   page = await worker.typedSourcesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
-  assert.equal(page.rows.find((item) => item.domain === 'news.example').sourceType, 'unclassified');
+  // The evaluator is provenance, not part of the key: switching it never reclassifies a known site.
+  assert.equal(page.rows.find((item) => item.domain === 'news.example').sourceType, 'editorial');
   assert.equal(page.classifier.model, 'openai/gpt-6-luna-decisions');
   assert.equal(calls.length, 0, 'reading and changing configuration never call the provider');
 });
@@ -217,7 +219,7 @@ test('distribution reports site-type shares, partial classification and the type
   const { sqlite } = setup({ domains: [row('news.example', 6), row('forum.example', 4), row('new.example', 2)] });
   const stamp = '2026-01-01';
   for (const [key, type] of [['news.example', 'editorial'], ['forum.example', 'ugc'], ['acme.example', 'corporate']])
-    sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain',?,'jev','typesafe/jev-1.14','source-types-v1',?,?)").run(key, type, stamp);
+    sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('domain',?,'source-types-v1',?,'jev','typesafe/jev-1.14',?)").run(key, type, stamp);
   globalThis.sourceFixture.citations = 9 + 8 + 6 + 4 + 2;
   const report = await worker.sourceTypesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
   assert.equal(report.citations, 29);
@@ -266,7 +268,7 @@ test('content types report shares of cited URLs, declares the unclassified part 
     urlRow('https://new.example/x', 2),
   ];
   for (const [key, type] of [['https://news.example/top-10', 'listicle'], ['https://news.example/a-vs-b', 'comparison']])
-    sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('url',?,'jev','typesafe/jev-1.14','source-types-v1',?,'2026-01-01')").run(key, type);
+    sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('url',?,'source-types-v1',?,'jev','typesafe/jev-1.14','2026-01-01')").run(key, type);
   globalThis.sourceFixture.citations = 15;
   const report = await worker.contentTypesReport('owner', new URLSearchParams(), { project: { id: 'project' } });
   assert.equal(report.citations, 15);
@@ -286,8 +288,8 @@ test('content types report shares of cited URLs, declares the unclassified part 
 test('page types are cached separately from site types and URL rows carry the site type of their domain', async () => {
   const { sqlite } = setup();
   globalThis.sourceFixture.sources.url = [urlRow('https://news.example/top-10', 6)];
-  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('url','https://news.example/top-10','jev','typesafe/jev-1.14','source-types-v1','listicle','2026-01-01')").run();
-  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain','news.example','jev','typesafe/jev-1.14','source-types-v1','editorial','2026-01-01')").run();
+  sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('url','https://news.example/top-10','source-types-v1','listicle','jev','typesafe/jev-1.14','2026-01-01')").run();
+  sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('domain','news.example','source-types-v1','editorial','jev','typesafe/jev-1.14','2026-01-01')").run();
   const page = await worker.typedSourcesReport('owner', new URLSearchParams('group=url'), { project: { id: 'project' } });
   assert.deepEqual(page.rows.map((item) => [item.sourceType, item.domainType]), [['listicle', 'editorial']]);
   const filtered = await worker.typedSourcesReport('owner', new URLSearchParams('group=url&type=listicle'), { project: { id: 'project' } });
@@ -297,7 +299,7 @@ test('page types are cached separately from site types and URL rows carry the si
 
 test('the public demo reads the fixed evaluator cache and never reports a disabled evaluator', async () => {
   const { sqlite } = setup({ enabled: 0, domains: [row('news.example', 6), row('gone.example', 1)] });
-  sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES('domain','news.example','jev','typesafe/jev-1.14','source-types-v1','editorial','2026-01-01')").run();
+  sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('domain','news.example','source-types-v1','editorial','jev','typesafe/jev-1.14','2026-01-01')").run();
   const calls = provider();
   const ctx = { project: { id: 'project' } };
   const demo = await worker.typedSourcesReport('owner', new URLSearchParams(), ctx, true);
@@ -309,4 +311,101 @@ test('the public demo reads the fixed evaluator cache and never reports a disabl
   assert.equal((await worker.contentTypesReport('owner', new URLSearchParams(), ctx, true)).classifier.state, 'demo');
   assert.notEqual(await worker.sourceTypeRevision('project', 'owner', true), await worker.sourceTypeRevision('project', 'owner'));
   assert.equal(calls.length, 0, 'reading never calls the provider');
+});
+
+const catalog = (sqlite, kind) => sqlite.prepare('SELECT key,type,provider FROM source_catalog WHERE kind=? ORDER BY key').all(kind).map((item) => ({ ...item }));
+
+test('one page cited in many shapes, days and evaluators is classified once and never again', async () => {
+  const { sqlite } = setup();
+  // What the same page looks like across prompts, days and engines: tracking suffix, text fragment, www, trailing slash, http.
+  const page = 'https://news.example/best-streaming';
+  globalThis.sourceFixture.sources.url = [
+    urlRow(page, 9),
+    urlRow('https://www.news.example/best-streaming?utm_source=chatgpt.com', 5),
+    urlRow('https://news.example/best-streaming/#:~:text=The%20best', 4),
+    urlRow('http://news.example/best-streaming', 2),
+    urlRow('https://news.example/other-page', 3),
+  ];
+  const calls = provider(['listicle', 'comparison']);
+  const first = await classify('url');
+  assert.deepEqual([first.queued, calls.length, calls[0].payload.state.items.length], [2, 1, 2], 'two pages, one request');
+  assert.deepEqual(catalog(sqlite, 'url').map((item) => item.key), [page, 'https://news.example/other-page']);
+  const again = await classify('url');
+  assert.deepEqual([again.queued, calls.length], [0, 1], 'a page already classified is not queued again');
+  // Switching the evaluator does not reclassify anything: the new one finds every page typed.
+  sqlite.prepare("UPDATE brand_research_configurations SET provider='decisions',revision=2").run();
+  const switched = await classify('url');
+  assert.deepEqual([switched.queued, calls.length], [0, 1]);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM source_catalog').get().n, 2);
+  // Every shape of the page reads the one type.
+  const classifier = await worker.sourceTypeClassifier('project', 'owner');
+  const types = await worker.cachedSourceTypes('url', globalThis.sourceFixture.sources.url.map((item) => item.key), classifier);
+  assert.equal(new Set([...types.entries()].filter(([key]) => key.includes('best-streaming')).map(([, type]) => type)).size, 1);
+  assert.equal(types.size, 5);
+});
+
+test('a page another project already queued is not queued again, and a queued batch that became known sends nothing', async () => {
+  const { sqlite, settings } = setup();
+  const stamp = new Date().toISOString();
+  sqlite.prepare("INSERT INTO projects(id,owner_id,name,domain,category,daily_enabled,created_at) VALUES('other','owner','Other','other.example','software',0,?)").run(stamp);
+  sqlite.prepare("INSERT INTO brand_research_configurations(project_id,owner_id,provider,enabled,revision,updated_at) VALUES('other','owner','jev',1,1,?)").run(stamp);
+  settings.BRAND_RESEARCH_PROJECTS = 'project,other';
+  globalThis.sourceFixture.sources.domain = [row('news.example', 5), row('forum.example', 3)];
+  const calls = provider(['editorial']);
+  // The first project's batch is waiting for the scheduler.
+  const items = ['acme.example', 'rival.example', 'news.example', 'forum.example'].map((key) => ({ kind: 'domain', key, domain: key }));
+  sqlite.prepare(`INSERT INTO brand_research_jobs(id,owner_id,project_id,input_key,context_key,answer_sha256,provider,model,status,reserved_usd,input_json,requested_at)
+    VALUES('waiting','owner','project','k','source-types:source-types-v1:jev','k','jev','typesafe/jev-1.14','pending',0.02,?,?)`).run(JSON.stringify({ kind: 'domain', items }), stamp);
+  const second = await worker.enqueueSourceTypes('other', 'owner', new URLSearchParams(), 'domain');
+  assert.equal(second.queued, 0, 'the same four sites are already waiting');
+  assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM brand_research_jobs WHERE status='pending'").get().n, 1);
+  // Meanwhile the catalog learns two of them (another batch, the migration...).
+  for (const key of ['news.example', 'forum.example', 'acme.example', 'rival.example'])
+    sqlite.prepare("INSERT INTO source_catalog(kind,key,rubric,type,provider,model,classified_at) VALUES('domain',?,'source-types-v1','editorial','jev','typesafe/jev-1.14','2026-01-01')").run(key);
+  assert.equal(await worker.processSourceTypeJobs(), 1);
+  assert.equal(calls.length, 0, 'nothing left to ask, so no provider call');
+  assert.deepEqual({ ...sqlite.prepare('SELECT status,cost_usd,reserved_usd FROM brand_research_jobs').get() }, { status: 'completed', cost_usd: 0, reserved_usd: 0 });
+});
+
+test('the migration keeps what production already classified and the fold costs no provider call', async () => {
+  const { sqlite } = setup({ before: '0023' });
+  const legacy = sqlite.prepare("INSERT INTO source_classifications(kind,key,provider,model,rubric,type,classified_at) VALUES(?,?,?,?,'source-types-v1',?,?)");
+  const jev = ['jev', 'typesafe/jev-1.14'];
+  const luna = ['decisions', 'openai/gpt-6-luna-decisions'];
+  // Domains: the same site under two evaluators and a www spelling.
+  legacy.run('domain', 'news.example', ...jev, 'editorial', '2026-10-01');
+  legacy.run('domain', 'news.example', ...luna, 'reference', '2026-10-05');
+  legacy.run('domain', 'www.forum.example', ...jev, 'ugc', '2026-10-01');
+  // URLs: the same page as cited on different days (tracking suffix, fragment) plus a distinct one.
+  legacy.run('url', 'https://news.example/top-10?utm_source=chatgpt.com', ...jev, 'listicle', '2026-10-01');
+  legacy.run('url', 'https://www.news.example/top-10#:~:text=a', ...jev, 'comparison', '2026-10-03');
+  legacy.run('url', 'https://news.example/top-10', ...luna, 'listicle', '2026-10-02');
+  legacy.run('url', 'https://news.example/review', ...jev, 'article', '2026-10-01');
+  const before = sqlite.prepare('SELECT COUNT(*) n FROM source_classifications').get().n;
+  sqlite.exec(readFileSync(root + 'apps/selfhost/drizzle/0023_source_catalog.sql', 'utf8'));
+  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM source_catalog').get().n, 0, 'the migration only creates the catalog');
+  const calls = provider();
+  const classifier = await worker.sourceTypeClassifier('project', 'owner');
+  const types = await worker.cachedSourceTypes('url', ['https://news.example/top-10', 'https://news.example/review'], classifier);
+  assert.deepEqual(Object.fromEntries(types), { 'https://news.example/top-10': 'comparison', 'https://news.example/review': 'article' }, 'the newest classification of the page wins');
+  assert.deepEqual(catalog(sqlite, 'url').map((item) => item.key), ['https://news.example/review', 'https://news.example/top-10']);
+  // Domains: the same site under two evaluators and a www spelling; the newest classification wins.
+  assert.deepEqual(catalog(sqlite, 'domain'), [{ key: 'forum.example', type: 'ugc', provider: 'jev' }, { key: 'news.example', type: 'reference', provider: 'decisions' }]);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM source_classifications').get().n, before, 'the old table is untouched');
+  assert.ok(sqlite.prepare("SELECT 1 FROM system_state WHERE key='source_catalog_fold_mark'").get());
+  // Running everything again changes nothing and asks nobody.
+  sqlite.prepare("DELETE FROM system_state WHERE key='source_catalog_fold_mark'").run();
+  await worker.foldLegacyClassifications();
+  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM source_catalog').get().n, 4);
+  assert.equal(calls.length, 0);
+  // A row an older Worker still writes while a release rolls out is picked up by the next isolate.
+  legacy.run('domain', 'late.example', ...jev, 'corporate', '2026-10-09');
+  await worker.foldLegacyClassifications();
+  const late = () => sqlite.prepare("SELECT COUNT(*) n FROM source_catalog WHERE key='late.example'").get().n;
+  assert.equal(late(), 0, 'one fold per isolate');
+  globalThis.sourceFixture.db = d1(sqlite);
+  await worker.foldLegacyClassifications();
+  assert.equal(late(), 1);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM source_catalog').get().n, 5);
+  assert.equal(calls.length, 0);
 });

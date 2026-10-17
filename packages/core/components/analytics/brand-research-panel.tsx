@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { BrandSentimentAnalysis } from './brand-sentiment-analysis';
 import { FilterSelect } from './shared';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SectionCard } from '@/components/lastfind/presentation/section-card';
 
 export type BrandResearchReport = {
   configuration?: {
@@ -265,54 +266,18 @@ export function BrandResearchPanel({
   };
   return (
     <div className="space-y-6 min-w-0">
-      <section className="live-card min-w-0">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3>
-              {t(
-                settings
-                  ? 'Brand discovery and sentiment'
-                  : 'Brand sentiment by monitored question',
-                settings
-                  ? 'Descoberta de marcas e sentimento'
-                  : 'Sentimento da marca por pergunta monitorada',
-              )}
-            </h3>
-            {settings ? (
-              <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                {t(
-                  'Choose the evaluator for this project, enable evaluation and review discovered competitors below. The same evaluator classifies cited sources by type. Saving does not start an evaluation or a classification.',
-                  'Escolha o avaliador deste projeto, habilite a avaliação e revise os concorrentes descobertos abaixo. O mesmo avaliador classifica as fontes citadas por tipo. Salvar não inicia avaliação nem classificação.',
-                )}
-              </p>
-            ) : (
-              <details className="mt-2 max-w-3xl text-xs text-muted-foreground">
-                <summary className="cursor-pointer">
-                  {t('How sentiment is counted', 'Como o sentimento é contado')}
-                </summary>
-                <p className="mt-2">
-                  {t(
-                    'Each logical question counts once per brand. We use its latest completed answer from each selected AI. Positive and negative views together become mixed; missing evidence stays unavailable.',
-                    'Cada pergunta lógica conta uma vez por marca. Usamos sua resposta completa mais recente em cada IA selecionada. Visões positivas e negativas juntas compõem misto; ausência de evidência continua indisponível.',
-                  )}
-                </p>
-                <p className="mt-2">
-                  {t(
-                    'Counts are questions, not name repetitions or model votes. Evaluated counts can have partial AI coverage. Unassessed, insufficient and ambiguous evidence never becomes neutral. Each bar divides evaluated logical questions only. Coverage states can overlap.',
-                    'As contagens representam perguntas, sem repetição de nomes ou votos de modelos. Avaliadas podem ter cobertura parcial de IA. Evidência não avaliada, insuficiente ou ambígua nunca vira neutra. Cada barra divide somente perguntas lógicas avaliadas. Estados de cobertura podem se sobrepor.',
-                  )}
-                </p>
-                {report.data?.previewImport && (
-                  <p className="mt-2">
-                    {t(
-                      'This preview imports public answers with original collection dates and sources preserved. Automatic collection is paused.',
-                      'Este preview importa respostas públicas preservando datas de coleta e fontes originais. A coleta automática está pausada.',
-                    )}
-                  </p>
-                )}
-              </details>
-            )}
-          </div>
+      <SectionCard
+        className="min-w-0"
+        title={t(
+          settings
+            ? 'Brand discovery and sentiment'
+            : 'Brand sentiment by monitored question',
+          settings
+            ? 'Descoberta de marcas e sentimento'
+            : 'Sentimento da marca por pergunta monitorada',
+        )}
+        action={
+          <>
           {!settings && onManage && (
             <Button variant="outline" size="sm" onClick={onManage}>
               {t('Manage in Settings', 'Gerenciar em Settings')}
@@ -405,7 +370,44 @@ export function BrandResearchPanel({
               </Button>
             </div>
           )}
-        </div>
+          </>
+        }
+      >
+        <div className="px-5 pb-5">
+            {settings ? (
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                {t(
+                  'Choose the evaluator for this project, enable evaluation and review discovered competitors below. The same evaluator classifies cited sources by type. Saving does not start an evaluation or a classification.',
+                  'Escolha o avaliador deste projeto, habilite a avaliação e revise os concorrentes descobertos abaixo. O mesmo avaliador classifica as fontes citadas por tipo. Salvar não inicia avaliação nem classificação.',
+                )}
+              </p>
+            ) : (
+              <details className="max-w-3xl text-xs text-muted-foreground">
+                <summary className="cursor-pointer">
+                  {t('How sentiment is counted', 'Como o sentimento é contado')}
+                </summary>
+                <p className="mt-2">
+                  {t(
+                    'Each logical question counts once per brand. We use its latest completed answer from each selected AI. Positive and negative views together become mixed; missing evidence stays unavailable.',
+                    'Cada pergunta lógica conta uma vez por marca. Usamos sua resposta completa mais recente em cada IA selecionada. Visões positivas e negativas juntas compõem misto; ausência de evidência continua indisponível.',
+                  )}
+                </p>
+                <p className="mt-2">
+                  {t(
+                    'Counts are questions, not name repetitions or model votes. Evaluated counts can have partial AI coverage. Unassessed, insufficient and ambiguous evidence never becomes neutral. Each bar divides evaluated logical questions only. Coverage states can overlap.',
+                    'As contagens representam perguntas, sem repetição de nomes ou votos de modelos. Avaliadas podem ter cobertura parcial de IA. Evidência não avaliada, insuficiente ou ambígua nunca vira neutra. Cada barra divide somente perguntas lógicas avaliadas. Estados de cobertura podem se sobrepor.',
+                  )}
+                </p>
+                {report.data?.previewImport && (
+                  <p className="mt-2">
+                    {t(
+                      'This preview imports public answers with original collection dates and sources preserved. Automatic collection is paused.',
+                      'Este preview importa respostas públicas preservando datas de coleta e fontes originais. A coleta automática está pausada.',
+                    )}
+                  </p>
+                )}
+              </details>
+            )}
         {demo ? (
           <p className="mt-4 text-sm text-muted-foreground">
             {t(
@@ -527,7 +529,8 @@ export function BrandResearchPanel({
             {error}
           </p>
         )}
-      </section>
+        </div>
+      </SectionCard>
       {settings && report.data?.suggestionsTruncated && (
         <output className="block text-sm text-muted-foreground">
           {t(

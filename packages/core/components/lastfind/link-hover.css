@@ -1,0 +1,15 @@
+/* Shared text-link treatment for Astro pages and the app. */
+:where(
+  a:not(.btn):not(.lf-public-cta):not(.lf-public-github):not(
+      [role='button']
+    ):not([role='menuitem'])
+):is(:hover, :focus-visible) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:where([role='menu'] a, [data-slot='dropdown-menu-content'] a):is(
+  :hover,
+  :focus-visible
+) {
+  text-decoration: none;
+}

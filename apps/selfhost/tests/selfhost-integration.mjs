@@ -66,30 +66,19 @@ try {
     lockedPage.response.headers.get('x-content-type-options'),
     'nosniff',
   );
-  const preview = await req(
+  // The old mock copy of the app is gone: its URLs lead to the owner sign-in.
+  for (const legacy of [
     '/app/preview/workspaces/conversion/projects/conversion/overview',
-  );
-  assert.match(
-    preview.data,
-    /Brand ranking/,
-    'Canonical preview links render synthetic analytics',
-  );
-  assert.doesNotMatch(preview.data, /id="owner-key"/);
-  assert.equal(
-    preview.response.headers.get('cache-control'),
-    'private, no-store',
-  );
-  const legacyPreview = await req(
     '/app/preview?tab=competitors&models=ChatGPT&days=7',
-  );
-  assert.equal(
-    new URL(legacyPreview.response.url).pathname,
-    '/app/preview/workspaces/conversion/projects/conversion/brands',
-  );
-  assert.equal(
-    new URL(legacyPreview.response.url).searchParams.get('models'),
-    'chatgpt',
-  );
+  ]) {
+    const preview = await req(legacy);
+    assert.equal(new URL(preview.response.url).pathname, '/app');
+    assert.match(preview.data, /id="owner-key"/);
+    assert.equal(
+      preview.response.headers.get('cache-control'),
+      'private, no-store',
+    );
+  }
   await req('/api/workspace', 'GET', undefined, 401, {
     'x-user-id': 'forged',
     'x-user-email': 'attacker@example.test',

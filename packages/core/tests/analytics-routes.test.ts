@@ -20,11 +20,11 @@ import {
 } from '../components/analytics/demo-data.ts';
 import { createDemoSession } from '../components/analytics/workspace-data.ts';
 
-await test('canonical analytics routes preserve workspace, project and detail identity on both bases', () => {
+await test('canonical analytics routes preserve workspace, project and detail identity ', () => {
   const session = createDemoSession();
   const workspace = session.workspaces[0];
   const project = workspace.projects[0];
-  for (const base of ['/app', '/app/preview'] as const) {
+  for (const base of ['/app'] as const) {
     for (const tab of [
       'overview',
       'prompts',
@@ -75,7 +75,7 @@ await test('canonical analytics routes preserve workspace, project and detail id
 });
 
 await test('workspace settings and account profile have separate canonical scopes', () => {
-  for (const base of ['/app', '/app/preview'] as const) {
+  for (const base of ['/app'] as const) {
     for (const settingsSection of [
       'workspace',
       'members',

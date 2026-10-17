@@ -34,19 +34,19 @@ import {
   TopicFilter,
   AnalyticsSkeleton,
   FilterSelect,
+  EmptyState,
 } from './shared';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
-} from 'recharts';
 import { UserAvatar } from './user-avatar';
 import { PageHeading } from '@/components/lastfind/presentation/page-heading';
 import { SectionCard } from '@/components/lastfind/presentation/section-card';
-import { parseDemoPromptImport } from './prompts-view';
+import { MetricCard, MetricGrid } from '@/components/lastfind/presentation/metric-card';
+import { DataTable, type DataColumn } from '@/components/lastfind/presentation/data-table';
+import { TagBadge } from '@/components/lastfind/presentation/tag-badge';
+import { SeriesLegend, TrendChart } from '@/components/lastfind/presentation/trend-chart';
+import { parseDemoPromptImport } from './prompt-import';
 import { DateRangePicker } from './date-range-picker';
 import { slugify } from './routes';
 import { SemanticAssociationReport } from './semantic-association-report';
@@ -63,8 +63,9 @@ import { DrillLink, type DrillTarget, type Linker } from './drill-link';
 import { DOMAIN_TYPES, PAGE_TYPES, SOURCE_OWNERS, UNCLASSIFIED, sourceFiltersFromQuery } from '@/lib/source-types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { getTrendScale, rankTrendSeries, summaryTrend, type TrendMetric, type TrendResolution } from '@/lib/report-trend';
-import { seriesColorVar } from '@/lib/chart-series';
+import { orderSeriesByTotal, seriesColorVar } from '@/lib/chart-series';
+import { getTrendScale, summaryTrend, type TrendMetric, type TrendResolution } from '@/lib/report-trend';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,7 +101,6 @@ import {
   Eye,
   MessageSquare,
   ListOrdered,
-  Info,
   ChevronRight,
   MoreVertical,
   Globe,
@@ -321,6 +321,7 @@ export function LiveAnalyticsApp({
   request: transport = requestJson,
   exportDemo,
   resetDemo,
+  billingPanel,
 }: {
   initialPath?: string[];
   initialSearch?: string;
@@ -329,6 +330,7 @@ export function LiveAnalyticsApp({
   request?: typeof requestJson;
   exportDemo?: (query: URLSearchParams) => void | Promise<void>;
   resetDemo?: () => void;
+  billingPanel?: ReactNode;
 }) {
   const cache = useMemo(() => createAnalyticsRequest(transport), [transport]);
   const request = cache.request;
@@ -439,8 +441,11 @@ export function LiveAnalyticsApp({
   const [responseMention, setResponseMention] = useState<'all' | 'mentioned' | 'missing'>(initialTab === 'responses' && (query.get('mention') === 'mentioned' || query.get('mention') === 'missing') ? (query.get('mention') as 'mentioned' | 'missing')
       : 'all',
   );
+  const pathSettingsSection = initialPath[0] === 'account' && initialPath[1] === 'profile'
+    ? 'profile'
+    : initialPath[2] === 'settings' ? initialPath[3] : null;
   const [settingsSection, setSettingsSection] = useState<SettingsSection>(
-    () => settingsSections.find(({ id }) => id === query.get('section'))?.id ?? 'workspace',
+    () => settingsSections.find(({ id }) => id === (pathSettingsSection ?? query.get('section')))?.id ?? 'workspace',
   );
   const [brandView, setBrandView] = useState(() => parseBrandReportView(query.get('brandView')));
   const [visiblePromptColumns, setVisiblePromptColumns] = useState([
@@ -1154,15 +1159,17 @@ export function LiveAnalyticsApp({
   const visibleChartBrands = overviewChartBrands.filter((brand) => !hiddenChartBrands.includes(brand.id));
   const overviewMetric = overviewChart as TrendMetric;
   const overviewScale = getTrendScale(overviewTrend, visibleChartBrands.map((brand) => brand.key), overviewMetric);
-  const overviewTooltipRank = new Map(rankTrendSeries(overviewChartBrands.map((brand, index) => {
+  const overviewTotals = new Map(overviewChartBrands.map((brand, index) => {
     const suffix = index ? `C${index - 1}` : '';
     const numerator = overviewChart === 'position' ? `positionSum${suffix}` : `mentions${suffix}`;
     const denominator = overviewChart === 'position' ? `positionSamples${suffix}` : overviewChart === 'shareOfVoice' ? 'totalMentions' : 'responses';
     const sum = (key: string) => overviewTrend.reduce((total, row) => total + Number(row[key] ?? 0), 0);
     const total = sum(denominator);
-    return { key: brand.key, name: brand.name, value: total ? sum(numerator) / total : null };
-  })));
-  const overviewSingleSamples = new Set(overviewChartBrands.filter((brand) => overviewTrend.filter((row) => row[brand.key] != null).length === 1).map((brand) => brand.key));
+    return [brand.key, total ? sum(numerator) / total : null] as const;
+  }));
+  // One order for legend, lines and tooltip: biggest period total first (best position first).
+  const orderedChartBrands = orderSeriesByTotal(overviewChartBrands, (brand) => overviewTotals.get(brand.key), overviewChart === 'position' ? 'asc' : 'desc');
+  const orderedVisibleBrands = orderedChartBrands.filter((brand) => !hiddenChartBrands.includes(brand.id));
   const promptTrend = detailReport && 'daily' in detailReport ? detailReport.daily.filter((row) => row.responses > 0) : [];
   const promptScale = getTrendScale(promptTrend, ['visibility'], 'visibility');
   const hasChartData = overviewTrend.some((row) => visibleChartBrands.some((brand) => row[brand.key] != null));
@@ -1448,30 +1455,114 @@ export function LiveAnalyticsApp({
 
   const promptColumnLabels: Record<string, string> = { models: t('AI models', 'Modelos de IA'), tags: t('Tags', 'Tags'), visibility: t('Visibility', 'Visibilidade'), position: t('Position', 'Posição'), country: t('Country', 'País'), channels: t('Per-model performance', 'Desempenho por modelo') };
   const showPromptColumn = (column: string) => visiblePromptColumns.includes(column);
-  const promptColumns = (
-    <colgroup>
-      <col style={{ width: 44 }} />
-      <col />
-      {[
-        ['models', 160],
-        ['tags', 110],
-        ['visibility', 90],
-        ['position', 80],
-        ['country', 140],
-        ['channels', 260],
-      ]
-        .filter(([column]) => showPromptColumn(String(column)))
-        .map(([column, width]) => <col key={column} style={{ width }} />)}
-      <col style={{ width: 48 }} />
-    </colgroup>
-  );
   // Per-question metrics come from a slower report than the prompt list: "—" means "no response in the period", never "still loading" or "failed".
   const promptMetricsLoading = tab === 'prompts' && reportLoading;
   const promptMetricsFailed = tab === 'prompts' && !promptRoute && workspaceReady && Boolean(reportPath) && !reportLoading && !promptStats;
   const promptMetricCell = (value: ReactNode, size = 'w-10') =>
     promptMetricsLoading ? <output aria-busy="true" className={`ml-auto block h-4 animate-pulse rounded bg-muted ${size}`}><span className="sr-only">{t('Loading…', 'Carregando…')}</span></output>
     : promptMetricsFailed ? <span className="sr-only">{t('Unavailable', 'Indisponível')}</span> : value;
-  const promptHeader = (hidden = false) => <TableHeader className={hidden ? 'sr-only' : undefined}><TableRow><TableHead className="w-10 pl-4">{hidden ? <span className="sr-only">{t('Select', 'Selecionar')}</span> : <Checkbox aria-label={t('Select all visible prompts', 'Selecionar todos os prompts visíveis')} checked={visiblePrompts.length > 0 && selectedVisiblePrompts.length === visiblePrompts.length} indeterminate={selectedVisiblePrompts.length > 0 && selectedVisiblePrompts.length < visiblePrompts.length} onCheckedChange={(checked) => setSelectedPrompts(checked ? visiblePrompts.map((item) => item.id) : [])} />}</TableHead><TableHead>{t('Prompt', 'Prompt')}</TableHead>{Object.entries(promptColumnLabels).filter(([column]) => showPromptColumn(column)).map(([column, label]) => <TableHead key={column} className={['visibility', 'position'].includes(column) ? 'text-right' : undefined}>{label}</TableHead>)}<TableHead><span className="sr-only">{t('Actions', 'Ações')}</span></TableHead></TableRow></TableHeader>;
+  // Columns of the prompts table. The sticky copy of the header shows the
+  // select-all checkbox; the real header then stays for screen readers only.
+  const promptTableColumns = (hiddenHeader: boolean): DataColumn<Prompt>[] => {
+    const metricFor = (item: Prompt) => promptStats?.[item.id];
+    return [
+      {
+        key: 'select', width: 44, mobile: 'check', headerClassName: 'w-10 pl-4', cellClassName: 'pl-4',
+        header: hiddenHeader ? <span className="sr-only">{t('Select', 'Selecionar')}</span> : <Checkbox aria-label={t('Select all visible prompts', 'Selecionar todos os prompts visíveis')} checked={visiblePrompts.length > 0 && selectedVisiblePrompts.length === visiblePrompts.length} indeterminate={selectedVisiblePrompts.length > 0 && selectedVisiblePrompts.length < visiblePrompts.length} onCheckedChange={(checked) => setSelectedPrompts(checked ? visiblePrompts.map((item) => item.id) : [])} />,
+        cell: (item) => <Checkbox aria-label={`${t('Select', 'Selecionar')} ${item.text}`} checked={selectedPrompts.includes(item.id)} onCheckedChange={(checked) => setSelectedPrompts((current) => checked ? [...current, item.id] : current.filter((id) => id !== item.id))} />,
+      },
+      {
+        key: 'prompt', mobile: 'title', cellClassName: 'min-w-0 py-4', header: t('Prompt', 'Prompt'),
+        cell: (item) => (
+          // onPromptDetail writes a ref, but only when clicked; the compiler cannot tell a handler handed to DataTable from a render-time call.
+          // oxlint-disable-next-line react/react-compiler
+          <button title={item.text} className="line-clamp-2 w-full whitespace-normal text-left text-body text-foreground hover:text-primary hover:underline hover:underline-offset-[3px] focus-visible:outline-primary" onClick={() => onPromptDetail(item)}>
+            {item.text}
+          </button>
+        ),
+      },
+      ...(showPromptColumn('models') ? [{
+        key: 'models', width: 160, header: promptColumnLabels.models, label: promptColumnLabels.models,
+        cell: (item: Prompt) => <div className="live-model-icons">{(item.engines ?? [item.engine]).map((engine) => <span key={engine} title={ENGINE_LABELS[engine]} aria-label={ENGINE_LABELS[engine]}><EngineIcon engine={engine} /></span>)}</div>,
+      }] : []),
+      ...(showPromptColumn('tags') ? [{
+        key: 'tags', width: 110, header: promptColumnLabels.tags, label: promptColumnLabels.tags,
+        cell: (item: Prompt) => (
+          <div className="flex max-w-[110px] flex-wrap gap-1">
+            {item.tags.length ? item.tags.map((tag) => <TagBadge key={tag} tone="muted">{tag}</TagBadge>) : <span className="text-muted-foreground">—</span>}
+          </div>
+        ),
+      }] : []),
+      ...(showPromptColumn('visibility') ? [{
+        key: 'visibility', width: 90, align: 'end' as const, header: promptColumnLabels.visibility, label: promptColumnLabels.visibility,
+        cell: (item: Prompt) => {
+          const metric = metricFor(item);
+          return promptMetricCell(metric?.responses ? <DrillLink link={link} to={{ tab: 'prompts', prompt: item.id }}>{`${metric.visibility.toFixed(1)}%`}</DrillLink> : '—');
+        },
+      }] : []),
+      ...(showPromptColumn('position') ? [{
+        key: 'position', width: 80, align: 'end' as const, header: promptColumnLabels.position, label: promptColumnLabels.position,
+        cell: (item: Prompt) => {
+          const metric = metricFor(item);
+          return promptMetricCell(metric?.position != null ? metric.position.toFixed(1) : '—');
+        },
+      }] : []),
+      ...(showPromptColumn('country') ? [{
+        key: 'country', width: 140, header: promptColumnLabels.country, label: promptColumnLabels.country, cellClassName: 'text-muted-foreground',
+        cell: () => <>{project?.location_code === 2076 ? '🇧🇷' : project?.location_code === 2840 ? '🇺🇸' : ''}{' '}{project?.location_code === 2076 ? t('Brazil', 'Brasil') : project?.location_code === 2840 ? t('United States', 'Estados Unidos') : t('Project country', 'País do projeto')}</>,
+      }] : []),
+      ...(showPromptColumn('channels') ? [{
+        key: 'channels', width: 260, mobile: 'wide' as const, header: promptColumnLabels.channels, label: promptColumnLabels.channels,
+        cell: (item: Prompt) => {
+          const metric = metricFor(item);
+          return (
+            <div className="space-y-2">
+              {(item.engines ?? [item.engine]).map((engine) => {
+                const channel = metric?.channels?.[engine];
+                return (
+                  <div key={engine} className="flex items-center gap-2 text-caption">
+                    <EngineIcon engine={engine} />
+                    <span className="flex-1">{ENGINE_LABELS[engine]}</span>
+                    <span className="tabular-nums" title={t('Visibility · Position', 'Visibilidade · Posição')}>
+                      {promptMetricCell(<>
+                        {channel?.responses ? `${channel.visibility.toFixed(1)}%` : '—'}{' '}
+                        · {' '}
+                        {channel?.position != null ? channel.position.toFixed(1) : '—'}
+                      </>, 'w-16')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        },
+      }] : []),
+      {
+        key: 'actions', width: 48, mobile: 'actions', header: <span className="sr-only">{t('Actions', 'Ações')}</span>,
+        cell: (item) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label={`${t('Actions for', 'Ações para')} ${item.text}`} />}>
+              <MoreVertical />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="analytics-menu">
+              <DropdownMenuItem onClick={() => openPromptEditor(item)}>
+                <Pencil />
+                {t('Edit prompt', 'Editar prompt')}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={busy} onClick={() => void mutate(`/api/prompts/${encodeURIComponent(item.id)}`, 'PATCH', { active: !item.active })}>
+                {item.active ? <Pause /> : <Play />}
+                {item.active ? t('Pause', 'Pausar') : t('Resume', 'Retomar')}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={busy} onClick={() => void mutate(`/api/prompts/${encodeURIComponent(item.id)}`, 'PATCH', { archived: !item.archived, ...(item.archived ? { active: true } : {}) })}>
+                <Archive />
+                {item.archived ? t('Restore', 'Restaurar') : t('Archive', 'Arquivar')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
+    ];
+  };
   const syncPromptScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
     if (target.dataset.slot !== 'table-container') return;
@@ -1694,7 +1785,7 @@ export function LiveAnalyticsApp({
                   }
                 >
                   <UserAvatar
-                    user={{ name: workspace.user.name || workspace.user.email }}
+                    user={{ name: workspace.user.name || workspace.user.email, importedAvatar: !demoMode }}
                     className="account-avatar"
                   />
                   <span className="user-menu-identity">
@@ -1712,6 +1803,7 @@ export function LiveAnalyticsApp({
                     <UserAvatar
                       user={{
                         name: workspace.user.name || workspace.user.email,
+                        importedAvatar: !demoMode,
                       }}
                       className="size-9"
                     />
@@ -1742,6 +1834,16 @@ export function LiveAnalyticsApp({
                     <Settings2 />
                     {t('Settings', 'Configurações')}
                   </DropdownMenuItem>
+                {billingPanel && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSettingsSection('profile');
+                      setTab('settings');
+                    }}
+                  >
+                    {t('Plan and billing', 'Plano e cobrança')}
+                  </DropdownMenuItem>
+                )}
                 {demoMode && (
                   <>
                     <DropdownMenuItem
@@ -2039,8 +2141,8 @@ export function LiveAnalyticsApp({
                   />
                 </>
                 {(!project || creatingProject) && (
-                  <form className="live-card live-form" onSubmit={onProject}>
-                    <h2>{t('New project', 'Novo projeto')}</h2>
+                  <SectionCard padded className="max-w-[640px]" title={t('New project', 'Novo projeto')}>
+                  <form className="live-form" onSubmit={onProject}>
                     <label>
                       {t('Brand', 'Marca')}
                       <input
@@ -2094,6 +2196,7 @@ export function LiveAnalyticsApp({
                       {t('Create project', 'Criar projeto')}
                     </button>
                   </form>
+                  </SectionCard>
                 )}
                 {project && !creatingProject && tab === 'overview' && (
                   <>
@@ -2103,7 +2206,7 @@ export function LiveAnalyticsApp({
                     ) : summary ? (
                       summary.metrics.responses ? (
                         <>
-                          <div className="metric-strip">
+                          <MetricGrid>
                             {(
                               [
                                 [
@@ -2113,6 +2216,10 @@ export function LiveAnalyticsApp({
                                   t(
                                     'Answers mentioning the brand',
                                     'Respostas que citam a marca',
+                                  ),
+                                  t(
+                                    'Responses mentioning the brand ÷ all responses in the period.',
+                                    'Respostas com a marca ÷ todas as respostas do período.',
                                   ),
                                 ],
                                 [
@@ -2126,6 +2233,10 @@ export function LiveAnalyticsApp({
                                     'Share of tracked brand mentions',
                                     'Participação entre menções de marcas monitoradas',
                                   ),
+                                  t(
+                                    'Brand mentions ÷ mentions of all tracked brands.',
+                                    'Menções à marca ÷ menções a todas as marcas monitoradas.',
+                                  ),
                                 ],
                                 [
                                   'mentionPosition',
@@ -2135,52 +2246,44 @@ export function LiveAnalyticsApp({
                                     'Average position among tracked brands',
                                     'Posição média entre marcas monitoradas',
                                   ),
+                                  t(
+                                    'Average order of appearance in an answer. Lower is better.',
+                                    'Ordem média de aparição na resposta. Quanto menor, melhor.',
+                                  ),
                                 ],
                               ] as const
-                            ).map(([key, title, suffix, description]) => {
+                            ).map(([key, title, suffix, description, definition]) => {
                               const available =
                                 summary.availability[key]?.current;
                               const delta = summary.comparison.delta[key];
+                              const comparable =
+                                available &&
+                                summary.comparison.comparable &&
+                                summary.comparison.hasPreviousData &&
+                                summary.availability[key]?.previous;
                               return (
-                                <article className="metric-summary" key={key}>
-                                  <div className="metric-label">
-                                    {key === 'visibility' ? (
-                                      <Eye size={15} />
-                                    ) : key === 'shareOfVoice' ? (
-                                      <MessageSquare size={15} />
-                                    ) : (
-                                      <ListOrdered size={15} />
-                                    )}
-                                    <span>{title}</span><button type="button" className="metric-help" aria-label={description} title={description}><Info size={12} /></button>
-                                  </div>
-                                  <div className="metric-number">
-                                    {available ? (
-                                      <DrillLink link={link} to={{ tab: 'competitors', brandView: 'general' }} aria-label={`${title}: ${summary.metrics[key].toFixed(1)}${suffix}. ${t('Open brands', 'Abrir marcas')}`}>
-                                        {`${summary.metrics[key].toFixed(1)}${suffix}`}
-                                      </DrillLink>
-                                    ) : '—'}
-                                  </div>
-                                  <p>{description}</p>
-                                  {available &&
-                                  summary.comparison.comparable &&
-                                  summary.comparison.hasPreviousData &&
-                                  summary.availability[key]?.previous ? (
-                                    <p className="live-metric-delta">
-                                      {delta >= 0 ? '+' : ''}
-                                      {delta.toFixed(1)} {suffix ? 'pp' : ''}{' '}
-                                      {t(
-                                        'versus previous period',
-                                        'ante período anterior',
-                                      )}
-                                    </p>
-                                  ) : null}
-                                </article>
+                                <MetricCard
+                                  key={key}
+                                  highlight={key === 'visibility'}
+                                  icon={key === 'visibility' ? <Eye size={15} /> : key === 'shareOfVoice' ? <MessageSquare size={15} /> : <ListOrdered size={15} />}
+                                  label={title}
+                                  definition={definition}
+                                  value={available ? (
+                                    <DrillLink link={link} to={{ tab: 'competitors', brandView: 'general' }} aria-label={`${title}: ${summary.metrics[key].toFixed(1)}${suffix}. ${t('Open brands', 'Abrir marcas')}`}>
+                                      {`${summary.metrics[key].toFixed(1)}${suffix}`}
+                                    </DrillLink>
+                                  ) : '—'}
+                                  description={description}
+                                  change={comparable ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)} ${suffix ? 'pp' : ''} ${t('versus previous period', 'ante período anterior')}` : null}
+                                />
                               );
                             })}
-                          </div>
+                          </MetricGrid>
                           <div className="overview-grid">
-                            <section className="analytics-panel trend-panel">
-                              <div className="panel-heading overview-trend-controls">
+                            <SectionCard
+                              className="trend-panel"
+                              title={t('Brand trend', 'Evolução das marcas')}
+                              action={<div className="flex flex-wrap items-center justify-end gap-2">
                                 <ToggleGroup multiple={false} value={[overviewChart]} onValueChange={(value) => { if (value[0]) setOverviewChart(value[0] as typeof overviewChart); }} size="sm" variant="outline" spacing={0} aria-label={t('Chart metric', 'Métrica do gráfico')}>
                                   <ToggleGroupItem value="visibility"><Eye />{t('Visibility', 'Visibilidade')}</ToggleGroupItem>
                                   <ToggleGroupItem value="shareOfVoice" title={t('Share of voice', 'Participação nas menções')} aria-label={t('Share of voice', 'Participação nas menções')}><MessageSquare />SOV</ToggleGroupItem>
@@ -2189,47 +2292,58 @@ export function LiveAnalyticsApp({
                                 <ToggleGroup multiple={false} value={[overviewResolution]} onValueChange={(value) => { if (value[0]) setOverviewResolution(value[0] as TrendResolution); }} size="sm" variant="outline" spacing={0} aria-label={t('Time resolution', 'Resolução temporal')}>
                                   {(['day', 'week', 'month'] as const).map((resolution, index) => <ToggleGroupItem key={resolution} value={resolution} aria-label={resolution === 'day' ? t('Day', 'Dia') : resolution === 'week' ? t('Week', 'Semana') : t('Month', 'Mês')} title={resolution === 'day' ? t('Day', 'Dia') : resolution === 'week' ? t('Week', 'Semana') : t('Month', 'Mês')}>{['D', 'W', 'M'][index]}</ToggleGroupItem>)}
                                 </ToggleGroup>
-                              </div>
+                              </div>}
+                            >
                               {hasChartData ? (
-                                <figure className="trend-chart" aria-label={t('Brand trend', 'Evolução das marcas')}>
-                                  <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 500, height: 233 }}>
-                                    <ComposedChart data={overviewTrend} margin={{ top: 15, right: 12, bottom: 5, left: -18 }}>
-                                      <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="3 4" />
-                                      <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={38} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(date) => new Intl.DateTimeFormat(locale, { day: overviewResolution === 'month' ? undefined : 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`))} dy={10} />
-                                      <YAxis axisLine={false} tickLine={false} reversed={overviewChart === 'position'} domain={overviewScale.domain} ticks={overviewScale.ticks} allowDecimals={overviewChart === 'position'} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(value) => overviewChart === 'position' ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Number(value)) : `${value}%`} />
-                                      <ChartTooltip itemSorter={(item) => overviewTooltipRank.get(String(item.dataKey)) ?? Infinity} labelFormatter={(date) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`))} contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14 }} formatter={(value, name) => [`${Number(value).toFixed(1)}${overviewChart === 'position' ? '' : '%'}`, overviewChartBrands.find((brand) => brand.key === name)?.name ?? name]} />
-                                      {visibleChartBrands.map((brand) => (
-                                        <Line key={brand.id} dataKey={brand.key} name={brand.key} type="monotone" stroke={brand.color} strokeWidth={brand.primary ? 2.5 : 1.5} dot={(props) => {
-                                          const { cx, cy, payload, index } = props;
-                                          if (payload?.[brand.key] == null || !overviewSingleSamples.has(brand.key)) return <g key={index} />;
-                                          return <circle key={index} cx={cx} cy={cy} r={3} fill={brand.color} />;
-                                        }} activeDot={{ r: 4 }} isAnimationActive={false} connectNulls />
-                                      ))}
-                                    </ComposedChart>
-                                  </ResponsiveContainer>
-                                </figure>
+                                <TrendChart
+                                  data={overviewTrend}
+                                  series={orderedVisibleBrands}
+                                  scale={overviewScale}
+                                  locale={locale}
+                                  reversed={overviewChart === 'position'}
+                                  monthly={overviewResolution === 'month'}
+                                  formatValue={(value) => `${value.toFixed(1)}${overviewChart === 'position' ? '' : '%'}`}
+                                  formatTick={(value) => overviewChart === 'position' ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value) : `${value}%`}
+                                  label={t('Brand trend', 'Evolução das marcas')}
+                                />
                               ) : (
                                 <p className="live-chart-empty">{visibleChartBrands.length === 0 ? t('Select a brand to display.', 'Selecione uma marca para exibir.') : overviewChart === 'position' ? t('No measured mention positions in this period.', 'Sem posições de menção medidas neste período.') : t('No measured data in this period.', 'Sem dados medidos neste período.')}</p>
                               )}
-                              <div className="chart-legend">{overviewChartBrands.map((brand) => (
-                                <button key={brand.id} aria-pressed={!hiddenChartBrands.includes(brand.id)} className={hiddenChartBrands.includes(brand.id) ? 'muted-series' : ''} onClick={() => setHiddenChartBrands((current) => current.includes(brand.id) ? current.filter((key) => key !== brand.id) : [...current, brand.id])}><i style={{ background: brand.color }} />{brand.name}</button>
-                              ))}</div>
-                            </section>
-                            <section className="analytics-panel ranking-panel">
-                              <div className="panel-heading"><h2>{t('Brand ranking', 'Ranking de marcas')}</h2><Button variant="ghost" size="sm" onClick={() => setTab('competitors')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button></div>
-                              <div className="live-table-scroll"><Table className="analytics-table"><TableHeader><TableRow><TableHead>#</TableHead><TableHead>{t('Brand', 'Marca')}</TableHead><TableHead className="text-right">{t('Visibility', 'Visibilidade')}</TableHead><TableHead className="text-right">{t('Mentions', 'Menções')}</TableHead></TableRow></TableHeader><TableBody>
-                              {summary.leaderboard.map((item, index) => (
-                                      <TableRow key={item.domain}><TableCell>{index + 1}</TableCell><TableCell><DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }} className="flex items-center gap-2"><SiteFavicon domain={item.domain} name={item.name} />{item.name}</DrillLink></TableCell><TableCell className="text-right">{item.visibility.toFixed(1)}%</TableCell><TableCell className="text-right"><DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }}>{item.count}</DrillLink></TableCell></TableRow>
-                                    ))}
-                              </TableBody></Table></div>
-                            </section>
+                              <SeriesLegend
+                                series={orderedChartBrands}
+                                hidden={hiddenChartBrands}
+                                onToggle={(id) => setHiddenChartBrands((current) => current.includes(id) ? current.filter((key) => key !== id) : [...current, id])}
+                              />
+                            </SectionCard>
+                            <SectionCard
+                              className="ranking-panel"
+                              title={t('Brand ranking', 'Ranking de marcas')}
+                              action={<Button variant="ghost" size="sm" onClick={() => setTab('competitors')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button>}
+                            >
+                              <DataTable
+                                rows={summary.leaderboard}
+                                rowKey={(item) => item.domain}
+                                columns={[
+                                  { key: 'rank', header: '#', mobile: 'hide', cell: (_item, index) => index + 1 },
+                                  { key: 'brand', header: t('Brand', 'Marca'), mobile: 'title', cell: (item) => (
+                                    <DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }} className="flex items-center gap-2"><SiteFavicon domain={item.domain} name={item.name} />{item.name}</DrillLink>
+                                  ) },
+                                  { key: 'visibility', header: t('Visibility', 'Visibilidade'), label: t('Visibility', 'Visibilidade'), align: 'end', cell: (item) => `${item.visibility.toFixed(1)}%` },
+                                  { key: 'mentions', header: t('Mentions', 'Menções'), label: t('Mentions', 'Menções'), align: 'end', cell: (item) => (
+                                    <DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }}>{item.count}</DrillLink>
+                                  ) },
+                                ]}
+                              />
+                            </SectionCard>
                           </div>
                           <div className="overview-grid sources-grid">
                             <div className="overview-stack">
-                              <section className="analytics-panel">
-                                <div className="panel-heading"><h2>{t('Top sources', 'Principais fontes')}</h2><Button variant="ghost" size="sm" onClick={() => setTab('sources')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button></div>
+                              <SectionCard
+                                title={t('Top sources', 'Principais fontes')}
+                                action={<Button variant="ghost" size="sm" onClick={() => setTab('sources')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button>}
+                              >
                                 <TopSourcesList state={overviewSourcesState} rows={overviewSources?.rows ?? []} link={link} t={t} />
-                              </section>
+                              </SectionCard>
                               <SourceTypesPanel
                                 report={typesReport}
                                 loading={typesState === 'loading' && !typesReport}
@@ -2259,14 +2373,17 @@ export function LiveAnalyticsApp({
                                 onRetry={() => setContentAttempt((value) => value + 1)}
                               />
                             </div>
-                            <section className="analytics-panel live-recent-panel">
-                              <div className="panel-heading"><h2>{t('Recent responses', 'Respostas recentes')}</h2><Button variant="ghost" size="sm" onClick={() => setTab('responses')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button></div>
+                            <SectionCard
+                              className="live-recent-panel"
+                              title={t('Recent responses', 'Respostas recentes')}
+                              action={<Button variant="ghost" size="sm" onClick={() => setTab('responses')}>{t('View all', 'Ver todas')}<ArrowUpRight size={13} /></Button>}
+                            >
                               {overviewHistory?.runs.length ? (
                                 <FitList className="live-list">
                                   {overviewHistory.runs.map((run) => (
                                     <li key={run.id}>
                                       <div className="min-w-0">
-                                        <DrillLink link={link} to={{ tab: 'responses', run: run.id }} className="live-run-title"><strong>{run.prompt_text}</strong></DrillLink>
+                                        <DrillLink link={link} to={{ tab: 'responses', run: run.id }} className="live-run-title">{run.prompt_text}</DrillLink>
                                         <span className="live-run-meta">
                                           <EngineIcon engine={run.engine} />
                                           <span>{ENGINE_LABELS[run.engine]}</span>
@@ -2279,7 +2396,7 @@ export function LiveAnalyticsApp({
                                           </time>
                                         </span>
                                       </div>
-                                      <DrillLink link={link} to={{ tab: 'responses', run: run.id }} className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open', 'Abrir')}: ${run.prompt_text}`}>
+                                      <DrillLink link={link} to={{ tab: 'responses', run: run.id }} plain className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open', 'Abrir')}: ${run.prompt_text}`}>
                                         {t('Open', 'Abrir')}
                                         <ArrowUpRight size={13} aria-hidden="true" />
                                       </DrillLink>
@@ -2289,16 +2406,11 @@ export function LiveAnalyticsApp({
                               ) : (
                                 <p className="p-5 text-muted-foreground">{t('No responses in this period.', 'Sem respostas neste período.')}</p>
                               )}
-                            </section>
+                            </SectionCard>
                           </div>
                         </>
                       ) : (
-                        <p className="live-card">
-                          {t(
-                            'No collected answers yet. Results appear after monitoring completes.',
-                            'Ainda não há respostas coletadas. Os resultados aparecem após a coleta.',
-                          )}
-                        </p>
+                        <EmptyState title={t('No collected answers yet. Results appear after monitoring completes.', 'Ainda não há respostas coletadas. Os resultados aparecem após a coleta.')} />
                       )
                     ) : null}
                     <p className="live-muted">
@@ -2314,8 +2426,9 @@ export function LiveAnalyticsApp({
                 {project && !creatingProject && tab === 'topics' && (
                   <>
                     <h2 className="sr-only">{t('Topics', 'Tópicos')}</h2>
-                    <form
-                        className="live-card live-inline"
+                    <SectionCard padded title={t('Add a topic', 'Adicionar um tópico')}>
+                      <form
+                        className="live-inline"
                         onSubmit={(event) => {
                           event.preventDefault();
                           void mutate('/api/topics', 'POST', {
@@ -2332,47 +2445,40 @@ export function LiveAnalyticsApp({
                           onChange={(event) => setTopic(event.target.value)}
                           placeholder={t('New topic', 'Novo tópico')}
                         />
-                        <button
-                          disabled={
-                            busy || (free && workspace.capacity.topics >= 1)
-                          }
-                        >
+                        <button disabled={busy || (free && workspace.capacity.topics >= 1)}>
                           {t('Add topic', 'Adicionar tópico')}
                         </button>
                       </form>
+                    </SectionCard>
                     {workspace.topics.length ? (
-                      <>
-                        <ul className="live-list">
-                        {topicsPage.rows.map((item) => (
-                          <li key={item.id}>
-                            <span>{item.name}</span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={busy}
-                                onClick={() => {
-                                  const next = window.prompt(
-                                    t('Rename topic', 'Renomear tópico'),
-                                    item.name,
-                                  );
-                                  if (next?.trim())
-                                    void mutate('/api/topics', 'PATCH', {
-                                      id: item.id,
-                                      name: next.trim(),
-                                    });
-                                }}
-                              >
-                                {t('Rename', 'Renomear')}
-                              </Button>
-                          </li>
-                        ))}
-                      </ul>
+                      <SectionCard>
+                        <DataTable
+                          rows={topicsPage.rows}
+                          rowKey={(item) => item.id}
+                          columns={[
+                            { key: 'name', header: t('Topic', 'Tópico'), mobile: 'title', cell: (item) => item.name },
+                            {
+                              key: 'rename', mobile: 'wide', header: <span className="sr-only">{t('Rename', 'Renomear')}</span>,
+                              cell: (item) => (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    const next = window.prompt(t('Rename topic', 'Renomear tópico'), item.name);
+                                    if (next?.trim()) void mutate('/api/topics', 'PATCH', { id: item.id, name: next.trim() });
+                                  }}
+                                >
+                                  {t('Rename', 'Renomear')}
+                                </Button>
+                              ),
+                            },
+                          ]}
+                        />
                         {topicsPage.controls}
-                      </>
+                      </SectionCard>
                     ) : (
-                      <p className="live-card">
-                        {t('No topics yet.', 'Ainda não há tópicos.')}
-                      </p>
+                      <EmptyState title={t('No topics yet.', 'Ainda não há tópicos.')} />
                     )}
                   </>
                 )}
@@ -2538,120 +2644,17 @@ export function LiveAnalyticsApp({
                         )}
                         {visiblePrompts.length ? (
                           <>
-                            {promptsSticky && <div className="live-sticky-column-header"><Table ref={promptStickyTable} className="analytics-table live-prompt-table" aria-label={t('Prompt table controls', 'Controles da tabela de prompts')}>{promptColumns}{promptHeader()}</Table></div>}
-                            <Table ref={promptTable} className="analytics-table live-prompt-table responsive-table" data-stack-cols="prompt">
-                              {promptColumns}
-                              {promptHeader(promptsSticky)}
-                              <TableBody>
-                                {visiblePrompts.map((item) => {
-                                  const metric = promptStats?.[item.id];
-                                  return (
-                                    <TableRow key={item.id} data-state={selectedPrompts.includes(item.id) ? 'selected' : undefined}>
-                                      <TableCell className="pl-4" data-mobile="check"><Checkbox aria-label={`${t('Select', 'Selecionar')} ${item.text}`} checked={selectedPrompts.includes(item.id,
-                                        )} onCheckedChange={(checked) => setSelectedPrompts((current) => checked ? [...current, item.id] : current.filter((id) => id !== item.id,
-                                                ),
-                                          )} /></TableCell>
-                                      <TableCell className="min-w-0 py-4" data-mobile="title">
-                                        <button
-                                          title={item.text}
-                                          className="line-clamp-2 w-full whitespace-normal text-left text-sm font-medium leading-5 text-foreground hover:text-primary focus-visible:outline-primary"
-                                          onClick={() => onPromptDetail(item)}
-                                        >
-                                          {item.text}
-                                        </button>
-                                      </TableCell>
-                                      {showPromptColumn('models') && <TableCell data-label={promptColumnLabels.models}><div className="live-model-icons">{(item.engines ?? [item.engine]).map((engine) => <span key={engine} title={ENGINE_LABELS[engine]} aria-label={ENGINE_LABELS[engine]}><EngineIcon engine={engine} /></span>)}</div></TableCell>}
-                                      {showPromptColumn('tags') && (
-                                        <TableCell data-label={promptColumnLabels.tags}>
-                                          <div className="flex max-w-[110px] flex-wrap gap-1">
-                                            {item.tags.length ? (
-                                          item.tags.map((tag) => (
-                                            <Badge key={tag} variant="outline" className="h-5 rounded px-1.5 text-sm font-normal text-muted-foreground">{tag}</Badge>))
-                                        ) : (
-                                          <span className="text-muted-foreground">—</span>
-                                        )}
-                                          </div>
-                                        </TableCell>
-                                      )}
-                                      {showPromptColumn('visibility') && <TableCell className="text-right tabular-nums" data-label={promptColumnLabels.visibility}>{promptMetricCell(metric?.responses ? <DrillLink link={link} to={{ tab: 'prompts', prompt: item.id }}>{`${metric.visibility.toFixed(1)}%`}</DrillLink> : '—')}</TableCell>}
-                                      {showPromptColumn('position') && <TableCell className="text-right tabular-nums" data-label={promptColumnLabels.position}>
-                                      {promptMetricCell(metric?.position != null
-                                        ? metric.position.toFixed(1)
-                                        : '—')}
-                                    </TableCell>}
-                                      {showPromptColumn('country') && <TableCell className="text-muted-foreground" data-label={promptColumnLabels.country}>{project.location_code === 2076 ? '🇧🇷' : project.location_code === 2840 ? '🇺🇸' : ''}{' '} {project.location_code === 2076 ? t('Brazil', 'Brasil') : project.location_code === 2840 ? t('United States', 'Estados Unidos') : t('Project country', 'País do projeto',
-                                            )}</TableCell>}
-                                      {showPromptColumn('channels') && (
-                                        <TableCell data-label={promptColumnLabels.channels} data-mobile="wide">
-                                          <div className="space-y-2">
-                                            {(item.engines ?? [item.engine]).map((engine) => {
-                                              const channel = metric?.channels?.[engine];
-                                              return (
-                                                <div key={engine} className="flex items-center gap-2 text-xs">
-                                                  <EngineIcon engine={engine} />
-                                                  <span className="flex-1">{ENGINE_LABELS[engine]}</span>
-                                                  <span className="tabular-nums" title={t('Visibility · Position', 'Visibilidade · Posição')}>
-                                                    {promptMetricCell(<>
-                                                    {channel?.responses ? `${channel.visibility.toFixed(1)}%` : '—'}{' '}
-                                                    · {' '}
-                                                    {channel?.position != null ? channel.position.toFixed(1) : '—'}
-                                                    </>, 'w-16')}
-                                                  </span>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        </TableCell>
-                                      )}
-                                      <TableCell data-mobile="actions">
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger
-                                            render={
-                                              <Button
-                                                variant="ghost"
-                                                size="icon-xs"
-                                                aria-label={`${t('Actions for', 'Ações para')} ${item.text}`}
-                                              />
-                                            }
-                                          >
-                                            <MoreVertical />
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent
-                                            align='end'
-                                            className="analytics-menu"
-                                          >
-                                            <DropdownMenuItem
-                                              onClick={() => openPromptEditor(item)}
-                                            >
-                                              <Pencil />
-                                              {t('Edit prompt', 'Editar prompt',
-                                          )}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              disabled={busy}
-                                              onClick={() => void mutate(`/api/prompts/${encodeURIComponent(item.id)}`, 'PATCH', { active: !item.active },
-                                            )}
-                                            >
-                                              {item.active ? <Pause /> : <Play />}
-                                              {item.active ? t('Pause', 'Pausar') : t('Resume', 'Retomar')}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                              disabled={busy}
-                                              onClick={() => void mutate(`/api/prompts/${encodeURIComponent(item.id)}`, 'PATCH', { archived: !item.archived, ...(item.archived ? { active: true } : {}),
-                                              },
-                                            )}
-                                            >
-                                              <Archive />
-                                              {item.archived ? t('Restore', 'Restaurar') : t('Archive', 'Arquivar')}
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
+                            {promptsSticky && <div className="live-sticky-column-header"><DataTable tableRef={promptStickyTable} className="live-prompt-table" ariaLabel={t('Prompt table controls', 'Controles da tabela de prompts')} columns={promptTableColumns(false)} rows={visiblePrompts} rowKey={(item) => item.id} headerOnly /></div>}
+                            <DataTable
+                              tableRef={promptTable}
+                              className="live-prompt-table"
+                              stackColumns="prompt"
+                              columns={promptTableColumns(promptsSticky)}
+                              hideHeader={promptsSticky}
+                              rows={visiblePrompts}
+                              rowKey={(item) => item.id}
+                              rowState={(item) => selectedPrompts.includes(item.id) ? 'selected' : undefined}
+                            />
                           </>
                         ) : (
                           <p className="p-5">{statusFilter === 'suggested'
@@ -2665,46 +2668,24 @@ export function LiveAnalyticsApp({
                           'daily' in detailReport && (
                             <article className="grid gap-5">
                               <BrandResearchPanel key={`${project.id}:${selectedPrompt.id}`} project={project} filters={filterQuery} demo={demoMode} refresh={dataRevision} busy={busy} onManage={() => { setSettingsSection('competitors'); setTab('settings'); }} onEvidence={(runId) => { setTab('responses'); void onRun(runId); }} promptId={selectedPrompt.id} />
-                              <div className="live-metrics live-prompt-metrics">
-                                <article>
-                                  <small>{t('Responses', 'Respostas')}</small>
-                                  <strong>
-                                    {detailReport.metrics?.responses ??
-                                      detailReport.platforms.reduce(
-                                        (sum, row) => sum + row.responses,
-                                        0,
-                                      )}
-                                  </strong>
-                                </article>
-                                <article>
-                                  <small>{t('Mentions', 'Menções')}</small>
-                                  <strong>
-                                    {detailReport.metrics?.mentions ??
-                                      detailReport.platforms.reduce(
-                                        (sum, row) => sum + row.mentions,
-                                        0,
-                                      )}
-                                  </strong>
-                                </article>
-                                <article>
-                                  <small>
-                                    {t('Visibility', 'Visibilidade')}
-                                  </small>
-                                  <strong>
-                                    {detailReport.metrics?.responses
-                                      ? `${detailReport.metrics.visibility.toFixed(1)}%`
-                                      : '—'}
-                                  </strong>
-                                </article>
-                                <article>
-                                  <small>{t('Position', 'Posição')}</small>
-                                  <strong>
-                                    {detailReport.metrics?.position != null
-                                      ? detailReport.metrics.position.toFixed(1)
-                                      : '—'}
-                                  </strong>
-                                </article>
-                              </div>
+                              <MetricGrid>
+                                <MetricCard
+                                  label={t('Responses', 'Respostas')}
+                                  value={detailReport.metrics?.responses ?? detailReport.platforms.reduce((sum, row) => sum + row.responses, 0)}
+                                />
+                                <MetricCard
+                                  label={t('Mentions', 'Menções')}
+                                  value={detailReport.metrics?.mentions ?? detailReport.platforms.reduce((sum, row) => sum + row.mentions, 0)}
+                                />
+                                <MetricCard
+                                  label={t('Visibility', 'Visibilidade')}
+                                  value={detailReport.metrics?.responses ? `${detailReport.metrics.visibility.toFixed(1)}%` : '—'}
+                                />
+                                <MetricCard
+                                  label={t('Position', 'Posição')}
+                                  value={detailReport.metrics?.position != null ? detailReport.metrics.position.toFixed(1) : '—'}
+                                />
+                              </MetricGrid>
                               <SectionCard
                                 title={t(
                                   'Visibility over time',
@@ -2712,177 +2693,73 @@ export function LiveAnalyticsApp({
                                 )}
                               >
                                 {promptTrend.length ? (
-                                  <div className="px-4 pb-4">
-                                    <ResponsiveContainer
-                                      width="100%"
-                                      height={240}
-                                    >
-                                      <ComposedChart data={promptTrend}>
-                                        <CartesianGrid
-                                          strokeDasharray="3 3"
-                                          vertical={false}
-                                          stroke="var(--border)"
-                                        />
-                                        <XAxis
-                                          dataKey="date"
-                                          tickFormatter={(value) =>
-                                            new Intl.DateTimeFormat(locale, {
-                                              month: 'short',
-                                              day: 'numeric',
-                                              timeZone: 'UTC',
-                                            }).format(new Date(String(value)))
-                                          }
-                                        />
-                                        <YAxis
-                                          domain={promptScale.domain}
-                                          ticks={promptScale.ticks}
-                                          tickFormatter={(value) => `${value}%`}
-                                        />
-                                        <ChartTooltip
-                                          formatter={(value) => [
-                                            `${Number(value).toFixed(1)}%`,
-                                            t('Visibility', 'Visibilidade'),
-                                          ]}
-                                        />
-                                        <Line
-                                          type="monotone"
-                                          dataKey='visibility'
-                                          stroke="var(--chart-1)"
-                                          strokeWidth={2}
-                                          dot={promptTrend.length === 1}
-                                          isAnimationActive={false}
-                                          connectNulls
-                                        />
-                                      </ComposedChart>
-                                    </ResponsiveContainer>
-                                  </div>
+                                  <TrendChart
+                                    data={promptTrend}
+                                    series={[{ id: 'visibility', key: 'visibility', name: t('Visibility', 'Visibilidade'), color: 'var(--chart-1)', primary: true }]}
+                                    scale={promptScale}
+                                    locale={locale}
+                                    formatValue={(value) => `${value.toFixed(1)}%`}
+                                    formatTick={(value) => `${value}%`}
+                                    label={t('Visibility over time', 'Visibilidade ao longo do tempo')}
+                                  />
                                 ) : (
-                                  <p className="p-4 text-muted-foreground">
-                                    {t('No collected answers for this prompt in the selected period.', 'Sem respostas coletadas para este prompt no período selecionado.',
-                                    )}
-                                  </p>
+                                  <EmptyState bare title={t('No collected answers for this prompt in the selected period.', 'Sem respostas coletadas para este prompt no período selecionado.')} />
                                 )}
                               </SectionCard>
                               <SectionCard title={t('By model', 'Por modelo')}>
-                                <Table className="analytics-table">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>{t('Model', 'Modelo')}</TableHead>
-                                      <TableHead className="text-right">{t('Responses', 'Respostas')}</TableHead>
-                                      <TableHead className="text-right">{t('Mentions', 'Menções')}</TableHead>
-                                      <TableHead className="text-right">{t('Visibility', 'Visibilidade')}</TableHead>
-                                      <TableHead className="text-right">{t('Position', 'Posição')}</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {detailReport.platforms.map((item) => (
-                                      <TableRow key={item.engine}>
-                                        <TableCell>
-                                          <span className="flex items-center gap-2">
-                                            <EngineIcon engine={item.engine} />
-                                            {ENGINE_LABELS[item.engine]}
-                                          </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">{item.responses}</TableCell>
-                                        <TableCell className="text-right">{item.mentions}</TableCell>
-                                        <TableCell className="text-right">{item.responses ? `${item.visibility.toFixed(1)}%` : '—'}</TableCell>
-                                        <TableCell className="text-right">
-                                          {item.position != null
-                                            ? item.position.toFixed(1)
-                                            : '—'}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                <DataTable
+                                  rows={detailReport.platforms}
+                                  rowKey={(item) => item.engine}
+                                  columns={[
+                                    { key: 'model', header: t('Model', 'Modelo'), mobile: 'title', cell: (item) => <span className="flex items-center gap-2"><EngineIcon engine={item.engine} />{ENGINE_LABELS[item.engine]}</span> },
+                                    { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (item) => item.responses },
+                                    { key: 'mentions', header: t('Mentions', 'Menções'), label: t('Mentions', 'Menções'), align: 'end', cell: (item) => item.mentions },
+                                    { key: 'visibility', header: t('Visibility', 'Visibilidade'), label: t('Visibility', 'Visibilidade'), align: 'end', cell: (item) => item.responses ? `${item.visibility.toFixed(1)}%` : '—' },
+                                    { key: 'position', header: t('Position', 'Posição'), label: t('Position', 'Posição'), align: 'end', cell: (item) => item.position != null ? item.position.toFixed(1) : '—' },
+                                  ]}
+                                />
                               </SectionCard>
                               <SectionCard title={t('Sources', 'Fontes')}>
-                                <Table className="analytics-table">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>{t('Domain', 'Domínio')}</TableHead>
-                                      <TableHead className="text-right">{t('Responses', 'Respostas')}</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {detailReport.sources.map((item) => (
-                                      <TableRow key={item.domain}>
-                                        <TableCell>
-                                          <DrillLink link={link} to={{ tab: 'sources', prompt: null, entity: { kind: 'domain', key: item.domain } }} className="flex items-center gap-2">
-                                            <SiteFavicon
-                                              domain={item.domain}
-                                              name={item.domain}
-                                            />
-                                            {item.domain}
-                                          </DrillLink>
-                                        </TableCell>
-                                        <TableCell className="text-right">{item.responses}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                <DataTable
+                                  rows={detailReport.sources}
+                                  rowKey={(item) => item.domain}
+                                  columns={[
+                                    {
+                                      key: 'domain', header: t('Domain', 'Domínio'), mobile: 'title',
+                                      cell: (item) => (
+                                        <DrillLink link={link} to={{ tab: 'sources', prompt: null, entity: { kind: 'domain', key: item.domain } }} className="flex items-center gap-2">
+                                          <SiteFavicon domain={item.domain} name={item.domain} />
+                                          {item.domain}
+                                        </DrillLink>
+                                      ),
+                                    },
+                                    { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (item) => item.responses },
+                                  ]}
+                                />
                                 {detailPagination(
                                 'sources',
                                 !!detailReport.hasMoreSources,
                               )}
                               </SectionCard>
-                              <SectionCard
-                                title={t(
-                                  'Response history',
-                                  'Histórico de respostas',
-                                )}
-                              >
-                                <Table className="analytics-table">
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>{t('Model', 'Modelo')}</TableHead>
-                                      <TableHead>{t('Date', 'Data')}</TableHead>
-                                      <TableHead>
-                                        {t('Status', 'Status')}
-                                      </TableHead>
-                                      <TableHead>
-                                        <span className="sr-only">
-                                          {t('Open response', 'Abrir resposta')}
-                                        </span>
-                                      </TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {detailReport.history.runs.map((run) => (
-                                      <TableRow key={run.id}>
-                                        <TableCell>
-                                          <span className="flex items-center gap-2">
-                                            <EngineIcon engine={run.engine} />
-                                            {ENGINE_LABELS[run.engine]}
-                                          </span>
-                                        </TableCell>
-                                        <TableCell>
-                                          <time dateTime={run.created_at}>
-                                            {relativeReportDate(
-                                              run.created_at,
-                                              locale,
-                                            )}
-                                          </time>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge variant="secondary">
-                                            {run.status === 'complete'
-                                              ? t('Complete', 'Concluída')
-                                              : run.status === 'failed'
-                                                ? t('Failed', 'Falhou')
-                                                : t('Pending', 'Pendente')}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          <DrillLink link={link} to={{ tab: 'responses', prompt: null, run: run.id }} className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open response', 'Abrir resposta')}: ${ENGINE_LABELS[run.engine]}`}>
-                                            {t('Open', 'Abrir')}
-                                            <ArrowUpRight size={13} aria-hidden="true" />
-                                          </DrillLink>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                              <SectionCard title={t('Response history', 'Histórico de respostas')}>
+                                <DataTable
+                                  rows={detailReport.history.runs}
+                                  rowKey={(run) => run.id}
+                                  columns={[
+                                    { key: 'model', header: t('Model', 'Modelo'), mobile: 'title', cell: (run) => <span className="flex items-center gap-2"><EngineIcon engine={run.engine} />{ENGINE_LABELS[run.engine]}</span> },
+                                    { key: 'date', header: t('Date', 'Data'), label: t('Date', 'Data'), cell: (run) => <time dateTime={run.created_at}>{relativeReportDate(run.created_at, locale)}</time> },
+                                    { key: 'status', header: t('Status', 'Status'), label: t('Status', 'Status'), cell: (run) => <TagBadge tone={run.status === 'failed' ? 'danger' : 'neutral'}>{run.status === 'complete' ? t('Complete', 'Concluída') : run.status === 'failed' ? t('Failed', 'Falhou') : t('Pending', 'Pendente')}</TagBadge> },
+                                    {
+                                      key: 'open', header: <span className="sr-only">{t('Open response', 'Abrir resposta')}</span>, mobile: 'wide',
+                                      cell: (run) => (
+                                        <DrillLink link={link} to={{ tab: 'responses', prompt: null, run: run.id }} plain className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open response', 'Abrir resposta')}: ${ENGINE_LABELS[run.engine]}`}>
+                                          {t('Open', 'Abrir')}
+                                          <ArrowUpRight size={13} aria-hidden="true" />
+                                        </DrillLink>
+                                      ),
+                                    },
+                                  ]}
+                                />
                                 {detailPagination(
                                 'history',
                                 !!detailReport.history.nextCursor,
@@ -2897,12 +2774,7 @@ export function LiveAnalyticsApp({
                                     )}
                             />
                           ) : (
-                            <p className="live-card">
-                              {t(
-                                'The prompt report is unavailable. Retry to load it.',
-                                'O relatório do prompt está indisponível. Tente carregar novamente.',
-                              )}
-                            </p>
+                            <EmptyState title={t('The prompt report is unavailable. Retry to load it.', 'O relatório do prompt está indisponível. Tente carregar novamente.')} />
                           ))}
                       </div>
                     </div>
@@ -2922,18 +2794,19 @@ export function LiveAnalyticsApp({
                         <option value="missing">{t('Brand missing', 'Marca ausente')}</option>
                       </select>
                       {brandFilter && (
-                        <Badge variant="secondary" className="st-chip">
+                        <TagBadge tone="primary">
                           {t('Brand', 'Marca')}: {brandFilter}
                           <button type="button" aria-label={t('Clear brand filter', 'Limpar filtro de marca')} onClick={() => setBrandFilter('')}><X size={12} /></button>
-                        </Badge>
+                        </TagBadge>
                       )}
                     </div>
                       {runRoute && !detail ? (
                         runState === 'failed' ? (
-                          <p className="live-card" role="alert">
-                            {t('This response is unavailable.', 'Esta resposta está indisponível.')}{' '}
-                            <DrillLink link={link} to={{ run: null }} className="st-link">{t('Back to responses', 'Voltar às respostas')}</DrillLink>
-                          </p>
+                          <EmptyState
+                            tone="error"
+                            title={t('This response is unavailable.', 'Esta resposta está indisponível.')}
+                            action={<DrillLink link={link} to={{ run: null }} className="st-link">{t('Back to responses', 'Voltar às respostas')}</DrillLink>}
+                          />
                         ) : (
                           <AnalyticsSkeleton label={t('Loading response…', 'Carregando resposta…')} />
                         )
@@ -2943,7 +2816,7 @@ export function LiveAnalyticsApp({
                           <ArrowLeft size={14} aria-hidden="true" />
                           {t('All responses', 'Todas as respostas')}
                         </DrillLink>
-                        <h3><DrillLink link={link} to={{ tab: 'prompts', run: null, prompt: promptUnit(detail.prompt_id) }}>{detail.prompt_text}</DrillLink></h3>
+                        <h3 className="text-section"><DrillLink link={link} to={{ tab: 'prompts', run: null, prompt: promptUnit(detail.prompt_id) }}>{detail.prompt_text}</DrillLink></h3>
                         <p className="live-run-meta">
                           <EngineIcon engine={detail.engine} />
                           <span>{ENGINE_LABELS[detail.engine]}</span>
@@ -2964,7 +2837,7 @@ export function LiveAnalyticsApp({
                         )}
                         {detail.sources.length > 0 && (
                           <>
-                            <h4>{t('Cited sources', 'Fontes citadas')}</h4>
+                            <h4 className="text-section mt-6 mb-2">{t('Cited sources', 'Fontes citadas')}</h4>
                             <ul>
                               {runSourcesPage.rows.map((source) => (
                                 <li key={source.url}>
@@ -2984,7 +2857,7 @@ export function LiveAnalyticsApp({
                               {runSourcesPage.controls}
                             </>
                         )}
-                        <h4>{t('Consulted sources', 'Fontes consultadas')}</h4>
+                        <h4 className="text-section mt-6 mb-2">{t('Consulted sources', 'Fontes consultadas')}</h4>
                         {detail.consulted_sources == null ? (
                           <p>
                             —{' '}
@@ -3015,7 +2888,7 @@ export function LiveAnalyticsApp({
                         )}
                         {!!detail.search_queries?.length && (
                           <>
-                            <h4>
+                            <h4 className="text-section mt-6 mb-2">
                               {t('Related searches', 'Buscas relacionadas')}
                             </h4>
                             <ul>
@@ -3031,37 +2904,27 @@ export function LiveAnalyticsApp({
                         <AnalyticsSkeleton label={t('Loading responses…', 'Carregando respostas…')} />
                       ) : currentHistory?.runs.length ? (
                         <div className="live-table-scroll">
-                          <Table className="analytics-table">
-                            <TableHeader><TableRow><TableHead>{t('Prompt', 'Prompt')}</TableHead><TableHead>{t('Model', 'Modelo')}</TableHead><TableHead>{t('Brands mentioned', 'Marcas mencionadas')}</TableHead><TableHead className="text-right">{t('Citations', 'Citações')}</TableHead><TableHead>{t('Date', 'Data')}</TableHead><TableHead>{t('Open response', 'Abrir resposta')}</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                              {currentHistory.runs.map((run) => (
-                                <TableRow key={run.id}>
-                                  <TableCell className="max-w-[340px] whitespace-normal"><DrillLink link={link} to={{ tab: 'prompts', prompt: promptUnit(run.prompt_id) }} className="font-medium">{run.prompt_text}</DrillLink></TableCell>
-                                  <TableCell>
-                                    <span className="flex items-center gap-2">
-                                      <EngineIcon engine={run.engine} />
-                                      {ENGINE_LABELS[run.engine]}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>{(() => {
-                                    const names = Object.entries(run.mentions || {}).filter(([, value]) => value).map(([name]) => name);
-                                    return names.length ? names.map((name, index) => <span key={name}>{index > 0 && ', '}<DrillLink link={link} to={{ tab: 'responses', run: null, brand: name, mention: 'mentioned' }}>{name}</DrillLink></span>) : '—';
-                                  })()}</TableCell>
-                                  <TableCell className="text-right"><DrillLink link={link} to={{ tab: 'responses', run: run.id }}>{run.source_count ?? run.sources?.length ?? 0}</DrillLink></TableCell>
-                                  <TableCell>{run.created_at.slice(0, 10)}</TableCell>
-                                  <TableCell><DrillLink link={link} to={{ tab: 'responses', run: run.id }} className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open', 'Abrir')}: ${run.prompt_text}`}>{t('Open', 'Abrir')}<ArrowUpRight size={13} aria-hidden="true" /></DrillLink></TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                          <DataTable
+                            rows={currentHistory.runs}
+                            rowKey={(run) => run.id}
+                            columns={[
+                              { key: 'prompt', header: t('Prompt', 'Prompt'), mobile: 'title', cellClassName: 'max-w-[340px] whitespace-normal', cell: (run) => <DrillLink link={link} to={{ tab: 'prompts', prompt: promptUnit(run.prompt_id) }}>{run.prompt_text}</DrillLink> },
+                              { key: 'model', header: t('Model', 'Modelo'), label: t('Model', 'Modelo'), cell: (run) => <span className="flex items-center gap-2"><EngineIcon engine={run.engine} />{ENGINE_LABELS[run.engine]}</span> },
+                              {
+                                key: 'brands', header: t('Brands mentioned', 'Marcas mencionadas'), label: t('Brands mentioned', 'Marcas mencionadas'),
+                                cell: (run) => {
+                                  const names = Object.entries(run.mentions || {}).filter(([, value]) => value).map(([name]) => name);
+                                  return names.length ? names.map((name, index) => <span key={name}>{index > 0 && ', '}<DrillLink link={link} to={{ tab: 'responses', run: null, brand: name, mention: 'mentioned' }}>{name}</DrillLink></span>) : '—';
+                                },
+                              },
+                              { key: 'citations', header: t('Citations', 'Citações'), label: t('Citations', 'Citações'), align: 'end', cell: (run) => <DrillLink link={link} to={{ tab: 'responses', run: run.id }}>{run.source_count ?? run.sources?.length ?? 0}</DrillLink> },
+                              { key: 'date', header: t('Date', 'Data'), label: t('Date', 'Data'), cell: (run) => run.created_at.slice(0, 10) },
+                              { key: 'open', header: <span className="sr-only">{t('Open response', 'Abrir resposta')}</span>, mobile: 'wide', cell: (run) => <DrillLink link={link} to={{ tab: 'responses', run: run.id }} plain className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open', 'Abrir')}: ${run.prompt_text}`}>{t('Open', 'Abrir')}<ArrowUpRight size={13} aria-hidden="true" /></DrillLink> },
+                            ]}
+                          />
                         </div>
                       ) : error ? null : (
-                      <p className="live-card">
-                        {t(
-                          'No responses in this period.',
-                          'Sem respostas neste período.',
-                        )}
-                      </p>
+                      <EmptyState bare title={t('No responses in this period.', 'Sem respostas neste período.')} />
                     )}
                       {!detail && currentHistory && (
                       <CollectionPagination
@@ -3156,9 +3019,7 @@ export function LiveAnalyticsApp({
                         />
                       </div>
                       {sources && sourceKind === 'consulted' && !sources.available && (
-                        <p className="live-card">
-                          {t('Consulted sources are unavailable for these answers.', 'Fontes consultadas indisponíveis para estas respostas.')}
-                        </p>
+                        <EmptyState title={t('Consulted sources are unavailable for these answers.', 'Fontes consultadas indisponíveis para estas respostas.')} />
                       )}
                       {sources?.classifier && sources.rows.some((row) => row.sourceType === UNCLASSIFIED) && (
                         <div className="st-list-notice">
@@ -3178,33 +3039,23 @@ export function LiveAnalyticsApp({
                         <AnalyticsSkeleton label={t('Loading sources…', 'Carregando fontes…')} />
                       ) : sources && sources.rows.length ? (
                         <div className="live-table-scroll">
-                          <Table className="analytics-table live-sources-table responsive-table" data-stack-cols="2">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead data-mobile="hide">#</TableHead>
-                                <TableHead>{sourceGroup === 'domain' ? t('Domain', 'Domínio') : t('Page', 'Página')}</TableHead>
-                                <TableHead>{sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo')}</TableHead>
-                                <TableHead className="text-right live-wrap-head">
-                                  {sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas')}
-                                </TableHead>
-                                <TableHead className="text-right live-wrap-head">
-                                  {sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta')}
-                                </TableHead>
-                                <TableHead className="text-right live-wrap-head" title={sourceKind === 'cited' ? t('Average times it is cited in a response that cites it.', 'Média de vezes em que é citada numa resposta que a cita.') : t('Average times it is consulted in a response that consults it.', 'Média de vezes em que é consultada numa resposta que a consulta.')}>
-                                  {sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias')}
-                                </TableHead>
-                                <TableHead>{t('Models', 'Modelos')}</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {sources.rows.map((source, index) => (
-                                <TableRow key={source.key}>
-                                  <TableCell data-mobile="hide">{(sourcePage - 1) * 50 + index + 1}</TableCell>
-                                  <TableCell data-mobile="title">
+                          <DataTable
+                            className="live-sources-table"
+                            stackColumns={2}
+                            rows={sources.rows}
+                            rowKey={(source) => source.key}
+                            columns={[
+                              { key: 'rank', header: '#', mobile: 'hide', cell: (_source, index) => (sourcePage - 1) * 50 + index + 1 },
+                              {
+                                key: 'source',
+                                header: sourceGroup === 'domain' ? t('Domain', 'Domínio') : t('Page', 'Página'),
+                                mobile: 'title',
+                                cell: (source) => (
+                                  <>
                                     <div className="st-name-line">
                                       <DrillLink link={link} to={{ tab: 'sources', entity: { kind: sourceGroup, key: source.key } }} className="flex min-w-0 items-center gap-2" disabled={!source.key}>
                                         {source.domain && <SiteFavicon domain={source.domain} name={source.domain} />}
-                                        <strong className="truncate">{source.title || source.domain || unknownDomainLabel(t)}</strong>
+                                        <span className="truncate">{source.title || source.domain || unknownDomainLabel(t)}</span>
                                       </DrillLink>
                                       <OwnerBadge owner={source.ownership} t={t} />
                                     </div>
@@ -3213,32 +3064,65 @@ export function LiveAnalyticsApp({
                                     ) : !source.key && (
                                       <small className="st-url">{unknownDomainHint(t)}</small>
                                     )}
-                                  </TableCell>
-                                  <TableCell data-label={sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo')}>
-                                    <span className="flex flex-wrap items-center gap-1.5">
-                                      <SourceTypeBadge type={source.sourceType} t={t} />
-                                      {sourceGroup === 'url' && source.domainType && source.domainType !== UNCLASSIFIED && <SourceTypeBadge type={source.domainType} t={t} className="st-badge-quiet" />}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-right" data-label={sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas')}>{source.responses}</TableCell>
-                                  <TableCell className="text-right" data-label={sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta')}>{sources.complete ? `${((100 * source.responses) / sources.complete).toFixed(1)}%` : '—'}</TableCell>
-                                  <TableCell className="st-avg text-right" data-label={sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias')}>{source.citations && source.responses ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(source.citations / source.responses) : '—'}</TableCell>
-                                  <TableCell data-label={t('Models', 'Modelos')} data-mobile="wide">
-                                    <div className="live-model-icons">
-                                      {source.engines.map((engine) => <span key={engine} title={ENGINE_LABELS[engine]} aria-label={ENGINE_LABELS[engine]}><EngineIcon engine={engine} /></span>)}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                                  </>
+                                ),
+                              },
+                              {
+                                key: 'type',
+                                header: sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo'),
+                                label: sourceGroup === 'domain' ? t('Site type', 'Tipo de site') : t('Content type', 'Tipo de conteúdo'),
+                                cell: (source) => (
+                                  <span className="flex flex-wrap items-center gap-1.5">
+                                    <SourceTypeBadge type={source.sourceType} t={t} />
+                                    {sourceGroup === 'url' && source.domainType && source.domainType !== UNCLASSIFIED && <SourceTypeBadge type={source.domainType} t={t} quiet />}
+                                  </span>
+                                ),
+                              },
+                              {
+                                key: 'responses',
+                                header: sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas'),
+                                label: sourceKind === 'cited' ? t('Responses with citation', 'Respostas com citação') : t('Responses consulted', 'Respostas consultadas'),
+                                align: 'end',
+                                headerClassName: 'live-wrap-head',
+                                cell: (source) => source.responses,
+                              },
+                              {
+                                key: 'rate',
+                                header: sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta'),
+                                label: sourceKind === 'cited' ? t('Citation rate', 'Taxa de citação') : t('Consultation rate', 'Taxa de consulta'),
+                                align: 'end',
+                                headerClassName: 'live-wrap-head',
+                                cell: (source) => sources.complete ? `${((100 * source.responses) / sources.complete).toFixed(1)}%` : '—',
+                              },
+                              {
+                                key: 'average',
+                                header: sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias'),
+                                label: sourceKind === 'cited' ? t('Avg. citations', 'Citações médias') : t('Avg. consultations', 'Consultas médias'),
+                                title: sourceKind === 'cited' ? t('Average times it is cited in a response that cites it.', 'Média de vezes em que é citada numa resposta que a cita.') : t('Average times it is consulted in a response that consults it.', 'Média de vezes em que é consultada numa resposta que a consulta.'),
+                                align: 'end',
+                                headerClassName: 'live-wrap-head',
+                                cell: (source) => source.citations && source.responses ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 }).format(source.citations / source.responses) : '—',
+                              },
+                              {
+                                key: 'models',
+                                header: t('Models', 'Modelos'),
+                                label: t('Models', 'Modelos'),
+                                mobile: 'wide',
+                                cell: (source) => (
+                                  <div className="live-model-icons">
+                                    {source.engines.map((engine) => <span key={engine} title={ENGINE_LABELS[engine]} aria-label={ENGINE_LABELS[engine]}><EngineIcon engine={engine} /></span>)}
+                                  </div>
+                                ),
+                              },
+                            ]}
+                          />
                         </div>
                       ) : error ? null : (
-                        <p className="live-card">
-                          {typeFilter || ownerFilter
+                        <EmptyState
+                          title={typeFilter || ownerFilter
                             ? t('No sources match these filters in this period.', 'Nenhuma fonte corresponde a estes filtros neste período.')
                             : t('No cited sources in this period.', 'Sem fontes citadas neste período.')}
-                        </p>
+                        />
                       )}
                       {sources && (
                         <CollectionPagination
@@ -3396,17 +3280,27 @@ export function LiveAnalyticsApp({
                       )}
                     {settingsSection === 'members' && (
                         <SectionCard className="live-settings-panel" title={t('Members and permissions', 'Membros e permissões')} description={demoMode ? t('Invitations are unavailable in this temporary demo.', 'Convites não estão disponíveis nesta demo temporária.') : t('Members are managed by the workspace owner.', 'Os membros são gerenciados pelo responsável do workspace.')}>
-                          <div className="flex items-center gap-3"><UserAvatar user={{ name: workspace.user.name || workspace.user.email }} /><div><strong>{workspace.user.name || workspace.user.email}</strong><p className="text-muted-foreground">{workspace.user.email}</p></div></div>
+                          <div className="flex items-center gap-3"><UserAvatar user={{ name: workspace.user.name || workspace.user.email, importedAvatar: !demoMode }} /><div><p>{workspace.user.name || workspace.user.email}</p><p className="text-muted-foreground">{workspace.user.email}</p></div></div>
                         </SectionCard>
                       )}
                     {settingsSection === 'projects' && (
-                        <SectionCard className="live-settings-panel" title={t('Projects', 'Projetos')} action={<Button size="sm" onClick={() => setCreatingProject(true)}><Plus size={15} />{t('New project', 'Novo projeto')}</Button>}><div className="live-table-scroll"><Table className="analytics-table"><TableHeader><TableRow><TableHead>{t('Project', 'Projeto')}</TableHead><TableHead>{t('Domain', 'Domínio')}</TableHead><TableHead>{t('Country', 'País')}</TableHead></TableRow></TableHeader><TableBody>{projectsPage.rows.map((item) => (
-                                  <TableRow key={item.id}><TableCell><Button variant="ghost" onClick={() => void refresh(item.id)}>{item.name}</Button></TableCell><TableCell>{item.domain}</TableCell><TableCell>{item.location_code === 2076 ? t('Brazil', 'Brasil') : item.location_code === 2840 ? t('United States', 'Estados Unidos') : t('United Kingdom', 'Reino Unido')}</TableCell></TableRow>))}</TableBody></Table></div>
+                        <SectionCard className="live-settings-panel" title={t('Projects', 'Projetos')} action={<Button size="sm" onClick={() => setCreatingProject(true)}><Plus size={15} />{t('New project', 'Novo projeto')}</Button>}><div className="live-table-scroll"><DataTable
+                          rows={projectsPage.rows}
+                          rowKey={(item) => item.id}
+                          columns={[
+                            { key: 'project', header: t('Project', 'Projeto'), mobile: 'title', cell: (item) => <Button variant="ghost" onClick={() => void refresh(item.id)}>{item.name}</Button> },
+                            { key: 'domain', header: t('Domain', 'Domínio'), label: t('Domain', 'Domínio'), cell: (item) => item.domain },
+                            { key: 'country', header: t('Country', 'País'), label: t('Country', 'País'), cell: (item) => item.location_code === 2076 ? t('Brazil', 'Brasil') : item.location_code === 2840 ? t('United States', 'Estados Unidos') : t('United Kingdom', 'Reino Unido') },
+                          ]}
+                        /></div>
                           {projectsPage.controls}
                         </SectionCard>
                       )}
                     {settingsSection === 'profile' && (
-                        <SectionCard className="live-settings-panel" title={t('My profile', 'Meu perfil')}><p>{workspace.user.name || workspace.user.email}</p><p className="text-muted-foreground">{workspace.user.email}</p><label className="mt-5 grid max-w-xs gap-2">{t('Interface language', 'Idioma da interface')}<select className="rounded-md border bg-background p-2" value={locale} onChange={(event) => { const next = event.target.value as typeof locale; setLocale(next); }}><option value="en">English</option><option value="pt-BR">Português (Brasil)</option></select></label></SectionCard>
+                        <div className="live-settings-content min-w-0 space-y-6">
+                          <SectionCard className="live-settings-panel" title={t('My profile', 'Meu perfil')}><p>{workspace.user.name || workspace.user.email}</p><p className="text-muted-foreground">{workspace.user.email}</p><label className="mt-5 grid max-w-xs gap-2">{t('Interface language', 'Idioma da interface')}<select className="rounded-md border bg-background p-2" value={locale} onChange={(event) => { const next = event.target.value as typeof locale; setLocale(next); }}><option value="en">English</option><option value="pt-BR">Português (Brasil)</option></select></label></SectionCard>
+                          {billingPanel}
+                        </div>
                       )}
                     </div>
                   </>
@@ -3420,62 +3314,43 @@ export function LiveAnalyticsApp({
                       <AnalyticsSkeleton label={t('Loading brands…', 'Carregando marcas…')} />
                     ) : brands ? (
                       <>
-                        <section className="analytics-panel">
+                        <SectionCard>
                           {brands.platforms.length ? (
                             <div className="live-table-scroll">
-                              <Table className="analytics-table responsive-table" data-stack-cols="3">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead data-mobile="hide">#</TableHead>
-                                    <TableHead>{t('Brand', 'Marca')}</TableHead>
-                                    <TableHead className="text-right">{t('Visibility', 'Visibilidade')}</TableHead>
-                                    <TableHead className="text-right">
-                                      {t('Share of voice', 'Share of voice')}
-                                    </TableHead>
-                                    <TableHead className="text-right">{t('Mentions', 'Menções')}</TableHead>
-                                    <TableHead className="text-right" data-mobile="hide">{t('Position', 'Posição')}</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {brandsPage.rows.map((item, index) => (
-                                    <TableRow key={item.domain}>
-                                      <TableCell data-mobile="hide">{index + 1}</TableCell>
-                                      <TableCell data-mobile="title"><DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }} className="flex items-center gap-2"><SiteFavicon domain={item.domain} name={item.name} />{item.name}{item.domain === project.domain && (
-                                            <Badge variant="secondary">{t('You', 'Você')}</Badge>
-                                          )}</DrillLink></TableCell>
-                                      <TableCell className="text-right" data-label={t('Visibility', 'Visibilidade')}>{item.responses ? `${item.visibility.toFixed(1)}%` : '—'}</TableCell>
-                                      <TableCell className="text-right" data-label={t('Share of voice', 'Share of voice')}>
-                                        {item.shareOfVoice == null
-                                          ? '—'
-                                          : `${item.shareOfVoice.toFixed(1)}%`}
-                                      </TableCell>
-                                      <TableCell className="text-right" data-label={t('Mentions', 'Menções')}><DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }}>{item.mentions}</DrillLink></TableCell>
-                                      <TableCell className="text-right text-muted-foreground" data-mobile="hide">—</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
+                              <DataTable
+                                stackColumns={3}
+                                rows={brandsPage.rows}
+                                rowKey={(item) => item.domain}
+                                columns={[
+                                  { key: 'rank', header: '#', mobile: 'hide', cell: (_, index) => <span className="text-muted-foreground">{index + 1}</span> },
+                                  {
+                                    key: 'brand', header: t('Brand', 'Marca'), mobile: 'title',
+                                    cell: (item) => (
+                                      <DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }} className="flex items-center gap-2">
+                                        <SiteFavicon domain={item.domain} name={item.name} />{item.name}
+                                        {item.domain === project.domain && <TagBadge tone="primary">{t('You', 'Você')}</TagBadge>}
+                                      </DrillLink>
+                                    ),
+                                  },
+                                  { key: 'visibility', header: t('Visibility', 'Visibilidade'), label: t('Visibility', 'Visibilidade'), align: 'end', cell: (item) => item.responses ? `${item.visibility.toFixed(1)}%` : '—' },
+                                  { key: 'sov', header: t('Share of voice', 'Share of voice'), label: t('Share of voice', 'Share of voice'), align: 'end', cell: (item) => item.shareOfVoice == null ? '—' : `${item.shareOfVoice.toFixed(1)}%` },
+                                  { key: 'mentions', header: t('Mentions', 'Menções'), label: t('Mentions', 'Menções'), align: 'end', cell: (item) => <DrillLink link={link} to={{ tab: 'responses', brand: item.name, mention: 'mentioned' }}>{item.mentions}</DrillLink> },
+                                ]}
+                              />
                             </div>
                           ) : (
-                            <p className="p-5 text-muted-foreground">{t('No collected answers yet.', 'Ainda não há respostas coletadas.',
-                              )}</p>
+                            <EmptyState bare title={t('No collected answers yet.', 'Ainda não há respostas coletadas.')} />
                           )}
                           {brandsPage.controls}
-                        </section>
-                        <section className="live-card">
-                          <h3>
-                            {t(
-                              'Competitor-only questions',
-                              'Perguntas só com concorrentes',
-                            )}
-                          </h3>
+                        </SectionCard>
+                        <SectionCard padded title={t('Competitor-only questions', 'Perguntas só com concorrentes')}>
                           {brands.competitorOnly.length ? (
                             <ul className="live-list">
                               {brands.competitorOnly.map((item, index) => (
                                 <li key={`${item.prompt}-${index}`}>
                                   <div className="min-w-0">
                                     <button
-                                      className="text-left font-medium hover:text-primary"
+                                      className="text-left hover:text-primary hover:underline hover:underline-offset-[3px]"
                                       onClick={() => {
                                         const prompt = workspace.prompts.find(
                                           (prompt) => prompt.id === item.prompt,
@@ -3510,12 +3385,7 @@ export function LiveAnalyticsApp({
                               ))}
                             </ul>
                           ) : (
-                            <p>
-                              {t(
-                                'No gaps in this period.',
-                                'Sem lacunas neste período.',
-                              )}
-                            </p>
+                            <EmptyState bare title={t('No gaps in this period.', 'Sem lacunas neste período.')} />
                           )}
                           {brands && (
                       <CollectionPagination
@@ -3531,15 +3401,10 @@ export function LiveAnalyticsApp({
                         onNext={() => setServerPage((page) => page + 1)}
                       />
                           )}
-                        </section>
+                        </SectionCard>
                       </>
                     ) : (
-                      <p className="live-card">
-                        {t(
-                          'No collected answers yet.',
-                          'Ainda não há respostas coletadas.',
-                        )}
-                      </p>
+                      <EmptyState title={t('No collected answers yet.', 'Ainda não há respostas coletadas.')} />
                     )}
                     </>)}
                     </BrandReportTabs>
@@ -3551,69 +3416,62 @@ export function LiveAnalyticsApp({
                     {reportLoading ? (
                       <AnalyticsSkeleton label={t('Loading model analysis…', 'Carregando análise dos modelos…')} />
                     ) : models ? (
-                      <section className="analytics-panel live-table-scroll">
-                        <Table className="analytics-table">
-                          <TableHeader><TableRow><TableHead>{t('Model', 'Modelo')}</TableHead><TableHead className="text-right">{t('Responses', 'Respostas')}</TableHead><TableHead className="text-right">{t('Brand mentions', 'Menções da marca')}</TableHead><TableHead className="text-right">{t('Visibility', 'Visibilidade')}</TableHead><TableHead className="text-right">{t('Citations', 'Citações')}</TableHead><TableHead className="text-right">{t('Query evidence', 'Evidência de consulta')}</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                            {modelsPage.rows.map((item) => (
-                              <TableRow key={item.key}>
-                                <TableCell className="font-medium">
-                                  <DrillLink link={link} to={{ tab: 'responses', engine: item.key }} className="flex items-center gap-2">
-                                    <EngineIcon engine={item.key} />
-                                    {ENGINE_LABELS[item.key]}
-                                  </DrillLink>
-                                </TableCell>
-                                <TableCell className="text-right"><DrillLink link={link} to={{ tab: 'responses', engine: item.key }}>{item.responses}</DrillLink></TableCell>
-                                <TableCell className="text-right">{item.mentions}</TableCell>
-                                <TableCell className="text-right">{item.responses ? `${item.visibility.toFixed(1)}%` : '—'}</TableCell>
-                                <TableCell className="text-right text-muted-foreground">—</TableCell>
-                                <TableCell className="text-right text-muted-foreground">—</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </section>
+                      <SectionCard className="live-table-scroll">
+                        <DataTable
+                          rows={modelsPage.rows}
+                          rowKey={(item) => item.key}
+                          columns={[
+                            {
+                              key: 'model', header: t('Model', 'Modelo'), mobile: 'title',
+                              cell: (item) => (
+                                <DrillLink link={link} to={{ tab: 'responses', engine: item.key }} className="flex items-center gap-2">
+                                  <EngineIcon engine={item.key} />
+                                  {ENGINE_LABELS[item.key]}
+                                </DrillLink>
+                              ),
+                            },
+                            { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (item) => <DrillLink link={link} to={{ tab: 'responses', engine: item.key }}>{item.responses}</DrillLink> },
+                            { key: 'mentions', header: t('Brand mentions', 'Menções da marca'), label: t('Brand mentions', 'Menções da marca'), align: 'end', cell: (item) => item.mentions },
+                            { key: 'visibility', header: t('Visibility', 'Visibilidade'), label: t('Visibility', 'Visibilidade'), align: 'end', cell: (item) => item.responses ? `${item.visibility.toFixed(1)}%` : '—' },
+                          ]}
+                        />
+                      </SectionCard>
                     ) : (
-                      <p className="live-card">
-                        {t(
-                          'No model data yet.',
-                          'Ainda não há dados por modelo.',
-                        )}
-                      </p>
+                      <EmptyState title={t('No model data yet.', 'Ainda não há dados por modelo.')} />
                     )}
                     {modelsPage.controls}
                   </>
                 )}
                 {project && !creatingProject && tab === 'opportunities' && (
                   <>
-                    <h2>{t('Opportunities', 'Oportunidades')}</h2>
+                    <h2 className="sr-only">{t('Opportunities', 'Oportunidades')}</h2>
                     {reportLoading ? (
                       <AnalyticsSkeleton label={t('Loading opportunities…', 'Carregando oportunidades…')} />
                     ) : opportunities?.rows.length ? (
-                      <ul className="live-list">
-                        {opportunities.rows.map((item) => (
-                          <li key={`${item.type}-${item.id}`}>
-                            <span>
-                              <strong>
-                                {item.type === 'uncited-brand' && item.source ? (
-                                  <DrillLink link={link} to={{ tab: 'sources', entity: { kind: 'domain', key: item.source } }}>{item.title}</DrillLink>
-                                ) : item.prompt ? (
-                                  <DrillLink link={link} to={{ tab: 'prompts', prompt: promptUnit(item.prompt) }}>{item.title}</DrillLink>
-                                ) : item.title}
-                              </strong>
-                              <small>{item.detail}</small>
-                            </span>
-                            <strong>{item.responses}</strong>
-                          </li>
-                        ))}
-                      </ul>
+                      <SectionCard>
+                        <DataTable
+                          rows={opportunities.rows}
+                          rowKey={(item) => `${item.type}-${item.id}`}
+                          columns={[
+                            {
+                              key: 'opportunity', header: t('Opportunity', 'Oportunidade'), mobile: 'title',
+                              cell: (item) => (
+                                <>
+                                  {item.type === 'uncited-brand' && item.source ? (
+                                    <DrillLink link={link} to={{ tab: 'sources', entity: { kind: 'domain', key: item.source } }}>{item.title}</DrillLink>
+                                  ) : item.prompt ? (
+                                    <DrillLink link={link} to={{ tab: 'prompts', prompt: promptUnit(item.prompt) }}>{item.title}</DrillLink>
+                                  ) : item.title}
+                                  <small className="block text-caption text-muted-foreground">{item.detail}</small>
+                                </>
+                              ),
+                            },
+                            { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (item) => item.responses },
+                          ]}
+                        />
+                      </SectionCard>
                     ) : (
-                      <p className="live-card">
-                        {t(
-                          'No measured opportunities in this period.',
-                          'Nenhuma oportunidade medida neste período.',
-                        )}
-                      </p>
+                      <EmptyState title={t('No measured opportunities in this period.', 'Nenhuma oportunidade medida neste período.')} />
                     )}
                     {opportunities && (
                       <CollectionPagination
@@ -3637,18 +3495,12 @@ export function LiveAnalyticsApp({
                               )}
                       />
                     ) : !semantic ? (
-                      <p className="live-card">{t('The report is unavailable. Retry to load it.', 'O relatório está indisponível. Tente carregar novamente.',
-                              )}</p>
+                      <EmptyState title={t('The report is unavailable. Retry to load it.', 'O relatório está indisponível. Tente carregar novamente.')} />
                     ) : (
                       <>
                         {semantic.configuration.enabled &&
                           semantic.coverage.evaluated === 0 && (
-                            <p className="live-card">
-                              {t(
-                                'Attributes are configured. Compatible evaluations are not available yet.',
-                                'Os atributos estão configurados. Ainda não há avaliações compatíveis disponíveis.',
-                              )}
-                            </p>
+                            <EmptyState title={t('Attributes are configured. Compatible evaluations are not available yet.', 'Os atributos estão configurados. Ainda não há avaliações compatíveis disponíveis.')} />
                           )}
                         <p className="live-muted">
                           {semantic.coverage.evaluated} /
@@ -3718,7 +3570,7 @@ export function LiveAnalyticsApp({
                                         return (
                                           <li key={brand.name}>
                                             <span>
-                                              <strong>{brand.name}</strong>
+                                              <span className="font-medium">{brand.name}</span>
                                               <small>{semantic.configuration.attributes.find((attribute) => attribute.id === attributeId)?.name}</small>
                                               <small>
                                                 {cell?.score == null
@@ -3756,7 +3608,7 @@ export function LiveAnalyticsApp({
                                       .map((assessment) => (
                                         <li key={assessment.run_id}>
                                           <details>
-                                            <summary><strong>{assessment.prompt_text}</strong><small>{ENGINE_LABELS[assessment.engine]}{' '}
+                                            <summary><span className="font-medium">{assessment.prompt_text}</span><small>{ENGINE_LABELS[assessment.engine]}{' '}
                                                 ·{' '}
                                                 {assessment.run_created_at.slice(0, 10,
                                                 )}{' '}
@@ -3774,9 +3626,9 @@ export function LiveAnalyticsApp({
                                               )
                                               .map((reading) => (
                                                 <div key={`${reading.brand}:${reading.attribute}`}>
-                                  <p><strong>{reading.brand} ·{' '}
+                                  <p><span className="font-medium">{reading.brand} ·{' '}
                                                       {semantic.configuration.attributes.find((item) => item.id === reading.attribute,
-                                                      )?.name ?? reading.attribute}</strong>{' '}
+                                                      )?.name ?? reading.attribute}</span>{' '}
                                                     ·{' '}
                                                     {reading.score == null ? t('No score', 'Sem nota',
                                                         ) : `${reading.score}/100`}</p>
@@ -3844,8 +3696,7 @@ export function LiveAnalyticsApp({
                                   />
                                 </>
                               ) : (
-                                <p className="live-card">{t('No individual assessment is available for these filters yet.', 'Ainda não há avaliação individual para estes filtros.',
-                                  )}</p>
+                                <EmptyState title={t('No individual assessment is available for these filters yet.', 'Ainda não há avaliação individual para estes filtros.')} />
                               )}
                             </div>
                           )}

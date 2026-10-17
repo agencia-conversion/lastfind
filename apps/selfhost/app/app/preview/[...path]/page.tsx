@@ -1,18 +1,17 @@
 import {
-  analyticsMetadata,
-  AnalyticsRoutePage,
+  legacyPreviewRedirect,
   type AnalyticsSearchParams,
 } from '@edition/components/analytics-route-page';
 
 export const dynamic = 'force-dynamic';
-export const metadata = {
-  ...analyticsMetadata,
-  title: 'Lastfind · UI preview',
-};
 
-export default function PreviewSectionPage(props: {
+export default async function PreviewSectionPage(props: {
   params: Promise<{ path: string[] }>;
   searchParams: Promise<AnalyticsSearchParams>;
 }) {
-  return <AnalyticsRoutePage base="/app/preview" {...props} />;
+  legacyPreviewRedirect({
+    target: '/app',
+    path: (await props.params).path,
+    searchParams: await props.searchParams,
+  });
 }

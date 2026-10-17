@@ -27,20 +27,25 @@ export type Linker = (target: DrillTarget) => {
   onClick: (event: MouseEvent<HTMLAnchorElement>) => void;
 };
 
-/** In-app anchor: a real link (new tab, copy address) that navigates without a reload on a plain click. */
+/**
+ * In-app anchor: a real link (new tab, copy address) that navigates without a reload on a plain click.
+ * Underlines on hover; `plain` is for anchors drawn as buttons, which never underline.
+ */
 export function DrillLink({
   link,
   to,
   children,
   className,
   disabled,
+  plain,
   ...rest
-}: { link: Linker; to: DrillTarget; children: ReactNode; disabled?: boolean } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'>) {
+}: { link: Linker; to: DrillTarget; children: ReactNode; disabled?: boolean; plain?: boolean } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'>) {
   // Nothing to open (for example a citation without a domain): same layout, no link.
-  if (disabled) return <a {...rest} className={`drill-link${className ? ` ${className}` : ''}`}>{children}</a>;
+  const classes = `drill-link${plain ? ' drill-link-plain' : ''}${className ? ` ${className}` : ''}`;
+  if (disabled) return <a {...rest} className={classes}>{children}</a>;
   const { href, onClick } = link(to);
   return (
-    <a {...rest} href={href} onClick={onClick} className={`drill-link${className ? ` ${className}` : ''}`}>
+    <a {...rest} href={href} onClick={onClick} className={classes}>
       {children}
     </a>
   );

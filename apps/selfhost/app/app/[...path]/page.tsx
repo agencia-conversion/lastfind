@@ -11,5 +11,5 @@ export default function AppSectionPage(props: {
   params: Promise<{ path: string[] }>;
   searchParams: Promise<AnalyticsSearchParams>;
 }) {
-  return <AnalyticsRoutePage base="/app" {...props} />;
+  return <AnalyticsRoutePage {...props} />;
 }

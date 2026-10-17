@@ -1,8 +1,8 @@
 // Private, ephemeral Miniflare namespace. No application bypass, live D1 or provider I/O.
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { storeIdentity } from '../lib/project-store-contract.ts';
@@ -830,6 +830,143 @@ try {
     'analysis_mentions_json',
   ])
     assert.equal(expiredAfter[column], null);
+  // Source catalog: a cited URL is stored once per response in its canonical form. New
+  // rows are canonicalized on write; rows stored before are rewritten page by page by the
+  // store itself (an older build seeds them here), and rewriting never touches anything else.
+  const bundleStore = async (legacy) =>
+    (
+      await build({
+        stdin: {
+          contents:
+            "export { ProjectStore } from './worker/project-store.ts'; export default { fetch() { return new Response(null, {status:404}); } };",
+          resolveDir: process.cwd(),
+          loader: 'ts',
+        },
+        bundle: true,
+        format: 'esm',
+        platform: 'neutral',
+        external: ['cloudflare:workers'],
+        write: false,
+        plugins: legacy
+          ? [
+              {
+                name: 'before-the-catalog',
+                setup(plugin) {
+                  // The build before this feature: it stored URLs as cited, wrote no completion
+                  // mark and never scheduled the rewrite.
+                  plugin.onResolve({ filter: /source-url\.mjs$/ }, () => ({ path: 'legacy', namespace: 'legacy' }));
+                  plugin.onLoad({ filter: /.*/, namespace: 'legacy' }, () => ({
+                    contents: 'export const canonicalCitationsJson = (json) => json;',
+                    loader: 'js',
+                  }));
+                  plugin.onLoad({ filter: /worker[\\/]project-store\.ts$/ }, async (args) => ({
+                    contents: (await readFile(args.path, 'utf8'))
+                      .replace("sources_canonical: 'done',", '')
+                      .replace("if (this.meta('owner') && this.meta('sources_canonical') !== 'done')", 'if (false)'),
+                    loader: 'ts',
+                    resolveDir: dirname(args.path),
+                  }));
+                },
+              },
+            ]
+          : [],
+      })
+    ).outputFiles[0].text;
+  const sourcesDirectory = await mkdtemp(join(tmpdir(), 'lastfind-project-store-sources-'));
+  const startStore = async (script) => {
+    const instance = new Miniflare(
+      convertV4MiniflareOptions({
+        name: 'lastfind-project-store-sources',
+        modules: true,
+        script,
+        compatibilityDate: '2026-05-22',
+        durableObjects: { PROJECT_STORES: { className: 'ProjectStore', useSQLite: true } },
+        resourcePersistencePath: sourcesDirectory,
+        unsafeDevRegistryPath: join(sourcesDirectory, 'registry'),
+        telemetry: { enabled: false },
+        logRequests: false,
+      }),
+    );
+    const stores = await instance.getDurableObjectNamespace('PROJECT_STORES');
+    const sourceScope = { ownerId: 'owner-s', projectId: 'project-s', generation: 'first' };
+    const call = async (message) => {
+      const stub = stores.get(stores.idFromName(storeIdentity(sourceScope)));
+      const response = await stub.fetch('https://project-store/rpc', {
+        method: 'POST',
+        body: JSON.stringify({ scope: sourceScope, ...message }),
+      });
+      const data = await response.json();
+      assert.equal(response.status, 200, JSON.stringify(data));
+      checks++;
+      return data;
+    };
+    const read = async (sql) => (await call({ action: 'query', statements: [{ sql, params: [] }] }))[0].results;
+    return { instance, call, read, scope: sourceScope };
+  };
+  const pageUrl = 'https://news.example/best-streaming';
+  const cited = (n) =>
+    JSON.stringify([
+      { url: `${pageUrl}?utm_source=chatgpt.com`, domain: 'news.example', title: 'Best streaming' },
+      { url: `https://www.news.example/best-streaming/#:~:text=pick-${n}`, domain: 'news.example', title: 'Duplicate of the same page' },
+      { url: `https://www.news.example/other-${n % 3}`, domain: 'news.example', title: `Other ${n % 3}` },
+    ]);
+  const sourceRun = (n) => ({
+    ...record,
+    id: `run-source-${String(n).padStart(3, '0')}`,
+    owner_id: 'owner-s',
+    project_id: 'project-s',
+    sources_json: cited(n),
+    consulted_sources_json: n % 2 ? null : cited(n + 1),
+  });
+  const seedRuns = Array.from({ length: 250 }, (_, n) => ({
+    entity: 'runs',
+    id: sourceRun(n).id,
+    revision: 1,
+    data: sourceRun(n),
+  }));
+  const legacy = await startStore(await bundleStore(true));
+  try {
+    await legacy.call({ action: 'initialize' });
+    for (let at = 0; at < seedRuns.length; at += 100)
+      await legacy.call({ action: 'apply', changes: seedRuns.slice(at, at + 100) });
+    const seeded = await legacy.read("SELECT COUNT(*) n FROM runs WHERE sources_json LIKE '%utm_source%'");
+    assert.equal(seeded[0].n, 250, 'the older build stores URLs as cited');
+    assert.equal((await legacy.read("SELECT COUNT(*) n FROM store_meta WHERE key='sources_canonical'"))[0].n, 0, 'an older store has no completion mark');
+  } finally {
+    await legacy.instance.dispose();
+  }
+  const current = await startStore(await bundleStore(false));
+  try {
+    const rows = async () => await current.read("SELECT COUNT(*) n FROM runs WHERE sources_json LIKE '%utm_source%' OR sources_json LIKE '%www.%'");
+    const deadline = Date.now() + 20000;
+    await current.call({ action: 'status' });
+    while ((await rows())[0].n && Date.now() < deadline) await new Promise((done) => setTimeout(done, 100));
+    assert.equal((await rows())[0].n, 0, 'every stored response is rewritten');
+    const first = (await current.read("SELECT sources_json,consulted_sources_json FROM runs WHERE id='run-source-000'"))[0];
+    assert.deepEqual(JSON.parse(first.sources_json), [
+      { url: pageUrl, domain: 'news.example', title: 'Best streaming' },
+      { url: 'https://news.example/other-0', domain: 'news.example', title: 'Other 0' },
+    ]);
+    assert.equal(JSON.parse(first.consulted_sources_json).length, 2);
+    assert.equal((await current.read("SELECT consulted_sources_json c FROM runs WHERE id='run-source-001'"))[0].c, null);
+    // One catalog entry per page across all 250 responses (their prompts, days and engines).
+    const distinct = await current.read(
+      "SELECT COUNT(DISTINCT json_extract(s.value,'$.url')) urls,COUNT(*) occurrences FROM runs r,json_each(r.sources_json) s",
+    );
+    assert.deepEqual({ ...distinct[0] }, { urls: 4, occurrences: 500 });
+    // New publications are canonical on write, whatever the producer sent.
+    const late = sourceRun(900);
+    await current.call({ action: 'apply', changes: [{ entity: 'runs', id: late.id, revision: 1, data: late }] });
+    assert.deepEqual(
+      JSON.parse((await current.read(`SELECT sources_json FROM runs WHERE id='${late.id}'`))[0].sources_json).map((item) => item.url),
+      [pageUrl, 'https://news.example/other-0'],
+    );
+    // A restart resumes nothing: the work is done and recorded.
+    assert.equal((await current.read("SELECT value FROM store_meta WHERE key='sources_canonical'"))[0].value, 'done');
+  } finally {
+    await current.instance.dispose();
+    await rm(sourcesDirectory, { recursive: true, force: true });
+  }
   console.log(
     `Project SQLite integration passed: ${checks} native RPC checks; idempotency, atomic rollback, tombstones, metadata preservation, tenant isolation and cumulative query byte limits.`,
   );

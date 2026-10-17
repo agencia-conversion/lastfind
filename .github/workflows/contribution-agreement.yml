@@ -1,0 +1,25 @@
+name: Contribution agreement
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+permissions: {}
+jobs:
+  contribution-agreement:
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 2
+    steps:
+      - name: Require contribution agreement
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const { pull_request: pr } = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+          const accepted = /^- \[x\] I am the author and agree to the Contribution agreement in CONTRIBUTING\.md, including Conversion's right to commercially relicense my contribution\.\r?$/im;
+          // Ignore Markdown code fences so example text cannot count as acceptance.
+          const body = (pr?.body ?? '').replace(/^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]*\1[^\n]*$/gm, '');
+          if (!accepted.test(body)) {
+            console.error('Accept the Contribution agreement in CONTRIBUTING.md by checking the box in the pull request description.');
+            process.exit(1);
+          }
+          console.log('Contribution agreement accepted. Maintainers must verify authorship before import.');
+          NODE

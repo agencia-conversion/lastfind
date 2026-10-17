@@ -8,10 +8,10 @@ import { requestJson } from '@/lib/client';
 import { useReport } from '@/hooks/use-report';
 import type { Project } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SectionCard } from '@/components/lastfind/presentation/section-card';
 
 type Candidate = {
   name: string;
@@ -198,20 +198,19 @@ export function CompetitorDiscoveryPanel({
     : 0;
 
   return (
-    <Card className="mb-6 gap-0 overflow-hidden py-0 ring-1 ring-border/70">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
-        <div className="max-w-2xl">
-          <h2 className="!mt-0 flex items-center gap-2 !text-sm !leading-5 !font-semibold !tracking-normal">
-            <Sparkles className="size-4 text-primary" />
-            {text('Suggested competitors', 'Concorrentes sugeridos')}
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {text(
-              'Candidates appear in contexts similar to your brand and tracked competitors. Review the answer evidence before adding one.',
-              'Os candidatos aparecem em contextos parecidos com os da sua marca e dos concorrentes monitorados. Revise as respostas antes de adicionar.',
-            )}
-          </p>
-        </div>
+    <SectionCard
+      className="mb-6"
+      title={
+        <span className="flex items-center gap-2">
+          <Sparkles className="size-4 text-primary" aria-hidden="true" />
+          {text('Suggested competitors', 'Concorrentes sugeridos')}
+        </span>
+      }
+      description={text(
+        'Candidates appear in contexts similar to your brand and tracked competitors. Review the answer evidence before adding one.',
+        'Os candidatos aparecem em contextos parecidos com os da sua marca e dos concorrentes monitorados. Revise as respostas antes de adicionar.',
+      )}
+      action={
         <Button
           variant="outline"
           size="sm"
@@ -221,7 +220,8 @@ export function CompetitorDiscoveryPanel({
           <RefreshCw className={processing ? 'animate-spin' : ''} />
           {text('Analyze again', 'Analisar novamente')}
         </Button>
-      </div>
+      }
+    >
       {actionError && (
         <p role="alert" className="px-5 py-4 text-sm text-destructive">
           {actionError}
@@ -278,7 +278,7 @@ export function CompetitorDiscoveryPanel({
               <div key={candidateKey} className="space-y-3 px-5 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium">{candidate.name}</p>
+                    <p className="text-body">{candidate.name}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {verified ? verified.answerCount.toLocaleString(locale) : research ? '0' : '—'}{' '}
                       {text(
@@ -373,6 +373,6 @@ export function CompetitorDiscoveryPanel({
         {analysis.data?.truncated &&
           ` ${text('The newest 10,000 answers were used.', 'Foram usadas as 10.000 respostas mais recentes.')}`}
       </p>
-    </Card>
+    </SectionCard>
   );
 }

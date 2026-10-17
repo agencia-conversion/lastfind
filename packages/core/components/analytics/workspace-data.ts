@@ -6,6 +6,7 @@ export type DemoUser = {
   id: string;
   name: string;
   email: string;
+  importedAvatar?: boolean;
   avatar?: {
     source: string;
     preview: string;
@@ -108,6 +109,7 @@ export function createDemoSession(
         id: authenticatedUser.id,
         name: authenticatedUser.name,
         email: authenticatedUser.email,
+        importedAvatar: true,
       },
       ...session.users.filter(
         (user) => user.id !== originalOwner && user.id !== authenticatedUser.id,

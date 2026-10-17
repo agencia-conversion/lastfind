@@ -1,28 +1,3 @@
-.st-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--background);
-  color: var(--foreground);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-  white-space: nowrap;
-}
-.st-badge i {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-}
-.st-badge-missing {
-  color: var(--muted-foreground);
-  border-style: dashed;
-}
 .st-panel .st-body {
   display: grid;
   gap: 14px;
@@ -31,7 +6,7 @@
 .st-panel .st-caption {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .st-panel .st-empty {
   margin: 0;
@@ -59,12 +34,13 @@
   pointer-events: none;
 }
 .st-donut figcaption strong {
-  font-size: 22px;
-  line-height: 26px;
+  font-size: var(--text-metric);
+  font-weight: var(--weight-strong);
+  line-height: var(--text-metric--line-height);
 }
 .st-donut figcaption span {
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-caption);
 }
 .st-donut svg:focus,
 .st-donut .recharts-surface:focus {
@@ -89,7 +65,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
   text-align: left;
   cursor: pointer;
 }
@@ -112,8 +88,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.st-legend b {
-  font-weight: 600;
+.st-legend-value {
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 .st-legend small {
@@ -127,7 +103,7 @@
   padding: 8px 10px;
   border-radius: 6px;
   background: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 .st-notice {
   display: flex;
@@ -135,7 +111,7 @@
   align-items: center;
   gap: 8px 10px;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 .st-notice p {
   flex: 1 1 220px;
@@ -147,7 +123,7 @@
 .st-error {
   margin: 0;
   color: var(--destructive);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 .st-link {
   padding: 0;
@@ -194,7 +170,7 @@
   gap: 6px;
   width: fit-content;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 .st-entity-head {
   display: grid;
@@ -216,13 +192,13 @@
 }
 .st-entity-title {
   margin: 0;
-  font-size: 20px;
-  line-height: 28px;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
   overflow-wrap: anywhere;
 }
 .st-entity-url {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted-foreground);
   overflow-wrap: anywhere;
 }
@@ -240,10 +216,7 @@
 }
 .st-entity-domain {
   color: var(--muted-foreground);
-  font-size: 13px;
-}
-.st-metrics {
-  margin-bottom: 0;
+  font-size: var(--text-body);
 }
 .st-columns {
   display: grid;
@@ -262,7 +235,7 @@
 .st-url {
   display: block;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-caption);
   overflow-wrap: anywhere;
   white-space: normal;
   max-width: 32ch;
@@ -282,7 +255,7 @@
   grid-template-columns: minmax(150px, 38%) minmax(0, 1fr) 28px;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--muted-foreground);
 }
 .live-app .live-frequency > a:hover span.truncate {
@@ -291,7 +264,7 @@
 .st-type-text {
   display: block;
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--text-caption);
   color: var(--muted-foreground);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -317,9 +290,10 @@
   border-radius: 4px;
   background: var(--primary);
 }
-.live-app .live-frequency > a b {
+.live-app .live-frequency > a .st-count {
   text-align: right;
-  font-weight: 600;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
   color: var(--foreground);
 }
 .live-app .live-run-meta {
@@ -329,53 +303,15 @@
   gap: 4px 6px;
   margin-top: 5px;
   color: var(--muted-foreground);
-  font-size: 12px;
-}
-.live-app .live-run-title strong {
-  font-weight: 600;
-}
-.live-app .live-run-title:hover strong {
-  color: var(--primary);
-}
-.st-badge-quiet {
-  border-style: dotted;
-  color: var(--muted-foreground);
+  font-size: var(--text-caption);
 }
 .st-list-notice {
   display: grid;
   gap: 6px;
   padding: 10px 16px 0;
 }
-.st-chip {
-  gap: 4px;
-}
-.st-chip button {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
 
 /* Ownership seal: a mark beside the site type, never a type of its own. */
-.st-owner {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  white-space: nowrap;
-}
-.st-owner-own {
-  background: color-mix(in srgb, #1649ff 12%, transparent);
-  color: #1649ff;
-}
-.st-owner-competitor {
-  background: color-mix(in srgb, #e5484d 12%, transparent);
-  color: #c52a30;
-}
 .st-name-line {
   display: flex;
   min-width: 0;
@@ -383,14 +319,4 @@
   align-items: center;
   gap: 4px 8px;
 }
-.st-avg {
-  font-variant-numeric: tabular-nums;
-}
-.st-owner-text-own {
-  color: #1649ff;
-  font-weight: 600;
-}
-.st-owner-text-competitor {
-  color: #c52a30;
-  font-weight: 600;
-}
+

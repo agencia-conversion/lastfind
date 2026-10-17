@@ -161,7 +161,7 @@ await test('a validated identity replaces the sample owner in every membership w
   assert.equal(session.userId, user.id);
   assert.deepEqual(
     session.users.find((entry) => entry.id === session.userId),
-    user,
+    { ...user, importedAvatar: true },
   );
   assert.notStrictEqual(session.users[0], user);
   assert.equal(

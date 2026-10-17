@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
@@ -30,7 +31,10 @@ const bundle = await build({
           Object.hasOwn(stubs, args.path) ? { path: args.path, namespace: 'fixture' } : undefined,
         );
         builder.onLoad({ filter: /.*/, namespace: 'fixture' }, (args) => ({ contents: stubs[args.path], loader: 'js' }));
-        builder.onResolve({ filter: /^@\// }, (args) => ({ path: root + 'packages/core/' + args.path.slice(2) + '.ts' }));
+        builder.onResolve({ filter: /^@\// }, (args) => {
+          const base = root + 'packages/core/' + args.path.slice(2);
+          return { path: ['.ts', '.tsx'].map((extension) => base + extension).find(existsSync) ?? base + '.ts' };
+        });
       },
     },
   ],

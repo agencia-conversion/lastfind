@@ -13,6 +13,7 @@ import {
   type StoreChange,
 } from '../lib/project-store-contract';
 import { matchesBrand } from '../lib/metrics';
+import { canonicalCitationsJson } from '../lib/source-url.mjs';
 import {
   discoverCompetitors,
   type CompetitorCandidate,
@@ -212,6 +213,43 @@ export class ProjectStore extends DurableObject<Record<string, unknown>> {
     );
     this.ensureSuggestionIdentity('competitor_suggestions');
     this.ensureSuggestionIdentity('competitor_suggestions_staging');
+    // Rows stored before the source catalog keep their original URLs until the
+    // alarm has rewritten them page by page (canonicalizeSourcesPage).
+    if (this.meta('owner') && this.meta('sources_canonical') !== 'done')
+      void ctx.blockConcurrencyWhile(async () => {
+        if ((await ctx.storage.getAlarm()) === null) await ctx.storage.setAlarm(Date.now() + 50);
+      });
+  }
+
+  /**
+   * Source catalog: a cited URL is stored once per response in its canonical
+   * form (source-url.mjs), so a page cited with tracking suffixes, a text
+   * fragment, `www` or a trailing slash is one source everywhere. New rows are
+   * canonicalized by apply(); this walks the rows stored before that, in id order
+   * and one bounded page per call, and records its progress so a restart
+   * resumes. Rows already canonical are not rewritten. Returns true while rows remain.
+   */
+  private canonicalizeSourcesPage(size = 100) {
+    if (!this.meta('owner') || this.meta('sources_canonical') === 'done') return false;
+    const sql = this.ctx.storage.sql;
+    const rows = sql
+      .exec<{ id: string; sources_json: string | null; consulted_sources_json: string | null }>(
+        'SELECT id,sources_json,consulted_sources_json FROM runs WHERE id>? ORDER BY id LIMIT ?',
+        this.meta('sources_canonical_cursor') ?? '',
+        size,
+      )
+      .toArray();
+    this.ctx.storage.transactionSync(() => {
+      for (const row of rows) {
+        const sources = canonicalCitationsJson(row.sources_json);
+        const consulted = canonicalCitationsJson(row.consulted_sources_json);
+        if (sources !== row.sources_json || consulted !== row.consulted_sources_json)
+          sql.exec('UPDATE runs SET sources_json=?,consulted_sources_json=? WHERE id=?', sources ?? '[]', consulted ?? null, row.id);
+      }
+      if (rows.length < size) this.setMeta('sources_canonical', 'done');
+      else this.setMeta('sources_canonical_cursor', rows[rows.length - 1].id);
+    });
+    return rows.length === size;
   }
 
   private ensureSuggestionIdentity(
@@ -828,6 +866,17 @@ export class ProjectStore extends DurableObject<Record<string, unknown>> {
   }
 
   async alarm() {
+    let sourcesRetry = 0;
+    try {
+      if (this.canonicalizeSourcesPage()) sourcesRetry = 100;
+    } catch {
+      // The page is retried later; reports keep reading the stored rows meanwhile.
+      sourcesRetry = 30_000;
+    }
+    if (sourcesRetry) {
+      const current = await this.ctx.storage.getAlarm();
+      if (current === null || current > Date.now() + sourcesRetry) await this.ctx.storage.setAlarm(Date.now() + sourcesRetry);
+    }
     const revision = this.ctx.storage.sql
       .exec<{ revision: string }>(
         'SELECT revision FROM competitor_analysis_jobs WHERE id=1',
@@ -860,6 +909,8 @@ export class ProjectStore extends DurableObject<Record<string, unknown>> {
           project: scope.projectId,
           generation: scope.generation,
           schema: '1',
+          // A new store only ever receives canonical sources (apply), so there is nothing to rewrite.
+          sources_canonical: 'done',
         }))
           sql.exec('INSERT INTO store_meta(key,value) VALUES(?,?)', key, value);
       });
@@ -962,7 +1013,11 @@ export class ProjectStore extends DurableObject<Record<string, unknown>> {
           const columns = storeColumns(change.entity).filter((column) =>
             Object.prototype.hasOwnProperty.call(data, column),
           );
-          const values = columns.map((key) => data[key] ?? null);
+          const values = columns.map((key) =>
+            change.entity === 'runs' && (key === 'sources_json' || key === 'consulted_sources_json')
+              ? (canonicalCitationsJson(data[key] as string | null) ?? null)
+              : (data[key] ?? null),
+          );
           if (
             values.some(
               (v) =>

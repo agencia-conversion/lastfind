@@ -1,7 +1,12 @@
 Lastfind
 Copyright 2026 Lastfind contributors
+Copyright 2026 CONVERSION SERVICOS DE MARKETING PUBLICIDADE TECNOLOGIA E CONSULTORIA LTDA
 
-Licensed under the Apache License, Version 2.0.
+Licensed under GNU AGPL-3.0-only.
+A commercial license is available exclusively from Conversion:
+comercial@conversion.com.br (see COMMERCIAL-LICENSE.md at the repository root).
+Versions published before this license change remain Apache-2.0 for those
+who already have them.
 This distribution includes dependencies under their own licenses.
 Lastfind is an independent project and is not affiliated with Peec, Profound,
 DataForSEO, OpenAI, Google, Cloudflare.

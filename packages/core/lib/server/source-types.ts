@@ -15,6 +15,7 @@ import {
   type SourceTypeKind,
 } from '@/lib/source-types';
 import { RESEARCH_MODELS } from '@/lib/brand-research-provider';
+import { canonicalSourceDomain, canonicalSourceUrl } from '@/lib/source-url.mjs';
 import type { ResearchProvider } from '@/lib/brand-research';
 import type {
   ContentTypeShare,
@@ -103,31 +104,130 @@ export async function sourceTypeClassifier(
   return { ...base, state: 'ready' };
 }
 
-/** Types cached for the active evaluator and rubric. Missing keys are unclassified. */
+/**
+ * The source catalog key of a domain or URL: the canonical form every stored
+ * occurrence uses (source-url.mjs). A key that is not a usable URL stays as it is.
+ */
+export const catalogKey = (kind: SourceTypeKind, key: string) =>
+  (kind === 'url' ? canonicalSourceUrl(key) : null) ?? (kind === 'domain' ? canonicalSourceDomain(key) : key);
+
+/** Databases already folded in this isolate, so a read costs nothing after the first. */
+const folded = new WeakSet<object>();
+/**
+ * Brings the types cached before the catalog (`source_classifications`, keyed by
+ * the URL as cited and by evaluator) into `source_catalog` (one row per canonical
+ * URL or domain and rubric) without any provider call, newest classification
+ * first so the newest wins. It is incremental: `system_state` keeps the newest
+ * `classified_at` already folded, so a row an older Worker still wrote while a
+ * release was rolling out is picked up by the next isolate, and it is repeatable
+ * because an entry is never overwritten.
+ */
+export async function foldLegacyClassifications() {
+  const database = db();
+  if (folded.has(database)) return;
+  const mark = await database
+    .prepare('SELECT value FROM system_state WHERE key=?')
+    .bind(CATALOG_FOLD_KEY)
+    .first<{ value: string }>();
+  const from = mark?.value ?? '';
+  const newest = (
+    await database.prepare('SELECT MAX(classified_at) latest FROM source_classifications').first<{ latest: string | null }>()
+  )?.latest;
+  const page = 500;
+  for (let offset = 0; ; offset += page) {
+    const rows = (
+      await database
+        .prepare(
+          'SELECT kind,key,rubric,type,provider,model,job_id,classified_at FROM source_classifications WHERE classified_at>=? ORDER BY classified_at DESC,provider,model,key LIMIT ? OFFSET ?',
+        )
+        .bind(from, page, offset)
+        .all<CatalogRow & { kind: SourceTypeKind; key: string }>()
+    ).results;
+    if (!rows.length) break;
+    await database.batch(rows.map((row) => catalogInsert(database, row.kind, catalogKey(row.kind, row.key), row)));
+    if (rows.length < page) break;
+  }
+  if (newest && newest > from)
+    await database
+      .prepare('INSERT INTO system_state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')
+      .bind(CATALOG_FOLD_KEY, newest)
+      .run();
+  folded.add(database);
+}
+
+type CatalogRow = {
+  rubric: string;
+  type: string;
+  provider: ResearchProvider;
+  model: string;
+  job_id: string | null;
+  classified_at: string;
+};
+const CATALOG_FOLD_KEY = 'source_catalog_fold_mark';
+
+/** Writes one classification into the catalog unless that URL or domain already has one for the rubric. */
+export function catalogInsert(
+  database: ReturnType<typeof db>,
+  kind: SourceTypeKind,
+  key: string,
+  row: CatalogRow,
+) {
+  return database
+    .prepare(
+      'INSERT OR IGNORE INTO source_catalog(kind,key,rubric,type,provider,model,job_id,classified_at) VALUES(?,?,?,?,?,?,?,?)',
+    )
+    .bind(kind, key, row.rubric, row.type, row.provider, row.model, row.job_id, row.classified_at);
+}
+
+/**
+ * The result of a settled job, written to the catalog only while that job is
+ * recorded as completed (the same guard both the customer queue and the demo
+ * operation use), and never over an existing entry.
+ */
+export function catalogWrite(
+  database: ReturnType<typeof db>,
+  item: { kind: SourceTypeKind; key: string; type: string },
+  job: { id: string; provider: ResearchProvider; model: string },
+  doneAt: string,
+) {
+  return database
+    .prepare(`INSERT INTO source_catalog(kind,key,rubric,type,provider,model,job_id,classified_at)
+    SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM brand_research_jobs WHERE id=? AND completed_at=? AND status IN ('completed','unsettled'))
+    ON CONFLICT(kind,key,rubric) DO NOTHING`)
+    .bind(item.kind, catalogKey(item.kind, item.key), SOURCE_TYPE_RUBRIC, item.type, job.provider, job.model, job.id, doneAt, job.id, doneAt);
+}
+
+/**
+ * Types in the catalog for the rubric. The evaluator that wrote a row is only
+ * provenance: switching the evaluator never makes the catalog forget a page, and
+ * a new rubric (a deliberate change of taxonomy) is the only thing that reclassifies.
+ * Keys are looked up in canonical form and answered under the key that was asked.
+ * Missing keys are unclassified.
+ */
 export async function cachedSourceTypes(
   kind: SourceTypeKind,
   keys: string[],
   classifier: Classifier,
 ) {
+  await foldLegacyClassifications();
   const found = new Map<string, string>();
-  const unique = [...new Set(keys)];
+  const asked = new Map<string, string[]>();
+  for (const key of keys) {
+    const canonical = catalogKey(kind, key);
+    asked.set(canonical, [...(asked.get(canonical) ?? []), key]);
+  }
+  const unique = [...asked.keys()];
   for (let offset = 0; offset < unique.length; offset += LOOKUP_CHUNK) {
     const rows = (
       await db()
         .prepare(
-          'SELECT key,type FROM source_classifications WHERE kind=? AND provider=? AND model=? AND rubric=? AND key IN (SELECT value FROM json_each(?))',
+          'SELECT key,type FROM source_catalog WHERE kind=? AND rubric=? AND key IN (SELECT value FROM json_each(?))',
         )
-        .bind(
-          kind,
-          classifier.provider,
-          classifier.model,
-          classifier.rubric,
-          JSON.stringify(unique.slice(offset, offset + LOOKUP_CHUNK)),
-        )
+        .bind(kind, classifier.rubric, JSON.stringify(unique.slice(offset, offset + LOOKUP_CHUNK)))
         .all<{ key: string; type: string }>()
     ).results;
     for (const row of rows)
-      if (isSourceType(kind, row.type)) found.set(row.key, row.type);
+      if (isSourceType(kind, row.type)) for (const key of asked.get(row.key) ?? []) found.set(key, row.type);
   }
   return found;
 }
@@ -402,24 +502,32 @@ export async function enqueueSourceTypes(
   const candidates = window.rows.filter((row) => row.key !== '');
   const cached = await cachedSourceTypes(kind, candidates.map((row) => row.key), classifier);
   const contextKey = `${SOURCE_TYPE_CONTEXT_PREFIX}${SOURCE_TYPE_RUBRIC}:${classifier.provider}`;
+  // Anything already waiting for a provider answer, whoever asked and whichever evaluator: the
+  // catalog is shared, so a page queued by another project is never queued a second time.
   const active = new Set(
     (
       await db()
         .prepare(
           `SELECT json_extract(item.value,'$.key') key FROM brand_research_jobs job,json_each(job.input_json,'$.items') item
-          WHERE job.project_id=? AND job.owner_id=? AND job.context_key=? AND job.model=?
-          AND job.status IN ('pending','submitting','unknown','unsettled') AND json_extract(job.input_json,'$.kind')=?`,
+          WHERE job.context_key LIKE ? AND job.status IN ('pending','submitting','unknown','unsettled')
+          AND json_extract(job.input_json,'$.kind')=?`,
         )
-        .bind(projectId, ownerId, contextKey, classifier.model, kind)
+        .bind(`${SOURCE_TYPE_CONTEXT_PREFIX}${SOURCE_TYPE_RUBRIC}:%`, kind)
         .all<{ key: string }>()
-    ).results.map((row) => row.key),
+    ).results.map((row) => catalogKey(kind, row.key)),
   );
+  const seen = new Set<string>();
   const todo: SourceTypeItem[] = candidates
-    .filter((row) => !cached.has(row.key) && !active.has(row.key))
+    .filter((row) => {
+      const key = catalogKey(kind, row.key);
+      if (cached.has(row.key) || active.has(key) || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, SOURCE_TYPE_ENQUEUE_LIMIT)
     .map((row) => ({
       kind,
-      key: row.key,
+      key: catalogKey(kind, row.key),
       domain: row.domain,
       title: kind === 'url' ? row.title : undefined,
     }));
@@ -549,6 +657,7 @@ export async function processSourceTypeJobs(scope?: Scope) {
     .filter(Boolean);
   if (!projects.length || !setting('OPENROUTER_API_KEY')) return 0;
   if (scope && !researchAllowed(scope.projectId)) return 0;
+  await foldLegacyClassifications();
   const database = db();
   const scopeSql = scope ? ' AND project_id=? AND owner_id=? AND provider=?' : '';
   const scopeParams = scope ? [scope.projectId, scope.ownerId, scope.provider] : [];
@@ -575,8 +684,20 @@ export async function processSourceTypeJobs(scope?: Scope) {
     processed++;
     let outcome: { unknown: boolean; cost: number | null } = { unknown: false, cost: null };
     try {
-      const { items } = JSON.parse(job.input_json) as { items: SourceTypeItem[] };
-      const result = await requestSourceTypes(items, job.model);
+      const queued = (JSON.parse(job.input_json) as { items: SourceTypeItem[] }).items;
+      // The catalog may have gained these pages since they were queued (another project, an
+      // earlier batch, the migration): only what is still unclassified is sent, and a batch with
+      // nothing left costs nothing and calls no provider.
+      const known = await cachedSourceTypes(queued[0]?.kind ?? 'domain', queued.map((item) => item.key), {
+        provider: job.provider,
+        model: job.model,
+        rubric: SOURCE_TYPE_RUBRIC,
+        state: 'ready',
+      });
+      const items = queued.filter((item) => !known.has(item.key));
+      const result = items.length
+        ? await requestSourceTypes(items, job.model)
+        : { types: [], cost: 0 };
       const cost = result.cost;
       outcome = { unknown: false, cost };
       const done = now();
@@ -592,13 +713,7 @@ export async function processSourceTypeJobs(scope?: Scope) {
             cost === null ? 'Usage cost is unavailable; the conservative reservation is retained.' : null,
             job.id,
           ),
-        ...result.types.map((item) =>
-          database
-            .prepare(`INSERT INTO source_classifications(kind,key,provider,model,rubric,type,job_id,classified_at)
-            SELECT ?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM brand_research_jobs WHERE id=? AND completed_at=? AND status IN ('completed','unsettled'))
-            ON CONFLICT(kind,key,provider,model,rubric) DO NOTHING`)
-            .bind(item.kind, item.key, job.provider, job.model, SOURCE_TYPE_RUBRIC, item.type, job.id, done, job.id, done),
-        ),
+        ...result.types.map((item) => catalogWrite(database, item, job, done)),
       ]);
     } catch (error) {
       if (error instanceof SourceTypeProviderError) outcome = { unknown: error.unknown, cost: error.cost };
@@ -625,9 +740,9 @@ export async function sourceTypeRevision(projectId: string, ownerId: string, dem
   const classifier = await sourceTypeClassifier(projectId, ownerId, demo);
   const row = await db()
     .prepare(
-      'SELECT COUNT(*) n,MAX(classified_at) latest FROM source_classifications WHERE provider=? AND model=? AND rubric=?',
+      'SELECT COUNT(*) n,MAX(classified_at) latest FROM source_catalog WHERE rubric=?',
     )
-    .bind(classifier.provider, classifier.model, classifier.rubric)
+    .bind(classifier.rubric)
     .first<{ n: number; latest: string | null }>();
   return `${classifier.state}:${classifier.provider}:${row?.n ?? 0}:${row?.latest ?? ''}`;
 }

@@ -10,5 +10,5 @@ export default function AppPage({
 }: {
   searchParams: Promise<AnalyticsSearchParams>;
 }) {
-  return <LegacyAnalyticsPage base="/app" searchParams={searchParams} />;
+  return <LegacyAnalyticsPage searchParams={searchParams} />;
 }

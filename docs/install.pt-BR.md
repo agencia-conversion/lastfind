@@ -8,7 +8,7 @@ Este guia leva você do zero até um Lastfind privado e funcionando. Você não 
 
 ## Quanto custa
 
-Você paga cada serviço diretamente. O Lastfind em si é gratuito (Apache-2.0) e não cobra nada.
+Você paga cada serviço diretamente. O Lastfind em si é gratuito (AGPL-3.0-only) e não cobra nada.
 
 | Serviço | Para que serve | Custo |
 | --- | --- | --- |
@@ -19,6 +19,10 @@ Você paga cada serviço diretamente. O Lastfind em si é gratuito (Apache-2.0) 
 **Exemplo.** 20 prompts só no ChatGPT, coletados uma vez por dia: 600 respostas por mês, cerca de US$ 0,72. Os mesmos 20 prompts nas seis assistentes custam cerca de US$ 17 por mês, quase tudo Claude e Perplexity. Comece só com o ChatGPT e acrescente modelos quando vir valor.
 
 **Limites de segurança.** A instalação limita a coleta a 1.500 respostas por mês e 1.000 por dia, para que um engano não esgote seu saldo. Para mudar, edite `SELF_HOST_MONTHLY_LIMIT` e `GLOBAL_DAILY_RUN_LIMIT` em `vars` no arquivo `wrangler.selfhost.json` e rode `npm run deploy:selfhost`.
+
+## Licença comercial
+
+O software gratuito é licenciado sob AGPL-3.0-only. Quem oferece uma versão modificada a terceiros, inclusive como serviço web, precisa disponibilizar o código-fonte correspondente sob AGPL-3.0. Para usar sem essas obrigações, a Conversion oferece uma [licença comercial](../COMMERCIAL-LICENSE.md): [comercial@conversion.com.br](mailto:comercial@conversion.com.br).
 
 ## Passo 1. Prepare o computador
 

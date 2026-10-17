@@ -1,22 +1,10 @@
-import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { AnalyticsApp } from '@/components/analytics/analytics-app';
 import { LiveAnalyticsApp } from '@/components/analytics/live-app';
-import { demoPrompts } from '@/components/analytics/demo-data';
-import {
-  buildAnalyticsPath,
-  parseAnalyticsRoute,
-  parseFilters,
-  promptKey,
-  serializeAnalyticsSearch,
-  type AnalyticsRoute,
-} from '@/components/analytics/routes';
-import { createDemoSession } from '@/components/analytics/workspace-data';
+import { parseAnalyticsRoute } from '@/components/analytics/routes';
 import { currentUser } from '@/lib/server/auth';
 import { semanticEvaluationAvailable } from '@/lib/server/capabilities';
 import type { ReactNode } from 'react';
 
-type RouteBase = '/app' | '/app/preview';
 export type AnalyticsSearchParams = Record<
   string,
   string | string[] | undefined
@@ -37,171 +25,87 @@ function searchEntries(query: AnalyticsSearchParams) {
   return params;
 }
 
-function filterSearch(query: AnalyticsSearchParams, tab: string) {
-  return serializeAnalyticsSearch(
-    parseFilters(searchEntries(query)),
-    tab,
-    first(query, 'view'),
-  ).toString();
-}
-
-function first(query: AnalyticsSearchParams, key: string) {
-  const value = query[key];
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function legacyRoute(base: RouteBase, query: AnalyticsSearchParams) {
-  const session = createDemoSession();
-  const workspaceKey = first(query, 'workspace');
-  const projectKey = first(query, 'project');
-  const workspace =
-    session.workspaces.find((w) =>
-      workspaceKey
-        ? w.id === workspaceKey || w.slug === workspaceKey
-        : projectKey
-          ? w.projects.some((p) => p.id === projectKey || p.slug === projectKey)
-          : w.id === session.workspaceId,
-    ) ?? session.workspaces[0];
-  const project =
-    workspace.projects.find((p) =>
-      projectKey
-        ? p.id === projectKey || p.slug === projectKey
-        : p.id === session.projectId,
-    ) ?? workspace.projects[0];
-  const knownWorkspace =
-    !workspaceKey ||
-    workspace.id === workspaceKey ||
-    workspace.slug === workspaceKey;
-  const knownProject =
-    !projectKey || project.id === projectKey || project.slug === projectKey;
-  const workspaceSlug = knownWorkspace ? workspace.slug : workspaceKey;
-  const projectSlug = knownProject ? project.slug : projectKey;
-  if (
-    !workspaceSlug ||
-    !projectSlug ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(workspaceSlug) ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectSlug)
-  )
-    notFound();
-
-  const requestedTab = first(query, 'tab') ?? 'overview';
-  const tab =
-    requestedTab === 'competitors'
-      ? 'brands'
-      : requestedTab === 'history'
-        ? 'chats'
-        : requestedTab;
-  if (
-    ![
-      'overview',
-      'prompts',
-      'brands',
-      'sources',
-      'models',
-      'chats',
-      'settings',
-      'onboarding',
-      'semantic-branding',
-    ].includes(tab)
-  )
-    notFound();
-  if (tab === 'settings' && !knownProject) notFound();
-  const route: AnalyticsRoute = {
-    base,
-    workspaceSlug,
-    projectSlug,
-    tab: tab === 'brands' ? 'competitors' : tab,
-    ...(tab === 'settings' ? { settingsSection: 'workspace' } : {}),
-  };
-  const requestedPrompt = first(query, 'prompt');
-  if (requestedPrompt && tab !== 'settings') {
-    const prompt = demoPrompts.find((p) => p.id === requestedPrompt);
-    route.tab = 'overview';
-    if (
-      !/^[a-zA-Z0-9]+(?:[-_][a-zA-Z0-9]+)*$/.test(requestedPrompt) ||
-      requestedPrompt.length > 180
-    )
-      notFound();
-    route.promptKey = prompt
-      ? promptKey(prompt)
-      : `${requestedPrompt}-unavailable`;
-  }
-  return route;
-}
-
 export async function LegacyAnalyticsPage({
-  base,
   searchParams,
   welcome,
+  billingPanel,
 }: {
-  base: RouteBase;
   searchParams: Promise<AnalyticsSearchParams>;
   welcome: ReactNode;
+  billingPanel?: ReactNode;
 }) {
-  const user = base === '/app' ? await currentUser() : null;
-  if (base === '/app' && !user) return welcome;
-  if (user)
-    return (
-      <LiveAnalyticsApp
-        initialSearch={searchEntries(await searchParams).toString()}
-        semanticEvaluationAvailable={semanticEvaluationAvailable}
-      />
-    );
-  const query = await searchParams;
-  let pathname: string;
-  try {
-    pathname = buildAnalyticsPath(legacyRoute(base, query));
-  } catch {
-    notFound();
-  }
-  if (!parseAnalyticsRoute(pathname)) notFound();
-  const search = filterSearch(query, parseAnalyticsRoute(pathname)!.tab);
-  redirect(`${pathname}${search ? `?${search}` : ''}`);
+  const user = await currentUser();
+  if (!user) return welcome;
+  return (
+    <LiveAnalyticsApp
+      initialSearch={searchEntries(await searchParams).toString()}
+      semanticEvaluationAvailable={semanticEvaluationAvailable}
+      billingPanel={billingPanel}
+    />
+  );
 }
 
 export async function AnalyticsRoutePage({
-  base,
   params,
   searchParams,
   welcome,
+  billingPanel,
 }: {
-  base: RouteBase;
   params: Promise<{ path: string[] }>;
   searchParams: Promise<AnalyticsSearchParams>;
   welcome: ReactNode;
+  billingPanel?: ReactNode;
 }) {
   // This edition guard applies to every owner route, including direct links.
-  const user = base === '/app' ? await currentUser() : null;
-  if (base === '/app' && !user) return welcome;
+  const user = await currentUser();
+  if (!user) return welcome;
   const { path } = await params;
-  const pathname = `${base}/${path.map(encodeURIComponent).join('/')}`;
-  const route = parseAnalyticsRoute(pathname);
-  if (!route || route.base !== base) notFound();
-  if (user)
-    return (
-      <LiveAnalyticsApp
-        initialPath={path}
-        initialSearch={searchEntries(await searchParams).toString()}
-        semanticEvaluationAvailable={semanticEvaluationAvailable}
-      />
-    );
-  const canonicalPath = buildAnalyticsPath(route);
-  const query = await searchParams;
-  const search = filterSearch(query, route.tab);
-  if (
-    pathname !== canonicalPath ||
-    searchEntries(query).toString() !== search
-  ) {
-    redirect(`${canonicalPath}${search ? `?${search}` : ''}`);
-  }
+  const route = parseAnalyticsRoute(`/app/${path.map(encodeURIComponent).join('/')}`);
+  if (!route) notFound();
   return (
-    <AnalyticsApp
-      key="preview"
-      initialPath={canonicalPath}
-      initialSearch={search}
-      initialSidebarOpen={
-        (await cookies()).get('sidebar_state')?.value !== 'false'
-      }
+    <LiveAnalyticsApp
+      initialPath={path}
+      initialSearch={searchEntries(await searchParams).toString()}
+      semanticEvaluationAvailable={semanticEvaluationAvailable}
+      billingPanel={billingPanel}
     />
   );
+}
+
+// `/app/preview` was a second, mock copy of the app. Its URLs now open the same
+// product screens: the real demo (`/demo`, Cloud) or the owner sign-in (`/app`,
+// selfhost, which has no public demo). Section, period and the old `?tab=`
+// links are carried over so no earlier link breaks.
+const legacySections: Record<string, string> = {
+  overview: 'overview',
+  prompts: 'prompts',
+  brands: 'competitors',
+  competitors: 'competitors',
+  sources: 'sources',
+  models: 'models',
+  chats: 'responses',
+  history: 'responses',
+  'semantic-branding': 'semantic-branding',
+};
+
+export function legacyPreviewRedirect({
+  target,
+  path = [],
+  searchParams,
+}: {
+  target: '/demo' | '/app';
+  path?: string[];
+  searchParams: AnalyticsSearchParams;
+}): never {
+  if (target === '/app') redirect('/app');
+  const query = searchEntries(searchParams);
+  let section = path[0] === 'workspaces' && path[2] === 'projects' ? path[4] : query.get('tab');
+  if (path[0] === 'workspaces' && path[2] === 'settings') section = 'settings';
+  const next = new URLSearchParams();
+  const tab = section === 'settings' ? 'settings' : legacySections[section ?? ''];
+  if (tab && tab !== 'overview') next.set('tab', tab);
+  const days = query.get('days');
+  if (days && /^\d{1,3}$/.test(days)) next.set('days', days);
+  const search = next.toString();
+  redirect(search ? `/demo?${search}` : '/demo');
 }

@@ -7,6 +7,9 @@
     "nodejs_compat"
   ],
   "workers_dev": true,
+  "version_metadata": {
+    "binding": "WORKER_VERSION"
+  },
   "vars": {
     "SELF_HOST_MONTHLY_LIMIT": "1500",
     "GLOBAL_DAILY_RUN_LIMIT": "1000",

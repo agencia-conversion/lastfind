@@ -7,6 +7,7 @@ export function configuration({ root, testing, port, production }) {
   if (production && existsSync(path)) return JSON.parse(readFileSync(path, 'utf8'));
   return {
     name: 'lastfind-personal-local', compatibility_date: '2026-09-05', compatibility_flags: ['nodejs_compat'],
+    version_metadata: { binding: 'WORKER_VERSION' },
     d1_databases: [{ binding: 'DB', database_name: 'lastfind-local', database_id: '00000000-0000-4000-8000-000000000000' }],
     r2_buckets: [{ binding: 'RAW_RESPONSES', bucket_name: 'lastfind-local-raw' }],
     durable_objects: { bindings: [{ name: 'PROJECT_STORES', class_name: 'ProjectStore' }] },

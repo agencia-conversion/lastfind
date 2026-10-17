@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 import { ArrowUpRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SectionCard } from '@/components/lastfind/presentation/section-card';
+import { TagBadge } from '@/components/lastfind/presentation/tag-badge';
 import {
   SOURCE_OWNER_LABELS,
   SOURCE_TYPE_COLORS,
@@ -41,19 +43,18 @@ export const sourceOwnerLabel = (owner: SourceOwner, t: Translate, plural = fals
  * Seal for a domain that is yours or a tracked competitor's. It is a mark next to the
  * site type, never a type; third-party domains carry no seal.
  */
-export function OwnerBadge({ owner, t, className = '' }: { owner: SourceOwner | undefined; t: Translate; className?: string }) {
+export function OwnerBadge({ owner, t, className }: { owner: SourceOwner | undefined; t: Translate; className?: string }) {
   if (!owner || owner === 'third-party') return null;
-  return <span className={`st-owner st-owner-${owner} ${className}`}>{sourceOwnerLabel(owner, t)}</span>;
+  return <TagBadge tone={owner === 'own' ? 'primary' : 'danger'} className={className}>{sourceOwnerLabel(owner, t)}</TagBadge>;
 }
 
 /** Type chip: every site and content type uses its fixed hue, and the label always accompanies it. */
-export function SourceTypeBadge({ type, t, className = '' }: { type: SourceTypeValue | undefined; t: Translate; className?: string }) {
-  const missing = !type || type === UNCLASSIFIED;
+export function SourceTypeBadge({ type, t, quiet, className }: { type: SourceTypeValue | undefined; t: Translate; quiet?: boolean; className?: string }) {
+  const missing = !type || type === UNCLASSIFIED || quiet;
   return (
-    <span className={`st-badge ${missing ? 'st-badge-missing' : ''} ${className}`} title={sourceTypeDescription(type, t) || undefined}>
-      <i style={{ background: colorOf(type) }} aria-hidden="true" />
+    <TagBadge tone={missing ? 'quiet' : 'neutral'} dotColor={colorOf(type)} title={sourceTypeDescription(type, t) || undefined} className={className}>
       {sourceTypeLabel(type, t)}
-    </span>
+    </TagBadge>
   );
 }
 
@@ -188,16 +189,17 @@ function TypeSharePanel({
   const share = (value: number) => `${percent.format(value)}%`;
   const unclassifiedShare = report && report.citations ? (report.unclassified / report.citations) * 100 : 0;
   return (
-    <section className="analytics-panel st-panel" aria-labelledby={id}>
-      <div className="panel-heading">
-        <h2 id={id}>{title}</h2>
-        {onViewAll && (
-          <Button variant="ghost" size="sm" onClick={onViewAll}>
-            {t('View all', 'Ver todas')}
-            <ArrowUpRight size={13} />
-          </Button>
-        )}
-      </div>
+    <SectionCard
+      className="st-panel"
+      title={title}
+      titleId={id}
+      action={onViewAll && (
+        <Button variant="ghost" size="sm" onClick={onViewAll}>
+          {t('View all', 'Ver todas')}
+          <ArrowUpRight size={13} />
+        </Button>
+      )}
+    >
       {loading ? (
         <output className="st-empty" aria-busy="true">{loadingText}</output>
       ) : failed || !report ? (
@@ -252,7 +254,7 @@ function TypeSharePanel({
                   >
                     <i style={{ background: colorOf(item.type) }} aria-hidden="true" />
                     <span className="st-legend-label">{sourceTypeLabel(item.type, t)}</span>
-                    <b>{share(item.share)}</b>
+                    <span className="st-legend-value">{share(item.share)}</span>
                     <small>{integer.format(item.citations)}</small>
                   </button>
                 </li>
@@ -284,7 +286,7 @@ function TypeSharePanel({
           )}
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }
 
@@ -367,10 +369,10 @@ export function TopSourcesList({
               {item.domain && <SiteFavicon domain={item.domain} name={item.domain} />}
               <span className="truncate">{item.domain || unknownDomainLabel(t)}</span>
             </span>
-            <span className="st-type-text"><span className="st-dot" style={{ background: sourceTypeColor(item.sourceType) }} aria-hidden="true" />{sourceTypeLabel(item.sourceType, t)}{item.ownership !== 'third-party' && <> · <b className={`st-owner-text st-owner-text-${item.ownership}`}>{sourceOwnerLabel(item.ownership, t)}</b></>}</span>
+            <span className="st-type-text"><span className="st-dot" style={{ background: sourceTypeColor(item.sourceType) }} aria-hidden="true" />{sourceTypeLabel(item.sourceType, t)}{item.ownership !== 'third-party' && <> · <span className={`st-owner-text st-owner-text-${item.ownership}`}>{sourceOwnerLabel(item.ownership, t)}</span></>}</span>
           </span>
           <i style={{ width: `${(100 * item.responses) / Math.max(1, rows[0].responses)}%` }} />
-          <b>{item.responses}</b>
+          <span className="st-count">{item.responses}</span>
         </DrillLink>
       ))}
     </div>

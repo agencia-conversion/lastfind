@@ -5,6 +5,7 @@ import {
 } from '@/components/analytics/route-page';
 export {
   analyticsMetadata,
+  legacyPreviewRedirect,
   type AnalyticsSearchParams,
 } from '@/components/analytics/route-page';
 export function LegacyAnalyticsPage(

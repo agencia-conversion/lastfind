@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -19,6 +19,7 @@ const bundle = await build({
   write: false,
   external: ['react', 'react-dom/server', 'react/jsx-runtime'],
   loader: { '.css': 'empty' },
+  jsx: 'automatic',
   plugins: [
     {
       name: 'ui-boundaries',
@@ -79,9 +80,14 @@ const bundle = await build({
           contents: stubs[args.path],
           loader: 'js',
         }));
-        builder.onResolve({ filter: /^@\// }, (args) => ({
-          path: root + 'packages/core/' + args.path.slice(2) + '.ts',
-        }));
+        builder.onResolve({ filter: /^@\// }, (args) => {
+          const base = root + 'packages/core/' + args.path.slice(2);
+          return {
+            path:
+              ['.ts', '.tsx'].map((extension) => base + extension).find(existsSync) ??
+              base + '.ts',
+          };
+        });
       },
     },
   ],
@@ -542,7 +548,7 @@ test('Brands routing restores its own view through history and General has only 
     source.indexOf("{project && !creatingProject && tab === 'models'", start),
   );
   assert.equal(
-    (section.match(/<Table className="analytics-table(?: [^"]*)?"/g) || []).length,
+    (section.match(/<DataTable\b/g) || []).length,
     1,
   );
   assert.doesNotMatch(section, /brandTopicsPage|By AI model|By topic/);

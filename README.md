@@ -1,6 +1,6 @@
 # Lastfind — by Conversion
 
-Open-source AI visibility analytics, powered by DataForSEO. Track prompts across supported AI engines, compare competitors and explore cited and consulted sources. Apache-2.0 licensed.
+Open-source AI visibility analytics, powered by DataForSEO. Track prompts across supported AI engines, compare competitors and explore cited and consulted sources. AGPL-3.0-only licensed.
 
 ## Install it yourself
 
@@ -25,4 +25,10 @@ For local development, run `npm run dev` and use the owner key in `.lastfind/dev
 
 ### Interface
 
-`/app` requires the owner session and reads persisted projects, prompts and collected reports. `/app/preview` is a public, noindex demonstration with deterministic sample data. Automatic Semantic Branding scoring is not available in the independent edition yet; its settings and report can be viewed, but enabling it will not create scores.
+`/app` requires the owner session and reads persisted projects, prompts and collected reports. The former `/app/preview` demonstration was removed; its URLs redirect to the sign-in. Automatic Semantic Branding scoring is not available in the independent edition yet; its settings and report can be viewed, but enabling it will not create scores.
+
+## License
+
+Lastfind is licensed under [GNU AGPL-3.0-only](LICENSE). You can study, modify, distribute and use it commercially under that license. If you offer a modified version to others, including over a network, you must make its corresponding source available under AGPL-3.0. Preserve license and copyright notices.
+
+For use without these AGPL obligations, Conversion offers a [commercial license](COMMERCIAL-LICENSE.md). Versions published before this license change remain Apache-2.0 for those who already have them. Third-party dependencies retain their own licenses.

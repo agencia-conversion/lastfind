@@ -9,9 +9,10 @@ import { ENGINE_LABELS } from '@/lib/engines';
 import { relativeReportDate } from '@/lib/report-date';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EngineIcon } from '@/components/lastfind/identity-icons';
 import { SectionCard } from '@/components/lastfind/presentation/section-card';
+import { DataTable } from '@/components/lastfind/presentation/data-table';
+import { MetricCard, MetricGrid } from '@/components/lastfind/presentation/metric-card';
 import { AnalyticsSkeleton, SiteFavicon } from './shared';
 import { ClassifierNotice, OwnerBadge, SourceTypeBadge } from './source-types-ui';
 import { DrillLink, type Linker } from './drill-link';
@@ -156,7 +157,7 @@ export function SourceEntityPage({
           </p>
         </div>
         {kind === 'domain' && (
-          <DrillLink link={link} to={{ tab: 'sources', entity: null, group: 'url' }} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <DrillLink link={link} to={{ tab: 'sources', entity: null, group: 'url' }} plain className={buttonVariants({ variant: 'outline', size: 'sm' })}>
             {t('View all content', 'Ver todos os conteúdos')}
             <ArrowUpRight size={13} />
           </DrillLink>
@@ -178,7 +179,7 @@ export function SourceEntityPage({
           {actionError}
         </p>
       )}
-      <div className="metric-strip st-metrics">
+      <MetricGrid>
         {[
           [t('Citations', 'Citações'), number.format(detail.metrics.citing), t('Responses that cite this source', 'Respostas que citam esta fonte')],
           [t('Citation rate', 'Taxa de citação'), detail.metrics.total ? `${percent.format(detail.metrics.rate)}%` : '—', `${t('of', 'de')} ${number.format(detail.metrics.total)} ${t('responses in this period', 'respostas neste período')}`],
@@ -186,15 +187,9 @@ export function SourceEntityPage({
             ? [t('Pages cited', 'Páginas citadas'), number.format(detail.metrics.pages), t('Distinct URLs of this domain', 'URLs distintas deste domínio')]
             : [t('AI models', 'Modelos de IA'), number.format(detail.platforms.length), t('Models that cited this page', 'Modelos que citaram esta página')],
         ].map(([label, value, help]) => (
-          <article className="metric-summary" key={label}>
-            <div className="metric-label">
-              <span>{label}</span>
-            </div>
-            <div className="metric-number">{value}</div>
-            <p>{help}</p>
-          </article>
+          <MetricCard key={label} label={label} value={value} description={help} />
         ))}
-      </div>
+      </MetricGrid>
       {empty ? (
         <p className="live-card">{t('No responses cite this source in the selected period.', 'Nenhuma resposta cita esta fonte no período selecionado.')}</p>
       ) : (
@@ -216,7 +211,7 @@ export function SourceEntityPage({
                   <YAxis axisLine={false} tickLine={false} allowDecimals={false} domain={metric === 'rate' ? [0, 100] : [0, 'auto']} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} tickFormatter={(value) => (metric === 'rate' ? `${value}%` : String(value))} />
                   <ChartTooltip
                     labelFormatter={(value) => day(String(value))}
-                    contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}
+                    contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 'var(--text-body)' }}
                     formatter={(value) => [metric === 'rate' ? `${percent.format(Number(value))}%` : number.format(Number(value)), metric === 'rate' ? t('Share of responses', 'Participação nas respostas') : t('Citations', 'Citações')]}
                   />
                   <Line type="monotone" dataKey={metric} stroke="var(--chart-1)" strokeWidth={2.5} dot={trend.length <= 2} isAnimationActive={false} connectNulls />
@@ -226,159 +221,129 @@ export function SourceEntityPage({
           </SectionCard>
           <div className="st-columns">
             <SectionCard title={t('By AI model', 'Por modelo de IA')}>
-              <div className="live-table-scroll">
-                <Table className="analytics-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('Model', 'Modelo')}</TableHead>
-                      <TableHead className="text-right">{t('Citations', 'Citações')}</TableHead>
-                      <TableHead className="text-right">{t('Rate', 'Taxa')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {detail.platforms.map((row) => (
-                      <TableRow key={row.engine}>
-                        <TableCell>
-                          <DrillLink link={link} to={{ tab: 'responses', entity: null, engine: row.engine }} className="flex items-center gap-2">
-                            <EngineIcon engine={row.engine} />
-                            {ENGINE_LABELS[row.engine]}
-                          </DrillLink>
-                        </TableCell>
-                        <TableCell className="text-right">{number.format(row.citing)}</TableCell>
-                        <TableCell className="text-right">{row.total ? `${percent.format(row.rate)}%` : '—'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                rows={detail.platforms}
+                rowKey={(row) => row.engine}
+                columns={[
+                  {
+                    key: 'model',
+                    header: t('Model', 'Modelo'),
+                    mobile: 'title',
+                    cell: (row) => (
+                      <DrillLink link={link} to={{ tab: 'responses', entity: null, engine: row.engine }} className="flex items-center gap-2">
+                        <EngineIcon engine={row.engine} />
+                        {ENGINE_LABELS[row.engine]}
+                      </DrillLink>
+                    ),
+                  },
+                  { key: 'citations', header: t('Citations', 'Citações'), label: t('Citations', 'Citações'), align: 'end', cell: (row) => number.format(row.citing) },
+                  { key: 'rate', header: t('Rate', 'Taxa'), label: t('Rate', 'Taxa'), align: 'end', cell: (row) => (row.total ? `${percent.format(row.rate)}%` : '—') },
+                ]}
+              />
             </SectionCard>
             <SectionCard title={t('Brands mentioned together', 'Marcas mencionadas junto')}>
               {detail.brands.length ? (
-                <div className="live-table-scroll">
-                  <Table className="analytics-table">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('Brand', 'Marca')}</TableHead>
-                        <TableHead className="text-right">{t('Responses', 'Respostas')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.brands.map((brand) => (
-                        <TableRow key={brand.name}>
-                          <TableCell>
-                            <DrillLink link={link} to={{ tab: 'responses', entity: null, run: null, brand: brand.name, mention: 'mentioned' }} className="flex items-center gap-2">
-                              {brand.domain && <SiteFavicon domain={brand.domain} name={brand.name} />}
-                              {brand.name}
-                            </DrillLink>
-                          </TableCell>
-                          <TableCell className="text-right">{number.format(brand.responses)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTable
+                  rows={detail.brands}
+                  rowKey={(brand) => brand.name}
+                  columns={[
+                    {
+                      key: 'brand',
+                      header: t('Brand', 'Marca'),
+                      mobile: 'title',
+                      cell: (brand) => (
+                        <DrillLink link={link} to={{ tab: 'responses', entity: null, run: null, brand: brand.name, mention: 'mentioned' }} className="flex items-center gap-2">
+                          {brand.domain && <SiteFavicon domain={brand.domain} name={brand.name} />}
+                          {brand.name}
+                        </DrillLink>
+                      ),
+                    },
+                    { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (brand) => number.format(brand.responses) },
+                  ]}
+                />
               ) : (
                 <p className="st-empty">{t('No tracked brand is mentioned in these responses.', 'Nenhuma marca monitorada é mencionada nestas respostas.')}</p>
               )}
             </SectionCard>
           </div>
           <SectionCard title={t('Prompts that cite it', 'Prompts que a citam')}>
-            <div className="live-table-scroll">
-              <Table className="analytics-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Prompt', 'Prompt')}</TableHead>
-                    <TableHead>{t('Topic', 'Tópico')}</TableHead>
-                    <TableHead className="text-right">{t('Responses', 'Respostas')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detail.prompts.map((row) => (
-                    <TableRow key={row.prompt}>
-                      <TableCell className="max-w-[420px] whitespace-normal">
-                        <DrillLink link={link} to={{ tab: 'prompts', entity: null, run: null, prompt: row.prompt }} className="font-medium">
-                          {row.text}
-                        </DrillLink>
-                      </TableCell>
-                      <TableCell>{row.topic || '—'}</TableCell>
-                      <TableCell className="text-right">{number.format(row.responses)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              rows={detail.prompts}
+              rowKey={(row) => row.prompt}
+              columns={[
+                {
+                  key: 'prompt',
+                  header: t('Prompt', 'Prompt'),
+                  mobile: 'title',
+                  cell: (row) => (
+                    <DrillLink link={link} to={{ tab: 'prompts', entity: null, run: null, prompt: row.prompt }} className="block max-w-[420px] whitespace-normal">
+                      {row.text}
+                    </DrillLink>
+                  ),
+                },
+                { key: 'topic', header: t('Topic', 'Tópico'), label: t('Topic', 'Tópico'), cell: (row) => row.topic || '—' },
+                { key: 'responses', header: t('Responses', 'Respostas'), label: t('Responses', 'Respostas'), align: 'end', cell: (row) => number.format(row.responses) },
+              ]}
+            />
           </SectionCard>
           {kind === 'domain' && (
             <SectionCard
               title={t('Most cited URLs', 'URLs mais citadas')}
               description={t('Content types come from the same evaluator as site types.', 'Os tipos de conteúdo vêm do mesmo avaliador dos tipos de site.')}
             >
-              <div className="live-table-scroll">
-                <Table className="analytics-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>URL</TableHead>
-                      <TableHead>{t('Content type', 'Tipo de conteúdo')}</TableHead>
-                      <TableHead className="text-right">{t('Citations', 'Citações')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {detail.urls.map((row) => (
-                      <TableRow key={row.url}>
-                        <TableCell className="max-w-[420px] whitespace-normal">
-                          <DrillLink link={link} to={{ tab: 'sources', entity: { kind: 'url', key: row.url } }} className="font-medium">
-                            {row.title}
-                          </DrillLink>
-                          <small className="st-url">{row.url}</small>
-                        </TableCell>
-                        <TableCell>
-                          <SourceTypeBadge type={row.pageType} t={t} />
-                        </TableCell>
-                        <TableCell className="text-right">{number.format(row.responses)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                rows={detail.urls}
+                rowKey={(row) => row.url}
+                columns={[
+                  {
+                    key: 'url',
+                    header: 'URL',
+                    mobile: 'title',
+                    cell: (row) => (
+                      <span className="block max-w-[420px] whitespace-normal">
+                        <DrillLink link={link} to={{ tab: 'sources', entity: { kind: 'url', key: row.url } }}>
+                          {row.title}
+                        </DrillLink>
+                        <small className="st-url">{row.url}</small>
+                      </span>
+                    ),
+                  },
+                  { key: 'type', header: t('Content type', 'Tipo de conteúdo'), label: t('Content type', 'Tipo de conteúdo'), cell: (row) => <SourceTypeBadge type={row.pageType} t={t} /> },
+                  { key: 'citations', header: t('Citations', 'Citações'), label: t('Citations', 'Citações'), align: 'end', cell: (row) => number.format(row.responses) },
+                ]}
+              />
             </SectionCard>
           )}
           <SectionCard title={kind === 'url' ? t('Prompts and responses that cite this page', 'Prompts e respostas que citam esta página') : t('Responses that cite it', 'Respostas que a citam')}>
-            <div className="live-table-scroll">
-              <Table className="analytics-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Prompt', 'Prompt')}</TableHead>
-                    <TableHead>{t('Model', 'Modelo')}</TableHead>
-                    <TableHead>{t('Date', 'Data')}</TableHead>
-                    <TableHead>
-                      <span className="sr-only">{t('Open response', 'Abrir resposta')}</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {runs.map((run) => (
-                    <TableRow key={run.id}>
-                      <TableCell className="max-w-[420px] whitespace-normal">{run.prompt_text}</TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-2">
-                          <EngineIcon engine={run.engine} />
-                          {ENGINE_LABELS[run.engine]}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <time dateTime={run.created_at}>{relativeReportDate(run.created_at, locale)}</time>
-                      </TableCell>
-                      <TableCell>
-                        <DrillLink link={link} to={{ tab: 'responses', entity: null, run: run.id }} className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open response', 'Abrir resposta')}: ${run.prompt_text}`}>
-                          {t('Open', 'Abrir')}
-                          <ArrowUpRight size={13} aria-hidden="true" />
-                        </DrillLink>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              rows={runs}
+              rowKey={(run) => run.id}
+              columns={[
+                { key: 'prompt', header: t('Prompt', 'Prompt'), mobile: 'title', cell: (run) => <span className="block max-w-[420px] whitespace-normal">{run.prompt_text}</span> },
+                {
+                  key: 'model',
+                  header: t('Model', 'Modelo'),
+                  label: t('Model', 'Modelo'),
+                  cell: (run) => (
+                    <span className="flex items-center gap-2">
+                      <EngineIcon engine={run.engine} />
+                      {ENGINE_LABELS[run.engine]}
+                    </span>
+                  ),
+                },
+                { key: 'date', header: t('Date', 'Data'), label: t('Date', 'Data'), cell: (run) => <time dateTime={run.created_at}>{relativeReportDate(run.created_at, locale)}</time> },
+                {
+                  key: 'open',
+                  header: <span className="sr-only">{t('Open response', 'Abrir resposta')}</span>,
+                  cell: (run) => (
+                    <DrillLink link={link} to={{ tab: 'responses', entity: null, run: run.id }} plain className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`${t('Open response', 'Abrir resposta')}: ${run.prompt_text}`}>
+                      {t('Open', 'Abrir')}
+                      <ArrowUpRight size={13} aria-hidden="true" />
+                    </DrillLink>
+                  ),
+                },
+              ]}
+            />
             {cursor && (
               <div className="st-more">
                 <Button

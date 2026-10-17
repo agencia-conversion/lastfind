@@ -2,7 +2,7 @@
    reserved for links. */
 .lf-eyebrow {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 600;
   line-height: 18px;
   letter-spacing: 0.08em;

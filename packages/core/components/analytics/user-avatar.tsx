@@ -16,40 +16,31 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useCopy, useNumbers } from './shared';
 import type { DemoUser } from './workspace-data';
+import { AccountAvatar } from './account-avatar';
 
 type Avatar = NonNullable<DemoUser['avatar']>;
 
+// `size` picks the initials from the type scale (12 / 14 / 24 px); `className` sets the box.
 export function UserAvatar({
   user,
   className,
+  size = 'md',
 }: {
-  user: Pick<DemoUser, 'name' | 'avatar'>;
+  user: Pick<DemoUser, 'name' | 'avatar' | 'importedAvatar'>;
   className?: string;
+  size?: 'xs' | 'md' | 'lg';
 }) {
   const classes = cn(
-    'inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-sm font-medium',
+    'inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted',
+    size === 'lg' ? 'text-title' : size === 'xs' ? 'text-xs font-medium' : 'text-body font-medium',
     className,
   );
-  return user.avatar ? (
-    // Local, bounded image data never goes through the image optimization server.
-    // eslint-disable-next-line next/no-img-element
-    <img
-      src={user.avatar.preview}
-      alt=""
-      width={32}
-      height={32}
+  return (
+    <AccountAvatar
+      name={user.name}
+      src={user.avatar?.preview || (user.importedAvatar ? '/api/avatar' : null)}
       className={classes}
     />
-  ) : (
-    <span aria-hidden="true" className={classes}>
-      {user.name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()}
-    </span>
   );
 }
 
@@ -232,7 +223,7 @@ export function ProfileAvatar({
   return (
     <>
       <div className="flex flex-wrap items-center gap-4">
-        <UserAvatar user={user} className="size-16 text-lg" />
+        <UserAvatar user={user} size="lg" className="size-16" />
         <div className="min-w-0 space-y-2.5">
           <p className="text-sm font-medium">
             {copy('Profile photo', 'Foto de perfil')}
@@ -272,7 +263,7 @@ export function ProfileAvatar({
       <Dialog open={open} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-section leading-6 font-medium">
               {copy('Edit profile photo', 'Editar foto de perfil')}
             </DialogTitle>
             <DialogDescription className="pr-4 text-sm leading-relaxed">

@@ -7,6 +7,7 @@ import type { BrandResearchReport } from './brand-research-panel';
 import { FilterSelect, SiteFavicon } from './shared';
 import { EngineBadge } from '@/components/lastfind/identity-icons';
 import { Button } from '@/components/ui/button';
+import { SectionHeader } from '@/components/lastfind/presentation/section-header';
 const colors = {
   positive: 'bg-emerald-600',
   neutral: 'bg-slate-400',
@@ -50,36 +51,36 @@ export function BrandSentimentAnalysis({
       <section
         aria-label={t('Sentiment comparison', 'Comparação de sentimentos')}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h4 className="text-sm font-semibold">
-            {t(
-              'Distribution of evaluated questions',
-              'Distribuição das perguntas avaliadas',
-            )}
-          </h4>
-          <ul
-            className="flex flex-wrap gap-x-4 gap-y-2 text-xs"
-            aria-label={t('Sentiment legend', 'Legenda de sentimentos')}
-          >
-            {SENTIMENTS.map((sentiment) => (
-              <li key={sentiment} className="flex items-center gap-1.5">
-                <span
-                  className={`size-2.5 rounded-sm ${colors[sentiment]}`}
-                  aria-hidden="true"
-                />
-                {label(sentiment)}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t(
+        <SectionHeader
+          as="h3"
+          className="px-0 pt-0 pb-3"
+          title={t(
+            'Distribution of evaluated questions',
+            'Distribuição das perguntas avaliadas',
+          )}
+          description={t(
             'Select a brand to inspect its responses.',
             'Selecione uma marca para inspecionar suas respostas.',
           )}
-        </p>
+          action={
+            <ul
+              className="flex flex-wrap gap-x-4 gap-y-2 text-xs"
+              aria-label={t('Sentiment legend', 'Legenda de sentimentos')}
+            >
+              {SENTIMENTS.map((sentiment) => (
+                <li key={sentiment} className="flex items-center gap-1.5">
+                  <span
+                    className={`size-2.5 rounded-sm ${colors[sentiment]}`}
+                    aria-hidden="true"
+                  />
+                  {label(sentiment)}
+                </li>
+              ))}
+            </ul>
+          }
+        />
         {report.brands.length ? (
-          <div className="mt-4 divide-y">
+          <div className="divide-y">
             {report.brands.map((item) => {
               const summary = SENTIMENTS.map(
                 (sentiment) =>
@@ -93,7 +94,7 @@ export function BrandSentimentAnalysis({
                   <div className="grid gap-3 sm:grid-cols-[minmax(140px,1fr)_minmax(0,2fr)]">
                     <div className="min-w-0">
                       <button
-                        className="flex max-w-full items-center gap-2 text-left text-sm font-medium hover:text-primary focus-visible:outline-primary"
+                        className="flex max-w-full items-center gap-2 text-left text-sm hover:text-primary focus-visible:outline-primary"
                         aria-pressed={selectedBrand === item.brand}
                         onClick={() => selectBrand(item.brand)}
                       >
@@ -154,11 +155,11 @@ export function BrandSentimentAnalysis({
                         {SENTIMENTS.map((sentiment) => (
                           <span key={sentiment}>
                             {label(sentiment)}{' '}
-                            <strong>
+                            <span className="tabular-nums">
                               {item.assessed
                                 ? item.distribution[sentiment]
                                 : '—'}
-                            </strong>
+                            </span>
                           </span>
                         ))}
                       </p>
@@ -205,54 +206,52 @@ export function BrandSentimentAnalysis({
         className="border-t pt-5"
         aria-label={t('Answer evidence', 'Evidências das respostas')}
       >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h4 className="text-sm font-semibold">
-              {t('Answer evidence', 'Evidências das respostas')}
-            </h4>
-            <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
-              {t(
-                'Filters below affect loaded answer details only. A mixed question can combine positive and negative answers from different models. The comparison above stays unchanged.',
-                'Os filtros abaixo afetam somente os detalhes de respostas carregados. Uma pergunta mista pode combinar respostas positivas e negativas de modelos diferentes. A comparação acima permanece igual.',
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <FilterSelect
-              label={t('Evidence brand', 'Marca nas evidências')}
-              value={selectedBrand}
-              onChange={selectBrand}
-              options={[
-                { value: 'all', label: t('All brands', 'Todas as marcas') },
-                ...report.brands.map((item) => ({
-                  value: item.brand,
-                  label: item.brand,
-                })),
-              ]}
-            />
-            <FilterSelect
-              label={t('Response sentiment', 'Sentimento nesta resposta')}
-              value={polarity}
-              onChange={(value) => {
-                setPolarity(value);
-                setLimit(20);
-              }}
-              options={[
-                {
-                  value: 'all',
-                  label: t(
-                    'All response sentiments',
-                    'Todos os sentimentos por resposta',
-                  ),
-                },
-                ...SENTIMENTS.map((sentiment) => ({
-                  value: sentiment,
-                  label: label(sentiment),
-                })),
-              ]}
-            />
-          </div>
-        </div>
+        <SectionHeader
+          as="h3"
+          className="px-0 pt-0 pb-3"
+          title={t('Answer evidence', 'Evidências das respostas')}
+          description={t(
+            'Filters below affect loaded answer details only. A mixed question can combine positive and negative answers from different models. The comparison above stays unchanged.',
+            'Os filtros abaixo afetam somente os detalhes de respostas carregados. Uma pergunta mista pode combinar respostas positivas e negativas de modelos diferentes. A comparação acima permanece igual.',
+          )}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <FilterSelect
+                label={t('Evidence brand', 'Marca nas evidências')}
+                value={selectedBrand}
+                onChange={selectBrand}
+                options={[
+                  { value: 'all', label: t('All brands', 'Todas as marcas') },
+                  ...report.brands.map((item) => ({
+                    value: item.brand,
+                    label: item.brand,
+                  })),
+                ]}
+              />
+              <FilterSelect
+                label={t('Response sentiment', 'Sentimento nesta resposta')}
+                value={polarity}
+                onChange={(value) => {
+                  setPolarity(value);
+                  setLimit(20);
+                }}
+                options={[
+                  {
+                    value: 'all',
+                    label: t(
+                      'All response sentiments',
+                      'Todos os sentimentos por resposta',
+                    ),
+                  },
+                  ...SENTIMENTS.map((sentiment) => ({
+                    value: sentiment,
+                    label: label(sentiment),
+                  })),
+                ]}
+              />
+            </div>
+          }
+        />
         {report.detailsTruncated && (
           <output className="mt-3 block text-sm text-muted-foreground">
             {t(
@@ -275,7 +274,7 @@ export function BrandSentimentAnalysis({
                 key={`${detail.runId}:${detail.brand}`}
               >
                 <summary className="cursor-pointer">
-                  <span className="block break-words font-medium">
+                  <span className="block break-words">
                     {detail.prompt}
                   </span>
                   <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

@@ -12,8 +12,9 @@
   }
 }
 .pd-dialog [data-slot='dialog-title'] {
-  font-size: 18px;
-  line-height: 26px;
+  font-size: var(--text-section);
+  font-weight: var(--weight-strong);
+  line-height: 24px;
 }
 .pd-form {
   display: flex;
@@ -61,7 +62,7 @@
 .pd-count {
   flex: none;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-variant-numeric: tabular-nums;
 }
 .pd-count-over {
@@ -102,7 +103,7 @@
   align-items: center;
   gap: 8px;
   min-height: 28px;
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 400;
 }
 .pd-notice {
@@ -111,7 +112,7 @@
   gap: 8px;
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 .pd-notice svg {
   flex: none;
@@ -123,5 +124,5 @@
 .pd-error {
   margin: 0;
   color: var(--destructive);
-  font-size: 13px;
+  font-size: var(--text-body);
 }

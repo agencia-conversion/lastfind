@@ -1,8 +1,47 @@
-# Lastfind Conversion — analytics frontend prototype
+# Lastfind app — design system
 
-This round rebuilds the application shell with shadcn/ui and synthetic data. The previous connected shell has been removed from the frontend. `/app` retains the edition authentication gate (Cloud email session or personal owner session), then renders the new prototype; `/app/preview` exposes the same prototype without signing in. The public preview contains only fixed synthetic fixtures, never private project records.
+The logged-in app (`/app`) is a single product: `LiveAnalyticsApp` (`components/analytics/live-app.tsx`) on top of the edition's authentication gate. The public demo (`/demo`, Cloud) renders the same component with the fixture client; `/app/preview` no longer exists as a second copy. Its URLs redirect: Cloud sends them to `/demo` (keeping the section and period), selfhost, which has no public demo, sends them to the owner sign-in at `/app`.
 
-Backend, provider integrations, authenticated APIs, storage, scheduling, installation and Apache-2.0 licensing remain in the repository. This frontend does not call monitoring or provider APIs. A later round will decide whether the engine and backend should be refactored and define the integration contract.
+The marketing site still renders a static illustration with the fixture helpers `demo-data.ts`, `workspace-data.ts`, `analytics-sidebar.tsx` and `overview.tsx` (`OverviewMetrics`, `BrandRanking`); those pieces use the same tokens and components but are not an app.
+
+## Type scale and weights
+
+One scale for every screen, dialog and sheet of the app. Tokens are in `app/globals.css` (`@theme static`); Tailwind's `text-xs` and `text-sm` are mapped onto the first two, so the vendored shadcn primitives follow the scale without being edited.
+
+| Token | Size / line | Use |
+| --- | --- | --- |
+| `text-caption` (`text-xs`) | 12 / 16 | metadata, axis labels, badges, column headers, legends, footnotes |
+| `text-body` (`text-sm`) | 14 / 21 | body, table cells, inputs, buttons, menus, descriptions |
+| `text-section` | 16 / 24 | section and card titles, dialog and sheet titles |
+| `text-title` | 24 / 32 | page title (`h1`) |
+| `text-metric` | 24 / 32, tabular | metric value in `MetricCard` |
+
+- Nothing below 12px, on desktop or on phones (badges and helper text stay at 12px on small screens).
+- Weights: 400 for text and table cells, 500 for labels, controls, titles and metric values. The cap is medium (`--weight-strong`, the single place to change it). No 600/700, no `font-semibold`/`font-bold`; `b`/`strong` in the app render at 500 and inherit the cell weight inside tables.
+- Inputs, selects and textareas are weight 400, also inside dialogs and sheets (portals).
+- Numbers are `tabular-nums`. Font family stays Plus Jakarta Sans.
+- In CSS use `var(--text-caption|body|section|title|metric)`; in TSX use the matching Tailwind class. `tests/app-typography.test.mjs` fails on a literal `font-size`, `text-[..px]`, a weight other than 400/500, `font-semibold`/`font-bold` or `text-base`+ in `components/analytics` and `components/lastfind`.
+- Documented exceptions: inputs use `text-section` (16px) on phones to avoid iOS zooming on focus; the Semantic Branding radar draws in SVG units and scales the token with `--radar-unit` so it renders at a true 12/14px; vendored `components/ui` is not scanned (its `text-[0.8rem]` small button and calendar labels, and the browser's `small`, are pulled to `text-caption` by `overview-presentation.css` inside the app).
+
+## Links
+
+Links in the app have no underline at rest and underline on hover (`text-underline-offset: 3px`); keyboard focus keeps the global focus ring. Anchors drawn as buttons (`DrillLink plain`, `buttonVariants`) and menu items never underline. The rule lives in `overview-presentation.css` and also covers dialogs, sheets and popovers.
+
+## Shared components
+
+All in `components/lastfind/presentation/`, composed on the shadcn primitives (which stay untouched). `core` does not import Cloud, and each works the same in both editions.
+
+| Component | Use |
+| --- | --- |
+| `SectionHeader`, `SectionCard` | the only section/card shell: title, optional description, action; `padded` insets text and lists, tables and charts go edge to edge |
+| `MetricCard`, `MetricGrid` | metric label with a definition tooltip, 24px value, one-line explanation, change against the previous period. A missing value is `—` with an explanation, never `0` |
+| `DataTable` | the only data table: 12px muted 500 headers, 14px 400 cells (domains, brands and names are never bold), numbers end-aligned and tabular, rows stacked as cards below 640px. Options: `mobile` (`hide`/`title`/`wide`/`check`/`actions`), `label`, `width` (renders a `colgroup`), `headerOnly` + `hideHeader` for a sticky header copy, `tableRef`, `rowState` |
+| `TrendChart`, `SeriesLegend` | the only line chart. `series` arrives already ordered by `orderSeriesByTotal` (`lib/chart-series.ts`): largest total of the selected period first, ties keep their original order, series without data last, position (lower is better) ascending. Lines, tooltip and legend follow that one order; each brand keeps a fixed colour (`seriesColorVar`, one place to change) |
+| `TagBadge` | the only badge/chip: 12px, 500; tones `neutral`, `primary`, `danger`, `quiet` (dashed, "not classified"), `muted`; the label always names the state |
+| `EmptyState` (`analytics/shared.tsx`) | the only empty, unavailable and error state; `tone="error"` adds `role="alert"`; `bare` drops the frame inside a card |
+| `PageHeading`, `AnalyticsSkeleton` | page title and loading state |
+
+Removed variants: `.panel-title`, `.panel-heading`, `PanelHeading`, the per-screen metric cards and score cards, the hand-written tables and chart axes, `.st-chip`/`.st-badge`-style chips, and the dead `kpi-strip`, `brand-ranking-table`, `response-table`, `visibility-drilldown`, `status-badge`, `empty-state` and `data-toolbar` files.
 
 ## UI reference and scope
 
@@ -32,36 +71,26 @@ Compose the installed shadcn Base UI primitives at call sites; do not overwrite 
 
 ## Frontend contracts
 
-The new UI lives in `components/analytics/`:
+`components/analytics/`:
 
-| File                          | Responsibility                                                                                            |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `analytics-app.tsx`           | Shell, navigation, global filters, in-memory prompt state, search and detail sheets                       |
-| `routes.ts`                   | Canonical path builders, parsers, stable slugs and filter serialization                                   |
-| `navigation-state.ts`         | URL resolution against the current session, entity scope and unavailable states                           |
-| `use-analytics-navigation.ts` | Browser history synchronization and navigation transitions                                                |
-| `demo-data.ts`                | Deterministic fixtures, typed prompts/responses, filter selection, derived metrics and browser CSV export |
-| `overview.tsx`                | Overview panels, trend charts and brand ranking                                                           |
-| `prompts-view.tsx`            | Prompt tables, topics, status tabs, local edits, batch actions and CSV import                             |
-| `detail-views.tsx`            | Sources, model comparison and response table                                                              |
-| `workspace-data.ts`           | Mock users, memberships, workspaces and scoped project prompt state                                       |
-| `workspace-settings.tsx`      | Workspace, project, member, role and profile management                                                   |
-| `user-avatar.tsx`             | Local avatar upload, framing and shared user thumbnails                                                   |
-| `shared.tsx`                  | Locale-aware copy/numbers, filter controls, favicons and shared panel components                          |
+| File | Responsibility |
+| --- | --- |
+| `live-app.tsx` | the app: shell, navigation, filters, every screen (Overview, Prompts, Brands, Sources, AI models, Chats, Opportunities, Semantic Branding, Settings, project creation) and its detail views |
+| `route-page.tsx` | edition-agnostic route wrappers (authentication gate, `/app/preview` redirects) |
+| `routes.ts` | canonical path builders, parsers, slugs and filter serialization for `/app` |
+| `source-entity-page.tsx`, `source-types-ui.tsx` | source and URL details, source types, top sources |
+| `semantic-association-report.tsx` | Semantic Branding report (summary, score, radar, ranking, heatmap, explanations) |
+| `brand-research-panel.tsx`, `brand-sentiment-analysis.tsx`, `live-competitor-settings.tsx`, `live-monitoring-settings.tsx`, `prompt-dialog.tsx` | brand research, competitor and monitoring settings, prompt form |
+| `shared.tsx` | locale-aware copy and numbers, filter controls, favicons, `EmptyState` |
+| `demo-data.ts`, `workspace-data.ts`, `analytics-sidebar.tsx`, `overview.tsx` | fixtures and pieces the marketing site still renders |
 
-Views receive filtered demo responses and callbacks. Metrics must derive from those responses, so counts, trends and drilldowns remain consistent. Keep production data access out of this folder during the prototype round. The only external image requests are public site favicons from Google's favicon service, with initials as an error fallback. The edition route wrappers control access and render `AnalyticsApp`; authenticated `/app` access does not switch the UI to live data.
+Screens receive data from the report endpoints (or the demo client) and compose the shared components above; none declares its own sizes, weights, borders or header spacing.
 
 ## State, evidence and language
 
-All analytics data and generated response text are illustrative. Prompt edits, imported CSV rows, workspaces, projects, profile edits and invitations share in-memory session state and reset after a reload. Prompts are scoped to projects; new projects and workspaces start without collected responses. The seeded Conversion project has the synthetic analytics dataset. Model filters allow any subset, including no models. Overview and Brands CSV exports download the filtered mock brand report in the browser; Prompts also offers a CSV import template. The existing language and sidebar preference cookies are the only persisted UI preferences.
-
-The footer user menu switches between demo users and links to profile, workspaces and members. Workspace access requires an active mock membership. Owners/admins manage settings; members can edit prompts; viewers cannot mutate them. Owners and the acting user's access are protected against accidental removal. Invitations are simulated state only and never send messages. These UI rules prepare the future multi-user contract; they do not replace the existing backend authorization or implement real multi-user authentication.
-
 Keep cited source IDs and consulted source IDs distinct. `consultedSourceIds: null` means consulted evidence was not provided; it must never be presented as zero consultations. Domain counts deduplicate within each response. Rates state their denominator, and sample source links do not imply verified provider output or a live crawl.
 
-English is the default, with pt-BR interface copy through `useI18n` and `useCopy`. `useNumbers` formats every displayed metric using `en-US` or `pt-BR` (for example `1,120.5` and `1.120,5`). Fixture prompt text is sample content. AI model icons remain local assets; the current Lastfind telescope is `public/lastfind/brand/icon-3d.png`, with its canonical path in `lib/lastfind-brand.ts` and provenance in `public/brand/README.md`. Brands and sources use favicons. Dropdowns open below their trigger with a 6px gap and consistent 12px text, 6px popup padding and 36px option height, flipping only where the viewport requires it. Accessible labels, keyboard navigation, visible focus and reduced-motion behavior remain part of the interface contract. The decorative source donut does not receive focus; its text legend exposes categories and counts.
-
-Profile photos accept JPG, PNG or WebP up to 5 MB. Users can adjust zoom and position, save, cancel, remove or reedit the original normalized image. Photos stay in the mock user session and follow that user across workspaces, with no upload to a server. Saved thumbnails are 256px; local source images are limited to a 1600px longest edge. Reloading clears mock avatars along with other session changes.
+English is the default, with pt-BR interface copy through `useI18n` and `useCopy`. `useNumbers` formats every displayed metric using `en-US` or `pt-BR` (for example `1,120.5` and `1.120,5`). Fixture prompt text is sample content. AI model icons remain local assets; the current Lastfind telescope is `public/lastfind/brand/icon-3d.png`, with its canonical path in `lib/lastfind-brand.ts` and provenance in `public/brand/README.md`. Brands and sources use favicons. Dropdowns open below their trigger with a 6px gap and consistent 14px text (`text-body`), 6px popup padding and 36px option height, flipping only where the viewport requires it. Accessible labels, keyboard navigation, visible focus and reduced-motion behavior remain part of the interface contract. The decorative source donut does not receive focus; its text legend exposes categories and counts.
 
 The sidebar project selector shows only the project name and favicon. The main trend chart fills the height of its panel alongside the ranking, with a minimum plotting height for stacked layouts. Settings tabs use two columns on narrow screens and four on larger screens, without horizontal scrolling. Interactive elements use a pointer cursor, while disabled controls and text fields retain their appropriate cursors.
 
@@ -73,7 +102,7 @@ The loading indicator uses the same current telescope PNG as the public header a
 
 ## URL contract
 
-Paths are language-independent. `{base}` is `/app` behind the existing edition authentication gate or `/app/preview` for public synthetic data. Every authenticated descendant checks authentication before resolving or rendering the destination. Successful login returns to the requested path and filters. App responses carry `no-store` and `nosniff`; route metadata discourages indexing.
+Paths are language-independent. `{base}` is `/app`, behind the edition authentication gate. Every authenticated descendant checks authentication before resolving or rendering the destination. Successful login returns to the requested path and filters. App responses carry `no-store` and `nosniff`; route metadata discourages indexing.
 
 | Destination        | Path after `{base}`                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -92,7 +121,7 @@ The `days`, `models`, `country`, `topic` and `tag` query parameters preserve glo
 
 Custom dates use `from=YYYY-MM-DD&to=YYYY-MM-DD` instead of `days`. Strict UTC parsing rejects impossible dates, reversed ranges and incomplete intervals; invalid links normalize to a supported preset or the default 28 days. Choosing a relative preset clears custom dates while retaining other filters.
 
-For example: `/app/preview/workspaces/conversion/projects/conversion/overview?days=14&models=chatgpt,claude`. Seeded fixtures work across reloads and shared links. Session-created entities and unsaved mock edits are not persisted: opening their links in another session shows the unavailable state. Account profile is independent of project context and opens the recipient's current demo user.
+For example: `/app/workspaces/conversion/projects/conversion/overview?days=14`. Account profile is independent of project context. Old `/app/preview…` links redirect (see the top of this document), keeping the section and `days`.
 
 ## Preview and validation
 
@@ -103,7 +132,7 @@ npm ci
 npm run dev -- --port 3001
 ```
 
-Open [the public frontend preview](http://localhost:3001/app/preview), or `/app` to exercise the existing edition authentication gate. No provider credentials are needed to interact with the mock UI. Development still starts the repository's native local runtime; `/app/preview` is a fixture-backed route, not a separate static-export build.
+Open `/app` (the edition authentication gate) or, in Cloud, `/demo` for the public demo with real study data. Pull-request previews and the logged-in QA flow are described in `docs/preview.md`.
 
 ```sh
 npm run typecheck
@@ -114,28 +143,15 @@ npm run build:selfhost
 
 Use `npm run verify` for the full repository verification, including isolated backend integration checks. The installer and existing backend continue to follow the root README and architecture documentation.
 
-## Guided setup and Semantic Branding
+## Semantic Branding
 
-Onboarding separates discovery, comparison, purchase intent and explicitly
-branded perception. Suggested prompts are editable templates, not a scraped
-site analysis. Completion creates a distinct session project, retains selected
-models/market/competitors and never attaches another project's answers.
-
-Semantic Branding uses the same filtered response IDs for coverage, canonical
-share of voice, cited/consulted source evidence and model comparisons. Attribute
-labels and confidence values are illustrative annotations. Its own disclosed
-score weights coverage (35%), associations (30%), sentiment (20%) and source
-diversity (15%); it is not a competitor's proprietary metric or a validated
-prediction. Local brand merges preserve raw identities and support split/undo.
-Source co-occurrence in an answer does not prove that the page mentions the brand.
-Report snapshots and opportunity planning remain in session memory; no report
-wizard triggers provider tasks or notifications.
+Semantic Branding reports coverage, canonical share of voice, cited/consulted source evidence and model comparisons over the same filtered responses. Its score weights are disclosed in the report; it is not a competitor's proprietary metric or a validated prediction. Source co-occurrence in an answer does not prove that the page mentions the brand. The report uses `MetricGrid`, `DataTable` and `SectionCard` like every other screen; the radar and heatmap are the only bespoke graphics and follow the same token scale.
 
 ## Initial interface refinement — September 11, 2026
 
 The following contracts supersede the compact typography and advanced Semantic UI descriptions above. Source data and advanced research helpers are preserved for their separate integration phase.
 
-- Plus Jakarta Sans uses 14px/21px for body, navigation, primary controls and tables, weight 500; headings 600/700. Public prose remains 16px or larger. The product preview uses the same readable scale. Vendored shadcn primitives remain intact.
+- Typography of the app is defined by the type scale at the top of this document (supersedes the 14px/500 base of September 11). Public prose remains 16px or larger. Vendored shadcn primitives remain intact.
 - Public/auth CTAs use 52px; header 40px; app/filter actions 38px and 44px on touch layouts. Primary hover/focus uses the shared blue/violet `--action-glow`, without movement; menus/filter triggers retain surface feedback.
 - Country/topic/tag accept multiple values: OR within dimensions, AND between. Tags support any/all. Prompts rows honor these dimensions. Repeated query parameters preserve multiple values; old singleton links remain supported. `countryEmpty=1`, `topicEmpty=1`, `tagEmpty=1` distinguish empty from an ordinary label such as none. `tagMode=all` matches every chosen tag. Snapshots clone full arrays.
 - Overview has three metrics: visibility, share of voice and average position. No initial route exposes sentiment. Trends fit all brands with rounded padded bounds and retain scale during legend toggles; position is reversed. Source frequency uses one horizontal row per source on a 0–100% response denominator, without synthetic source categories.
