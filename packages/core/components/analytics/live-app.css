@@ -1,0 +1,910 @@
+.live-app .live-content {
+  padding-bottom: 64px;
+}
+.live-app .mobile-filter-toggle {
+  display: none;
+}
+.live-app .topbar-help {
+  display: flex;
+  flex: 0 0 auto;
+}
+/* Raw fields of the older forms; the catalog's Input, NativeSelect and Textarea keep their own look. */
+.live-app .live-form input:not([data-slot]),
+.live-app .live-form select:not([data-slot]),
+.live-app .live-form textarea:not([data-slot]),
+.live-app .live-inline input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.live-app .live-muted,
+.live-app .live-form small,
+.live-app .live-list small {
+  color: var(--muted-foreground);
+}
+
+/* A document's Markdown heading (an artifact, agent.css) keeps the document scale. */
+.live-app .live-content h2:not([data-slot='section-heading'], .live-answer > h2) {
+  font-size: var(--text-section);
+  font-weight: var(--weight-strong);
+  margin: 24px 0 16px;
+}
+.live-app .live-content h2.sr-only { margin: 0; }
+.live-app .panel-heading h2 { font-size: var(--text-section); margin: 0; }
+.live-app .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.live-app .overview-grid .analytics-table th:first-child, .live-app .overview-grid .analytics-table td:first-child { padding-left: 16px; }
+.live-app .overview-grid .analytics-table th:last-child, .live-app .overview-grid .analytics-table td:last-child { padding-right: 16px; }
+.live-app .metric-strip { margin-bottom: 20px; }
+.live-app .live-frequency { display: grid; gap: 8px; padding: 16px; border-top: 1px solid var(--border); }
+.live-app .live-frequency > div { display: grid; grid-template-columns: 120px minmax(0, 1fr) 28px; align-items: center; gap: 8px; font-size: var(--text-caption); color: var(--muted-foreground); }
+.live-app .live-frequency i { display: block; height: 7px; min-width: 2px; max-width: 100%; border-radius: var(--radius-sm); background: var(--primary); }
+.live-app .live-frequency b { text-align: right; font-weight: var(--weight-strong); color: var(--foreground); }
+.live-app .live-card,
+.live-app .live-list li {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.live-app .live-form {
+  display: grid;
+  /* One column no wider than the form: a wide child (a table, a long link) never pushes the footer's buttons past the card. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  max-width: 580px;
+}
+.live-app .live-form label {
+  display: grid;
+  gap: 4px;
+  font-weight: var(--weight-label);
+}
+.live-app .live-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.live-app .live-form > button,
+.live-app .live-inline > button,
+.live-app .live-card > button:not([data-slot='button']) {
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 8px 12px;
+}
+.live-app button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.live-app .live-inline {
+  display: flex;
+  gap: 12px;
+  max-width: 580px;
+}
+.live-app .live-inline input {
+  flex: 1;
+}
+.live-app .live-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.live-app .live-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.live-app .live-list small {
+  display: block;
+  margin-top: 4px;
+}
+.live-app .live-answer {
+  overflow-wrap: anywhere;
+}
+.live-app .live-answer > * + *,
+.live-app .live-answer li > * + * { margin-top: 0.75em; }
+.live-app .live-answer ul,
+.live-app .live-answer ol { padding-left: 1.5em; }
+.live-app .live-answer ul { list-style: disc; }
+.live-app .live-answer ol { list-style: decimal; }
+.live-app .live-answer pre { overflow-x: auto; white-space: pre; }
+.live-app .live-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-menu-content.live-account-menu {
+  width: min(280px, calc(100vw - 24px));
+}
+
+.live-app .live-chart-empty { display: grid; place-items: center; min-height: 180px; color: var(--muted-foreground); }
+.live-app .live-table-scroll { overflow: visible; }
+
+.live-app .live-prompt-toolbar {
+  position: sticky;
+  top: var(--live-header-height, var(--header-height));
+  z-index: 19;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  background: var(--card);
+  /* Separates toolbar from column headers; fill-panel keeps the same rule when sticky is off. */
+  border-bottom: 1px solid var(--border);
+}
+.live-app .live-status-count {
+  border-radius: var(--radius-sm);
+  background: var(--muted);
+  padding: 0 4px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.live-app .live-prompt-toolbar .analytics-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 420px;
+}
+.live-app .live-prompt-detail-layout .prompts-topics,
+.live-app .live-prompt-detail-layout .live-prompt-toolbar,
+.live-app .live-prompt-detail-layout .live-prompts-main > .flex,
+.live-app .live-prompt-detail-layout .live-prompts-main > .analytics-table,
+/* The hidden list's phone sort bar too: it stood alone above the prompt's cards. */
+.live-app .live-prompt-detail-layout .live-prompts-main > .data-table-sort,
+.live-app .live-prompt-detail-layout .live-prompts-main > p {
+  display: none;
+}
+.live-app .live-prompt-detail-layout .live-prompts-main {
+  grid-column: 1 / -1;
+}
+.live-app .prompts-layout,
+.live-app .prompts-layout > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.live-app .prompts-topics > [data-slot='button'] {
+  min-width: 0;
+  max-width: 100%;
+}
+.live-app .prompts-topics > [data-slot='button'] > span {
+  min-width: 0;
+}
+.live-app .live-prompt-toolbar > [data-slot='button'] {
+  flex: none;
+  white-space: nowrap;
+}
+.live-app .live-prompts-main {
+  min-width: 0;
+}
+
+.live-app .analytics-topbar .filter-main > [data-slot='button'] {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .live-app .topbar-filters {
+    overflow: visible;
+    width: 100%;
+  }
+  .live-app .live-content {
+    padding-top: 24px;
+  }
+
+  .live-app .live-prompt-toolbar {
+    top: var(--live-header-height, var(--header-height-touch));
+    flex-wrap: wrap;
+  }
+  .live-app .live-prompt-toolbar .analytics-search {
+    order: 2;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .live-app .live-inline {
+    display: grid;
+  }
+  .live-app .live-list li {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+.live-settings-dialog {
+  font-family: var(--font-sans);
+}
+.live-settings-dialog .live-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.live-settings-dialog label {
+  display: grid;
+  gap: 8px;
+  font-size: var(--text-body);
+  font-weight: var(--weight-label);
+}
+.live-settings-dialog input,
+.live-settings-dialog select,
+.live-settings-dialog textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  background: var(--background);
+  color: var(--foreground);
+}
+.live-settings-dialog textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+.live-settings-dialog small {
+  color: var(--muted-foreground);
+}
+
+.live-app .live-prompt-toolbar {
+  flex-wrap: wrap;
+}
+@media (max-width: 639px) {
+  
+  .live-app .live-prompt-toolbar > .analytics-action-group { order: 2; }
+  .live-app .live-prompt-toolbar .analytics-search { order: 3; flex: 0 0 100%; }
+}
+
+.live-model-icons { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* Avatar stack: all icons stay whole (overlap), never clipped by the column. */
+.live-app .live-model-icons.live-model-icons-compact {
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow: visible;
+  width: max-content;
+  max-width: 100%;
+}
+/* Each icon sits in its own round chip, so a light overlap keeps every logo readable. */
+.live-app .live-model-icons.live-model-icons-compact > span:not(.live-model-icons-more) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-inline-start: -4px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  position: relative;
+}
+.live-app .live-model-icons.live-model-icons-compact > span:first-child { margin-inline-start: 0; }
+/* In the model filter's trigger the stack keeps the control's height. */
+.live-app [data-slot='dropdown-menu-trigger'] .live-model-icons.live-model-icons-compact > span:not(.live-model-icons-more) { width: 18px; height: 18px; margin-inline-start: -4px; }
+.live-app [data-slot='dropdown-menu-trigger'] .live-model-icons.live-model-icons-compact > span:first-child { margin-inline-start: 0; }
+.live-app .live-model-icons.live-model-icons-compact > .live-model-icons-more {
+  margin-inline-start: 4px;
+  box-shadow: none;
+  background: transparent;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-model-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 12px; }
+.live-app .live-form .live-model-option, .live-app .live-model-option { display: flex; gap: 8px; align-items: center; font-size: var(--text-body); }
+
+/* List screens (Prompts model): edge-to-edge, fill the pane under the top bar; the table scrolls inside.
+   Any screen opts in by rendering a .live-table-fill-panel. */
+.live-app:has(.live-table-fill-panel) > [data-slot='sidebar-inset'] {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+.live-app .live-content:has(.live-table-fill-panel) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.live-app .live-content:has(.live-table-fill-panel) > section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* A screen may wrap the fill in a block with a switch above it:
+   the wrapper takes the pane height so the fill below still scrolls inside it. */
+.live-app .live-content:has(.live-table-fill-panel) > section > :has(> .live-table-fill) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.live-app .live-content:has(.live-table-fill-panel) > section > :has(> .live-table-fill) > :not(.live-table-fill) {
+  flex: none;
+  align-self: flex-start;
+  margin: 28px 0 0 28px; /* same gutter as the padded Cited in text view, so the switch does not jump */
+}
+.live-app .live-table-fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.live-app .live-table-fill-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+.live-app .live-table-fill-panel > .data-table-toolbar {
+  /* One hairline under the toolbar (top bar already has its own); no second line from the panel. */
+  border-bottom: 1px solid var(--border);
+}
+/* Metric cards above the table (DataTableScreen): they keep their height, the table takes the rest.
+   Same gutter as the Overview cards. */
+.live-app .live-table-fill > .live-table-fill-cards {
+  flex: none;
+  display: grid;
+  gap: 12px;
+  padding: var(--content-gutter);
+  border-bottom: 1px solid var(--border);
+}
+.live-app .live-table-fill-cards > .metric-strip {
+  margin: 0;
+}
+.live-app .live-table-fill-panel[aria-busy='true'] [data-slot='table-container'] {
+  opacity: 0.7;
+}
+/* Notes between the toolbar and the table (classifier, origin): one hairline, never squeezed. */
+.live-app .live-table-fill-panel > .live-table-note,
+.live-app .live-table-fill-panel > .st-list-notice {
+  flex: none;
+  margin: 0;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+/* A list screen's empty, error or progress state (Brands, Comparison's lists) is the pane's own body under the toolbar, never a second
+   card: its frame's border would draw a doubled line under the toolbar's hairline. */
+.live-app .live-table-fill-panel > [data-slot='empty'] {
+  border: 0;
+  border-radius: 0;
+}
+/* Fixed column widths (set per column in the DataTable) so a long cell truncates instead of widening the table. */
+.live-app .analytics-table.live-fixed-columns {
+  table-layout: fixed;
+  width: 100%;
+}
+@media (min-width: 640px) {
+  .live-app .analytics-table.live-fixed-columns { min-width: 960px; }
+}
+.live-app .live-table-fill-panel > .data-table-toolbar,
+.live-app .live-table-fill-panel > div.flex,
+.live-app .live-table-fill-panel > p[role='alert'],
+.live-app .live-table-fill-panel > p.p-5 {
+  flex: none;
+}
+[data-slot='table-container'].data-table-fill-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+/* Wide screens: ONE container scrolls, the whole .live-table-fill (cards, toolbar, table), both axes.
+   The toolbar and the column header stick to its top, the Summary to its bottom, so cards scroll away
+   and the table keeps its chrome. A second scroller inside (table container) would let the header slide
+   under a strong trackpad scroll, so the container and the panel stay `visible`/`clip`. */
+@media (min-width: 768px) {
+  :root {
+    /* Padding 8 + control + padding 8 + hairline of .data-table-toolbar (48px and its line, the header's height); the
+       column header sticks right under it. */
+    --data-table-toolbar-height: calc(var(--toolbar-control-height) + 17px);
+  }
+  .live-app .live-table-fill {
+    overflow: auto;
+    overscroll-behavior: contain;
+    /* With the scrollbar's gutter always reserved, 100cqw is the visible width (the gutter is outside it), so
+       toolbar and notes stay put when a wide table scrolls sideways and never push it past the pane. */
+    container-type: inline-size;
+    scrollbar-gutter: stable;
+    --fill-visible-width: 100cqw;
+  }
+  .live-app .live-table-fill > :not(.live-table-fill-panel) {
+    flex: none;
+  }
+  /* Cards stay put when a wide table scrolls sideways; only the table moves. */
+  .live-app .live-table-fill > .live-table-fill-cards {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: var(--fill-visible-width);
+  }
+  .live-app .live-table-fill-panel {
+    flex: 1 0 auto;
+    /* Wide as the table needs (so the sticky toolbar has room to stay put), never narrower than the pane. */
+    width: fit-content;
+    min-width: 100%;
+    max-width: none;
+    overflow: clip visible;
+  }
+  .live-app .live-table-fill-panel > :not([data-slot='table-container']) {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: var(--fill-visible-width);
+    max-width: var(--fill-visible-width);
+    overflow-x: clip;
+  }
+  .live-app .live-table-fill-panel > .data-table-toolbar {
+    top: 0;
+    z-index: 4;
+    height: var(--data-table-toolbar-height);
+  }
+  /* At least one pane tall: a switch to a shorter table never scrolls the cards back into view. */
+  .live-app .live-table-fill:has(> .live-table-fill-cards) > .live-table-fill-panel {
+    min-height: 100%;
+  }
+  .live-app .live-table-fill [data-slot='table-container'].data-table-fill-scroll {
+    flex: 1 0 auto;
+    overflow: visible;
+  }
+  .live-app .analytics-table.data-table-fill > thead th {
+    top: var(--data-table-toolbar-height);
+  }
+}
+/* Fit tables (a column with `shrinkTo`): wide tables stay inside the container (no sideways scroll). The text
+   columns give up width down to their floor and truncate (full text in the title); the other headers wrap. */
+@media (min-width: 768px) {
+  .analytics-table[data-fit] th { white-space: normal; }
+  /* Status text ("Awaiting confirmation") wraps in its cell instead of widening the table. */
+  .analytics-table[data-fit] td:not([data-shrink]) { white-space: normal; }
+  .analytics-table[data-fit] :is(th, td)[data-shrink] { min-width: var(--shrink-to); }
+  /* No width of its own: the column's `width` (max) and floor decide, so the cell text never widens it. */
+  .analytics-table[data-fit] .data-table-shrink {
+    contain: inline-size;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* A touch badge (tag-badge.css) reaches past its line: that cell clips only sideways. */
+  .analytics-table[data-fit] .data-table-shrink:has([data-touch]) { overflow: clip visible; }
+  /* Label, sort arrow and (i) stay on one row; only the label wraps. */
+  .analytics-table[data-fit] .data-table-head { display: flex; align-items: center; gap: 4px; }
+  .analytics-table[data-fit] .data-table-head[data-align='end'] { justify-content: flex-end; }
+  .analytics-table[data-fit] .data-table-head[data-align='center'] { justify-content: center; }
+  .analytics-table[data-fit] .data-table-head > * { flex: none; margin: 0; }
+  .analytics-table[data-fit] .data-table-head > .table-sort { flex: 0 1 auto; min-width: 0; text-align: inherit; }
+}
+/* Separate borders so the sticky header keeps its own lines while stuck (a collapsed border belongs to the table and scrolls
+   away). The lines are the header cells' borders, never inset shadows over transparent borders: a shadow sits inside the
+   border, which left a 1px strip of the card between the header's line and the first row (12/11/2026, every list table). */
+.analytics-table.data-table-fill {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.analytics-table.data-table-fill > thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--card);
+}
+.live-app .live-settings-form { max-width: none; margin-top: 28px; }
+.live-app .live-settings-brand { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 24px; }
+.live-app .live-settings-brand h2, .live-app .live-settings-brand > button { grid-column: 1 / -1; }
+.live-app .live-settings-brand > button { justify-self: end; }
+
+.live-app .live-settings-state { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 0; margin-top: 16px; border-bottom: 1px solid var(--border); }
+.live-app .live-settings-state p, .live-app .live-settings-models p { color: var(--muted-foreground); font-size: var(--text-body); line-height: 1.6; margin-top: 4px; }
+.live-app .live-settings-state > button, .live-app .live-settings-state > [data-slot='badge'] { flex-shrink: 0; }
+.live-app .live-settings-models { border: 0; padding: 0; }
+.live-app .live-settings-models legend { font-weight: var(--weight-label); }
+.live-app .live-settings-models .live-model-options { grid-template-columns: repeat(3,minmax(0,1fr)); margin-top: 16px; }
+.live-app .live-settings-models input[type='checkbox'], .live-app .live-model-option input[type='checkbox'] { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--primary); }
+/* Border comes from SettingsBlock/SectionCard; DataTable only draws row hairlines. */
+.live-app .live-settings-note { padding: 16px 20px; margin-top: 24px; background: var(--muted); border-radius: var(--radius); font-size: var(--text-body); line-height: 1.6; }
+.live-app .live-settings-note p { margin-top: 4px; color: var(--muted-foreground); }
+.live-app .live-semantic-attributes { margin-top: 16px; }
+.live-app .live-semantic-attributes > div { padding: 16px 0; border-bottom: 1px solid var(--border); }
+.live-app .live-semantic-attributes dt { font-size: var(--text-body); font-weight: var(--weight-label); }
+.live-app .live-semantic-attributes dd { font-size: var(--text-body); color: var(--muted-foreground); margin-top: 4px; }
+@media (max-width: 1023px) {
+  .live-app .live-settings-models .live-model-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .live-app .live-settings-brand { grid-template-columns: minmax(0,1fr); }
+}
+@container app-content (max-width: 759px) {
+  .live-app .live-settings-models .live-model-options { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .live-app .live-settings-brand { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 900px) {
+  .live-app .page-heading.live-settings-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 4px;
+    margin-bottom: 16px;
+  }
+  .live-app .page-heading.live-settings-heading .page-heading-text { display: contents; }
+  .live-app .page-heading.live-settings-heading h1 { grid-column: 1; grid-row: 1; min-width: 0; }
+  .live-app .page-heading.live-settings-heading p { grid-column: 1 / -1; grid-row: 2; }
+  .live-app .page-heading.live-settings-heading .page-heading-actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+    align-self: start;
+  }
+      }
+@container app-content (max-width: 636px) {
+  .live-app .page-heading.live-settings-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 4px;
+    margin-bottom: 16px;
+  }
+  .live-app .page-heading.live-settings-heading .page-heading-text { display: contents; }
+  .live-app .page-heading.live-settings-heading h1 { grid-column: 1; grid-row: 1; min-width: 0; }
+  .live-app .page-heading.live-settings-heading p { grid-column: 1 / -1; grid-row: 2; }
+  .live-app .page-heading.live-settings-heading .page-heading-actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+    align-self: start;
+  }
+      }
+@media (max-width: 639px) {
+  .live-app .live-settings-state { align-items: start; flex-wrap: wrap; gap: 12px; }
+  .live-app .live-settings-models .live-model-options { grid-template-columns: minmax(0,1fr); }
+}
+
+.live-settings-dialog .live-model-option { display: flex; align-items: center; gap: 8px; font-weight: var(--weight-text); }
+.live-settings-dialog .live-model-option input[type='checkbox'] { width: 16px; height: 16px; padding: 0; flex-shrink: 0; accent-color: var(--primary); }
+.live-settings-dialog fieldset:disabled { opacity: .65; }
+
+/* Wider screens: the filters that do not fit beside the path fold into the Filters button (live-app.tsx, lib/filter-fit.ts),
+   never clipped at the edge; the button opens them all on a row of their own under the bar, as on a phone. */
+@media (min-width: 768px) {
+  .live-app .analytics-topbar [data-folded] {
+    display: none;
+  }
+  .live-app .analytics-topbar[data-filters-folded] .topbar-actions > .mobile-filter-toggle {
+    display: inline-flex;
+    order: 1;
+  }
+  .live-app .analytics-topbar[data-filters-folded] .topbar-actions:has(> .topbar-filters[data-mobile-open='true']) {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .live-app .analytics-topbar[data-filters-folded] .topbar-actions > .topbar-help {
+    order: 2;
+  }
+  /* Open: the path and the Filters button share the first line; the filters wrap on the lines under them. */
+  .live-app .analytics-topbar[data-filters-folded]:has(.topbar-filters[data-mobile-open='true']) {
+    align-items: start;
+    padding-block: 8px;
+  }
+  .live-app .analytics-topbar[data-filters-folded]:has(.topbar-filters[data-mobile-open='true']) .topbar-path {
+    height: var(--control-height);
+  }
+  .live-app .analytics-topbar[data-filters-folded] .topbar-filters[data-mobile-open='true'] {
+    order: 3;
+    flex: 1 0 100%;
+    padding-bottom: 8px;
+  }
+  .live-app .analytics-topbar[data-filters-folded] .topbar-filters[data-mobile-open='true'] .filter-main {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+@media (max-width: 767px) {
+  .live-app .analytics-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 8px;
+    min-height: var(--header-height-touch);
+  }
+  .live-app .analytics-topbar > div:first-child {
+    display: contents;
+  }
+  .live-app .analytics-topbar > div:first-child > :not([data-slot='sidebar-trigger']) {
+    display: none;
+  }
+  .live-app .analytics-topbar .topbar-actions > .mobile-filter-toggle {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .live-app .topbar-help {
+    display: flex;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .live-app .topbar-help [data-slot='button'],
+  .live-app .analytics-topbar [data-slot='sidebar-trigger'] {
+    width: var(--control-height-touch);
+    height: var(--control-height-touch);
+  }
+  .live-app .topbar-filters {
+    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .live-app .topbar-filters[data-mobile-open='true'] {
+    display: block;
+  }
+  .live-app .live-form :is(input, select, textarea) {
+    font-size: var(--text-section);
+  }
+  .live-settings-dialog
+    :is(input:not([type='checkbox']), select, textarea) {
+    font-size: var(--text-section);
+  }
+  .live-app .prompts-topics > [data-slot='button'] {
+    min-height: var(--control-height-touch);
+  }
+  .live-app .live-prompt-toolbar {
+    min-width: 0;
+  }
+}
+
+/* Four or more KPIs between a phone's width and a wide content (a tablet, or Ask Lastfind docked): two per row, an odd last
+   one taking the row, so no label wraps and no figure is cut (rule 8). Three still fit one row; the Overview's pairs have
+   their own rule (overview-presentation.css). */
+@container app-content (min-width: 637px) and (max-width: 880px) {
+  .live-app .metric-strip:not(.metric-strip-pairs, [data-columns='3']) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .live-app .metric-strip:not(.metric-strip-pairs, [data-columns='3']) > .metric-summary {
+    grid-column: auto;
+    border-left: 0;
+    border-top: 0;
+  }
+  .live-app .metric-strip:not(.metric-strip-pairs, [data-columns='3']) > .metric-summary:nth-child(even) {
+    border-left: 1px solid var(--border);
+  }
+  .live-app .metric-strip:not(.metric-strip-pairs, [data-columns='3']) > .metric-summary:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .live-app .metric-strip:not(.metric-strip-pairs, [data-columns='3']) > .metric-summary:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .live-app .metric-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-app .metric-summary:first-child {
+    grid-column: auto;
+  }
+  .live-app .metric-summary + .metric-summary {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .live-app .metric-summary:nth-child(3) {
+    border-left: 0;
+  }
+}
+@container app-content (max-width: 636px) {
+  .live-app .metric-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .live-app .metric-summary:first-child {
+    grid-column: auto;
+  }
+  .live-app .metric-summary + .metric-summary {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .live-app .metric-summary:nth-child(3) {
+    border-left: 0;
+  }
+}
+@media (max-width: 900px) {
+  .live-app .prompts-topics {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    padding-block: 4px;
+  }
+  
+  .live-app .prompts-topics > [data-slot='button'] {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: var(--control-height-touch);
+    white-space: nowrap;
+  }
+}
+
+.live-app .live-model-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.live-app .live-model-icons > span {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.live-app .live-table-scroll {
+  max-width: 100%;
+  min-width: 0;
+}
+/* Single-line tables (Brands): scroll inside the container, not the page. */
+.live-app .live-table-scroll:has([data-single-line]) {
+  overflow-x: auto;
+}
+.live-app
+  .live-prompt-detail-layout
+  .live-prompts-main
+  > [data-slot='table-container'],
+.live-app .live-prompt-detail-layout .live-prompts-main > nav {
+  display: none;
+}
+
+.live-app .live-prompt-detail-layout .live-prompts-main {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* The live filter bar belongs to the viewport, independent of page scroll ancestors. */
+.live-app .analytics-topbar {
+  position: fixed;
+  inset: 0 0 auto;
+}
+.live-app > [data-slot='sidebar-inset'] {
+  padding-top: var(--live-header-height, var(--header-height));
+}
+@media (min-width: 768px) {
+  .live-app .analytics-topbar {
+    left: var(--sidebar-width);
+  }
+  .live-app > [data-slot='sidebar'][data-collapsible='icon'] ~ [data-slot='sidebar-inset'] > .analytics-topbar {
+    left: var(--sidebar-width-icon);
+  }
+}
+
+/* Narrow screens: collections never scroll sideways. Each row becomes a card
+   that shows the title and the metrics that fit, labelled by data-label. */
+@media (max-width: 639px) {
+  .live-app .live-table-scroll:not(:has([data-single-line])),
+  .live-app [data-slot='table-container']:has(> .responsive-table) {
+    overflow-x: visible;
+  }
+  .live-app .analytics-table-summary-aside {
+    position: static;
+    transform: none;
+    order: 2;
+    align-self: flex-end;
+    box-shadow: none;
+    background: transparent;
+  }
+  .live-app:has(.live-table-fill-panel) > [data-slot='sidebar-inset'] {
+    height: auto;
+    overflow: visible;
+  }
+  .live-app .live-content:has(.live-table-fill-panel) {
+    flex: none;
+    overflow: visible;
+  }
+  .live-app .live-content:has(.live-table-fill-panel) > section,
+  .live-app .live-table-fill,
+  .live-app .live-table-fill-panel {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+  }
+  .live-app .live-table-fill:has(> .live-table-fill-cards) > .live-table-fill-panel {
+    min-height: calc(100dvh - var(--live-header-height, var(--header-height-touch)));
+  }
+  [data-slot='table-container'].data-table-fill-scroll {
+    flex: none;
+    overflow: visible;
+  }
+
+}
+
+
+/* Settings uses the app sidebar and the shared panel/heading primitives. Heading and content share one
+   960 px column centered in the pane (plus the 32 px padding), the same in every section, so switching
+   sections never moves the heading. */
+.live-app.settings-mode .live-content { max-width: calc(960px + 64px); width: 100%; margin: 0 auto; padding: 32px 32px 64px; }
+.live-app .settings-form-block .live-settings-form { margin-top: 0; }
+.live-app .settings-form-block .live-settings-brand { display: grid; }
+.live-app .settings-block-footer { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.live-app .settings-block-footer > output { font-size: var(--text-caption); color: var(--muted-foreground); }
+@media (max-width: 640px) {
+  /* The bottom keeps the 64px every screen keeps under its last row (Ask Lastfind floats there). */
+  .live-app.settings-mode .live-content { padding: 24px 16px 64px; }
+  .live-app .settings-form-block .live-settings-brand { grid-template-columns: minmax(0,1fr); }
+  .live-app .settings-block-footer { align-items: flex-start; flex-direction: column; }
+  .live-app .settings-block-footer > div { width: 100%; }
+  .live-app .settings-block-footer button { flex: 1; }
+}
+
+/* One sidebar for the app and Settings: only its links change, with a short fade (none with reduced motion). The class is set
+   only after a swap, never on the first paint, so a page drawn without running animations (a print) shows the links whole. */
+.live-app .sidebar-nav-swap { animation: sidebar-nav-swap 120ms ease-out; }
+@keyframes sidebar-nav-swap { from { opacity: 0; transform: translateX(-4px); } }
+@media (prefers-reduced-motion: reduce) { .live-app .sidebar-nav-swap { animation: none; } }
+
+/* Brands in answer text: a light-yellow text marker (token pair in tokens.css); the project's own brand is also bold. */
+.live-app .live-answer-mark { background: var(--highlight); color: var(--highlight-foreground); border-radius: var(--radius-sm); padding: 0 2px; }
+.live-app .live-answer-mark-own { font-weight: var(--weight-strong); }
+.live-app .prompt-visibility-bar { display: block; height: 6px; border-radius: var(--radius-sm); background: var(--muted, rgba(128,128,128,.2)); overflow: hidden; min-width: 72px; }
+.live-app .prompt-visibility-bar > span { display: block; height: 100%; background: var(--chart-1); }
+/* Brand drill chips live in the table toolbar; the x keeps its full 24 px touch area. */
+.live-app .data-table-toolbar .tag-badge { overflow: visible; }
+.live-app .data-table-toolbar .tag-badge button { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; margin: -4px -4px -4px 0; }
+
+
+/* Settings > Brand and market: the danger zone (ProjectDangerZone), one row per action, the action at its end. */
+.live-app .danger-zone-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.live-app .danger-zone-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.live-app .danger-zone-row:last-child {
+  padding-bottom: 0;
+}
+.live-app .danger-zone-row > div {
+  flex: 1 1 18rem;
+}
+.danger-zone-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+/* A screen that is still loading never makes the page scroll (13/11/2026: "some loading skeletons cause scrolling"). Its
+   skeleton cannot know whether the screen comes back long or as one empty card, so the content stops at the window's bottom
+   until it loads: the app's first load (the screen's section, busy) and a screen's own first load (its skeleton, marked
+   data-screen-skeleton). Only placeholders are cut, never content; tooling/qa-pr/layout-flow.mjs checks every screen. */
+.live-app .live-content:has(> section[aria-busy='true'], [data-screen-skeleton]) {
+  max-height: calc(100svh - var(--live-header-height, var(--header-height)));
+  overflow: clip;
+}
+@media (max-width: 767px) {
+  .live-app .live-content:has(> section[aria-busy='true'], [data-screen-skeleton]) {
+    max-height: calc(100svh - var(--live-header-height, var(--header-height-touch)));
+  }
+}

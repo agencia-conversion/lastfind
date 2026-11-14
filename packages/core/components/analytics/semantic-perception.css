@@ -1,0 +1,60 @@
+/* Semantic Branding report. Only what the Overview's classes do not already give. */
+/* The Overview's spacing: 20px between the metric strip and the row of cards (here a grid gap, so the margins go). */
+.perception { display: grid; gap: 20px; }
+.perception :is(.metric-strip, .overview-grid) { margin-bottom: 0; }
+.perception-bar { display: inline-flex; align-items: center; gap: 8px; min-width: 120px; font-variant-numeric: tabular-nums; }
+.perception-bar > i { display: block; flex: none; width: calc(var(--score) * 1px); height: 6px; border-radius: 3px; background: var(--chart-1); min-width: 2px; }
+.perception-bar > b { font-weight: var(--weight-strong); white-space: nowrap; }
+.perception-reason { font-size: var(--text-caption); color: var(--muted-foreground); overflow-wrap: anywhere; }
+.perception-raw { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--text-caption); background: var(--muted); border-radius: 6px; padding: 8px 10px; margin: 6px 0 0; }
+.perception-sources-list { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: var(--text-caption); }
+.perception-sources-list a { display: inline-flex; align-items: center; gap: 4px; color: var(--muted-foreground); }
+.perception-engines { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; white-space: normal; }
+.perception-sources .analytics-table { margin: 0; }
+.perception-sources .analytics-table :is(td, th) { overflow-wrap: anywhere; }
+.perception-sources .analytics-table td:first-child a { overflow-wrap: anywhere; min-width: 0; }
+
+/* Justifications: Accordion variant="rows" (one row per brand); inside, the labelled blocks of the public report, then the details. */
+.semantic-justification-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0; font-size: var(--text-body); line-height: 1.5; overflow-wrap: anywhere; }
+.semantic-justification-label { margin: 0 0 6px; font-size: var(--text-caption); font-weight: var(--weight-label); color: var(--muted-foreground); }
+/* One column for the AI and its note, one for the reason, aligned across the AIs (subgrid). */
+.semantic-justification-answers { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 16px; list-style: none; margin: 0; padding: 0; }
+.semantic-justification-answers > li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; row-gap: 4px; }
+.semantic-justification-ai { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; }
+.semantic-justification-ai small { color: var(--muted-foreground); font-size: var(--text-caption); }
+.semantic-justification-evidence { display: grid; gap: 6px; margin: 0; padding-left: 20px; list-style: disc; }
+/* An AI's reason with its facts under it. */
+.semantic-justification-reason { display: grid; gap: 4px; min-width: 0; }
+.semantic-justification-details { display: grid; }
+.semantic-justification-more[open] { display: grid; gap: 8px; padding-bottom: 8px; }
+.semantic-justification-more > summary { display: flex; align-items: center; gap: 6px; width: fit-content; min-height: 40px; list-style: none; cursor: pointer; font-size: var(--text-body); font-weight: var(--weight-label); color: var(--muted-foreground); }
+.semantic-justification-more > summary::-webkit-details-marker { display: none; }
+.semantic-justification-more > summary > svg { flex: none; transition: rotate 0.15s; }
+.semantic-justification-more[open] > summary > svg { rotate: 90deg; }
+.semantic-justification-more > summary:hover { color: var(--foreground); }
+@media (prefers-reduced-motion: reduce) { .semantic-justification-more > summary > svg { transition: none; } }
+
+@media (max-width: 760px) {
+  .perception-compare { display: none; }
+  .perception-bar { min-width: 0; }
+  /* Sources: the domain wraps instead of widening the card past the screen. */
+  .perception-sources .analytics-table { table-layout: fixed; }
+  .perception-sources .analytics-table :is(th, td):nth-child(2) { width: 92px; padding-left: 4px; }
+  .perception-sources .analytics-table td:first-child, .perception-sources .analytics-table td:first-child a { overflow-wrap: anywhere; min-width: 0; }
+  /* Fixed layout: the column width is known, so the UrlCell caps at it (its vw cap is wider than this column). */
+  .perception-sources .analytics-table .url-cell { max-width: 100%; }
+  .semantic-justification-answers { grid-template-columns: minmax(0, 1fr); }
+}
+@container app-content (max-width: 720px) {
+  .perception-compare { display: none; }
+  .perception-bar { min-width: 0; }
+  /* Sources: the domain wraps instead of widening the card past the screen. */
+  .perception-sources .analytics-table { table-layout: fixed; }
+  .perception-sources .analytics-table :is(th, td):nth-child(2) { width: 92px; padding-left: 4px; }
+  .perception-sources .analytics-table td:first-child, .perception-sources .analytics-table td:first-child a { overflow-wrap: anywhere; min-width: 0; }
+  /* Fixed layout: the column width is known, so the UrlCell caps at it (its vw cap is wider than this column). */
+  .perception-sources .analytics-table .url-cell { max-width: 100%; }
+  .semantic-justification-answers { grid-template-columns: minmax(0, 1fr); }
+}
+/* Which answer the justification and evidences come from (the one closest to the mean of the AIs). */
+.semantic-justification-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; font-size: var(--text-caption); color: var(--muted-foreground); }

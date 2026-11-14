@@ -1,0 +1,135 @@
+/* A page that takes the whole main content (detail-page.tsx). Inside the app, the fixed top bar and the screen's heading
+   step aside, and the content loses its width and gutters: the page lays out its own. */
+.live-app:has(.detail-page) > [data-slot='sidebar-inset'] {
+  padding-top: 0;
+}
+.live-app:has(.detail-page) :is(.analytics-topbar, .page-heading) {
+  display: none;
+}
+.live-app .live-content:has(.detail-page) {
+  max-width: none;
+  padding: 0;
+}
+.detail-page {
+  --detail-header-height: var(--header-height);
+  min-height: 100dvh;
+  background: var(--background);
+}
+.detail-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'leading title actions' 'below below below';
+  /* The hairline is inside the height, as the app top bar's: every header is exactly --header-height, so two bars side by
+     side (the top bar and Ask Lastfind's docked panel) end on the same line. */
+  grid-template-rows: calc(var(--header-height) - 1px);
+  align-items: center;
+  column-gap: calc(var(--spacing) * 2);
+  min-height: var(--header-height);
+  padding: 0 var(--content-gutter);
+  border-bottom: 1px solid var(--border);
+  background: var(--background);
+}
+.detail-header[data-density='compact'] {
+  padding: 0 calc(var(--spacing) * 4);
+}
+.detail-header.static {
+  position: static;
+}
+.detail-header-leading,
+.detail-header-actions {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 1);
+}
+.detail-header-leading {
+  grid-area: leading;
+}
+.detail-header-actions {
+  grid-area: actions;
+}
+/* The title at body size and label weight, its caption inline after it, on one line (docs/design/shell.md section 4). The
+   title has priority: it keeps its width (cut with an ellipsis only past the whole row). The caption takes what is left,
+   cut with an ellipsis; when less than 8rem is left it wraps to a second line that the row hides, and the title's tooltip
+   still says it. */
+.detail-header-title {
+  grid-area: title;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  align-content: flex-start;
+  column-gap: calc(var(--spacing) * 2);
+  row-gap: 0;
+  min-width: 0;
+  height: var(--control-height);
+  overflow: hidden;
+}
+.detail-header-title > :first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+/* Also inside the app's content, whose headings carry their own size and margins (live-app.css). */
+.detail-header-title :is(h1, h2),
+.live-app .live-content .detail-header .detail-header-title > :is(h1, h2) {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body);
+  line-height: var(--control-height);
+  font-weight: var(--weight-label);
+  color: var(--foreground);
+}
+/* The second row: edge to edge under the first, 40px, only when it has something (DetailHeader). */
+.detail-header-below {
+  grid-area: below;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: calc(var(--spacing) * 10);
+  margin: 0 calc(var(--content-gutter) * -1);
+  padding: 0 var(--content-gutter);
+  border-top: 1px solid var(--border);
+}
+.detail-header-below:empty {
+  display: none;
+}
+.detail-header-meta {
+  flex: 1 1 8rem;
+  max-width: max-content;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.detail-body {
+  width: 100%;
+  max-width: calc(var(--spacing) * 200);
+  margin: 0 auto;
+  padding: calc(var(--spacing) * 6) var(--content-gutter) calc(var(--spacing) * 16);
+}
+.detail-body[data-wide] {
+  max-width: var(--content-max-width);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .detail-header-title {
+    height: var(--control-height-touch);
+  }
+  .detail-header-title :is(h1, h2),
+  .live-app .live-content .detail-header .detail-header-title > :is(h1, h2) {
+    line-height: var(--control-height-touch);
+  }
+}
+@media (max-width: 767px) {
+  .detail-header {
+    grid-template-rows: calc(var(--header-height-touch) - 1px);
+    min-height: var(--header-height-touch);
+  }
+}

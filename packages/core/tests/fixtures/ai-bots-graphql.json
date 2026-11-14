@@ -1,0 +1,53 @@
+{
+  "day": {
+    "data": {
+      "viewer": {
+        "zones": [
+          {
+            "bots": [
+              { "count": 120, "sum": { "edgeResponseBytes": 4800000 }, "dimensions": { "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)", "clientRequestPath": "/blog/seo", "edgeResponseStatus": 200 } },
+              { "count": 30, "sum": { "edgeResponseBytes": 1200000 }, "dimensions": { "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.1; +https://openai.com/gptbot)", "clientRequestPath": "/blog/seo", "edgeResponseStatus": 200 } },
+              { "count": 12, "sum": { "edgeResponseBytes": 0 }, "dimensions": { "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)", "clientRequestPath": "/pricing", "edgeResponseStatus": 404 } },
+              { "count": 40, "sum": { "edgeResponseBytes": 900000 }, "dimensions": { "userAgent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)", "clientRequestPath": "/", "edgeResponseStatus": 200 } },
+              { "count": 9, "sum": { "edgeResponseBytes": 10000 }, "dimensions": { "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15 (Applebot-Extended/0.1; +http://www.apple.com/go/applebot)", "clientRequestPath": "/docs", "edgeResponseStatus": 200 } },
+              { "count": 7, "sum": { "edgeResponseBytes": 0 }, "dimensions": { "userAgent": "meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)", "clientRequestPath": "/docs", "edgeResponseStatus": 503 } },
+              { "count": 5, "sum": { "edgeResponseBytes": 0 }, "dimensions": { "userAgent": "Mozilla/5.0 (compatible; Kangaroo Bot/1.0)", "clientRequestPath": "/", "edgeResponseStatus": 403 } },
+              { "count": 3, "sum": { "edgeResponseBytes": 0 }, "dimensions": { "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SomeCrawler/2.0", "clientRequestPath": "", "edgeResponseStatus": 200 } }
+            ],
+            "total": [{ "count": 9800 }],
+            "pages": [
+              { "count": 900, "dimensions": { "clientRequestPath": "/" } },
+              { "count": 400, "dimensions": { "clientRequestPath": "/blog/seo" } },
+              { "count": 120, "dimensions": { "clientRequestPath": "/pricing" } }
+            ],
+            "referrals": [
+              { "count": 12, "dimensions": { "clientRefererHost": "chatgpt.com", "clientRequestPath": "/pricing" } },
+              { "count": 6, "dimensions": { "clientRefererHost": "chatgpt.com", "clientRequestPath": "/blog/seo" } },
+              { "count": 4, "dimensions": { "clientRefererHost": "www.perplexity.ai", "clientRequestPath": "/" } },
+              { "count": 2, "dimensions": { "clientRefererHost": "example.org", "clientRequestPath": "/" } }
+            ]
+          }
+        ]
+      }
+    },
+    "errors": null
+  },
+  "authz": {
+    "data": null,
+    "errors": [
+      {
+        "message": "not authorized for that account",
+        "path": ["viewer", "zones", "0", "bots"],
+        "extensions": { "code": "authz", "timestamp": "2026-11-10T12:00:00.000Z" }
+      }
+    ]
+  },
+  "budget": {
+    "data": null,
+    "errors": [{ "message": "rate limiter budget depleted, try again after 5 minutes", "extensions": { "code": "budget" } }]
+  },
+  "unknownField": {
+    "data": null,
+    "errors": [{ "message": "unknown field \"clientRefererHost\"", "path": ["viewer", "zones", "0", "referrals"], "extensions": { "code": "unknownField" } }]
+  }
+}

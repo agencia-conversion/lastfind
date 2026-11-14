@@ -1,0 +1,109 @@
+/* WizardSteps (wizard-steps.tsx): the one step indicator. */
+.wizard-steps,
+.wizard-steps-track {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted-foreground);
+}
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2) calc(var(--spacing) * 6);
+}
+.wizard-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+.wizard-steps li[data-state='current'],
+.wizard-steps-track li[data-state='current'] {
+  color: var(--foreground);
+  font-weight: var(--weight-label);
+}
+.wizard-step-number {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.wizard-step-number svg {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
+}
+.wizard-steps li[data-state='current'] .wizard-step-number {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.wizard-steps li[data-state='done'] .wizard-step-number {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* `progress`: a bar, then one column per step (circle over its name). */
+.wizard-steps-progress {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+}
+.wizard-steps-track {
+  display: flex;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 2);
+}
+.wizard-steps-track li {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  text-align: center;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+.wizard-steps-track .wizard-step-number {
+  width: calc(var(--spacing) * 7);
+  height: calc(var(--spacing) * 7);
+}
+.wizard-steps-track li[data-state='done'] .wizard-step-number {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.wizard-steps-track li[data-state='current'] .wizard-step-number {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.wizard-step-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Not every name fits its step's column: only the current one shows, under its own step (the first and last steps' names keep to the
+   track's edges); the others stay for screen readers. */
+.wizard-steps-track[data-fit='current'] li:not([data-state='current']) .wizard-step-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.wizard-steps-track[data-fit='current'] li[data-state='current'] .wizard-step-name {
+  max-width: none;
+  overflow: visible;
+}
+.wizard-steps-track[data-fit='current'] li:first-child .wizard-step-name {
+  align-self: flex-start;
+}
+.wizard-steps-track[data-fit='current'] li:last-child .wizard-step-name {
+  align-self: flex-end;
+}

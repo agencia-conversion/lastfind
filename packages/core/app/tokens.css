@@ -1,0 +1,398 @@
+/* Fonte única dos tokens (Cloud via core, site Astro via base.css). Não redeclarar em outro CSS. */
+/* Conversion — https://tweakcn.com/themes/cmg2mgpqd000404jman9ofw2p */
+/* Cores claras. As superfícies públicas (header, menu, diálogo, GitHub, demo) não têm
+   modo escuro e redeclaram aqui os valores claros, mesmo dentro de .dark. */
+:root,
+.lf-public-header,
+.lf-public-dialog,
+.lf-public-menu,
+.lf-public-github,
+.lf-demo {
+  --background: #ffffff;
+  --foreground: #020817;
+  --card: #ffffff;
+  --card-foreground: #020817;
+  --popover: #ffffff;
+  --popover-foreground: #020817;
+  --primary: #1649ff;
+  /* Blue text (links, the current page): the brand blue on light, a lighter blue on the dark canvas. */
+  --link: var(--primary);
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #617187; /* AA: 4,54:1 em --muted, 4,98:1 em #fff */
+  --text-secondary: #536078;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #e51414; /* AA: 4,53:1 com --destructive-foreground, 4,73:1 em #fff */
+  --warning: #b45309;
+  --destructive-foreground: #fafafa;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #1649ff;
+  /* Chart series: the project's brand in the primary blue, then one hue per competitor slot (lib/chart-series.ts). Twelve distinct
+     colours: the brand and 11 competitors, so every monitored brand (10 at most) has its own. Each is at least 3:1 on
+     --card in its theme (graphical objects, WCAG 1.4.11). */
+  --chart-1: #1649ff;
+  --chart-2: #16a36a;
+  --chart-3: #d27a12;
+  --chart-4: #e34f5f;
+  --chart-5: #a45be0;
+  --chart-6: #10979f;
+  --chart-7: #d6409f;
+  --chart-8: #8f5a2e;
+  --chart-9: #64748b;
+  --chart-10: #768a12;
+  --chart-11: #9c8500;
+  --chart-12: #4f3fd8;
+  /* The main sidebar (13/11/2026, after Tremor's Planner): a neutral grey, rows in a quiet dark ink at the text weight. */
+  --sidebar: #f9fafb;
+  --sidebar-foreground: #374151; /* AA: 9,9:1 on --sidebar */
+  --sidebar-primary: #1649ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceef1;
+  /* The active nav row: the dark ink it had before the blue; selection is the fill, never blue text. */
+  --sidebar-accent-foreground: #111827;
+  --sidebar-hover: #f0f1f4;
+  --sidebar-border: #e5e7eb;
+  /* The main sidebar's active row: the card's white, raised off the grey by a soft shadow (never a ring or a border on a
+     row; the project switcher, on --card, takes the same shadow). Dark: a step lighter than the sidebar, no shadow. */
+  --sidebar-raised: var(--card);
+  --sidebar-raised-shadow: 0 1px 2px 0 rgb(17 24 39 / 0.08), 0 1px 3px 0 rgb(17 24 39 / 0.06);
+  --sidebar-ring: #5b6b7c;
+  /* A table row or cell under the pointer: tinted, never the canvas, so the table never looks see-through. */
+  --table-hover: #f5f7ff;
+  --state-good: #208566;
+  --state-bad: var(--destructive);
+  --state-neutral: var(--muted-foreground);
+  /* The neutral band of sentiment (40-59), between --state-good and --state-bad: the clear yellow of an NPS "passive" (6/11/2026; a
+     gold #b88700 before, which deuteranopia made look like the red), never the gray of "no change". A light bar beside its figure, which
+     is written in --sentiment-neutral-foreground (5,9:1 on --background). */
+  --sentiment-neutral: #facc15;
+  --sentiment-neutral-foreground: #806000;
+  /* The bands' fill in a sentiment bar (9/11/2026: the pastel tints of 8/11 read washed out): the state tokens themselves, each at least
+     3:1 on --card (WCAG 1.4.11): green 4,6:1, red 4,7:1. The clear yellow cannot reach 3:1 on white, so the neutral band is the
+     deepest yellow that does (#a69000, 3,2:1; still yellow, not the orange gold). A 2px gap parts the bands; the tooltip and screen
+     reader text name each one. */
+  --sentiment-positive-fill: var(--state-good);
+  --sentiment-neutral-fill: #a69000;
+  --sentiment-negative-fill: var(--state-bad);
+  /* What a Badge tone's text is mixed toward for AA on its light tint: black here, white in .dark. */
+  --badge-ink: #000000;
+  /* Every tooltip/balloon (catalog Tooltip, info icons, chart tooltips): dark with light text in both themes. */
+  --tooltip: #020817;
+  --tooltip-foreground: #fafafa;
+  /* Text marker behind a selected brand in answer text and evidence (light yellow, never blue). */
+  --highlight: #fef3a2;
+  --highlight-foreground: #020817;
+  /* Date range calendar: the selected period's days in light blue, the compared period's in light gray. */
+  --range-selected: #dbe4ff;
+  --range-compared: #e5e9ef;
+  /* Semantic Branding heatmap bands (0-59, 60-79, 80-89, 90-100; lib/semantic-perception.ts heatColor): pastel tints, the score in
+     --heat-foreground on each (AA 4.5:1 or more on every band and on the blends between them). */
+  --heat-low: #fbeceb;
+  --heat-mid: #faf4e0;
+  --heat-high: #e7f3ec;
+  --heat-top: #cde8d8;
+  --heat-foreground: #1f2937;
+  /* A site's icon (SiteFavicon) sits on the canvas as it is; in dark on a light backing, inset, so a black logo stays visible. */
+  --favicon-backing: transparent;
+  --favicon-inset: 0px;
+  /* Tons de superfícies públicas (marketing, demo, pricing); valores exatos dos hex
+     migrados. Só claro: nada aplica .dark nessas telas. */
+  --text-subtle: #475569;
+  --text-disabled: #94a3b8;
+  --surface-subtle: #f8fafc;
+  --border-strong: #cbd5e1;
+  --primary-hover: #123dd6;
+  --primary-soft: #eef2ff;
+  --primary-tint: #f5f7ff;
+  --primary-faint: #eff3ff;
+  --primary-wash: #f8faff;
+  --primary-focus-surface: #e8eefb;
+  --primary-soft-border: #dbe2ff;
+  --primary-ring-soft: #a5b4fc;
+  --primary-focus-ring: #809bff;
+  /* What is alive in the agent's states (the writing caret, the list's spinner and unread dot): the brand blue; its light
+     tint on the dark canvas, where the blue sinks. */
+  --activity-mark: var(--primary);
+  /* Artifact types (ArtifactIcon): one colour per document type, a white glyph on it, as the system's document icons. */
+  --artifact-document: #5b6b82;
+  --artifact-content: #2f6bf5;
+  --artifact-report: #8257e6;
+  --artifact-table: #16a34a;
+  --artifact-brief: #f06a14;
+  --artifact-skill: #0d8f86;
+  --destructive-strong: #b91c1c;
+  --destructive-soft: #fff7f7;
+  --demo-surface: #f7f9fd;
+  --demo-ink: #18243d;
+  --demo-text: #52617a;
+  --demo-muted: #65738a;
+  --demo-border-strong: #c9d5ed;
+  --demo-border: #dbe3f0;
+  --demo-divider: #e9eef6;
+  /* The site's dark band (footer, closing text): ink background, its text and its quieter text. */
+  --site-ink: #05091b;
+  --site-ink-foreground: #f8fafc;
+  --site-ink-muted: #bac5dd;
+  /* Sign-in page (auth.css): one night card over the cosmos in every theme; text is --site-ink-*. */
+  --auth-canvas: #02040c;
+  --auth-surface: #080e1d;
+  --auth-line: #ffffff26;
+  --auth-label: #e4ebfa;
+  --auth-link: #c4d3ff;
+  --auth-link-strong: #d6e1ff;
+  --auth-accent: #6488ff;
+  --auth-focus: #8da8ff;
+  --auth-field: #111b2d;
+  --auth-field-border: #53617a;
+  --auth-field-focus: #15233c;
+  --auth-placeholder: #a5b2c9;
+  --auth-segment: #0b1424;
+  --auth-segment-active: #1c2a44;
+  --auth-error: #f87171;
+  --auth-error-text: #ffb4bd;
+  --auth-error-surface: #441b29;
+  --auth-error-foreground: #ffe0e4;
+  /* Source types (site and content type): one fixed hue per type, always next to its label. */
+  --source-type-corporate: #6e56cf;
+  --source-type-editorial: #12a594;
+  --source-type-press: #3e63dd;
+  --source-type-institutional: #f5a524;
+  --source-type-ugc: #d6409f;
+  --source-type-social: #ef5f00;
+  --source-type-reference: #30a46c;
+  --source-type-other: #8b95a5;
+  --source-type-homepage: #1649ff;
+  --source-type-category: #0b8ea8;
+  --source-type-product: #6e56cf;
+  --source-type-listicle: #12a594;
+  --source-type-comparison: #f5a524;
+  --source-type-profile: #8e4ec6;
+  --source-type-alternative: #e5484d;
+  --source-type-discussion: #d6409f;
+  --source-type-how-to: #30a46c;
+  --source-type-article: #3e63dd;
+  --source-type-unclassified: #cbd5e1;
+}
+:root {
+  --action-height: 52px;
+  --action-glow: 0 5px 18px -7px #1649ff70, 0 8px 25px -14px #b25dff80;
+  --font-sans:
+    var(--font-jakarta-sans), 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --font-serif: serif;
+  --font-mono: monospace;
+  --radius: 0.5rem;
+  /* The radius steps as plain properties, for stylesheets Tailwind does not build (the Astro site) and for any rule that
+     reads them before a utility does; the same values as the @theme block at the end, which makes rounded-*. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+  --shadow-color: #000000;
+  --shadow-opacity: 0.1;
+  --shadow-blur: 8px;
+  --shadow-spread: -2px;
+  --shadow-offset-x: 0px;
+  --shadow-offset-y: 2px;
+  --letter-spacing: 0px;
+  --spacing: 0.25rem;
+  /* Semantic / layout tokens (single source; screens read these, never invent values). docs/design/shell.md section 3. */
+  --header-height: 48px;
+  --header-height-touch: 52px;
+  --control-height: 32px;
+  --control-height-touch: 40px;
+  --nav-row-height: 32px;
+  /* A nested row of the main sidebar (Agent > Chat, Products > Brands): a step more compact; touch keeps 40px. */
+  --nav-subrow-height: 28px;
+  --table-row-height: 42px;
+  --content-max-width: 1700px;
+  --content-gutter: 28px;
+  --sidebar-width-app: 224px;
+  --tracking-label: 0.04em;
+  /* Type scale (docs/design/shell.md section 2). globals.css repeats the sizes for Tailwind's utilities (equal, tests/design-rules). */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+  /* Every menu's text (dropdown, select, combobox, command, popover, calendar): a step between the caption and the body,
+     smaller than the trigger that opens it. */
+  --text-menu: 13px;
+  --text-menu--line-height: 20px;
+  --text-section: 16px;
+  --text-section--line-height: 24px;
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-metric: 24px;
+  --text-metric--line-height: 32px;
+  /* Document scale: an artifact's and a content's text and headings (shell.md section 2), Notion's: the page title 40 px at
+     1.2, headings 1.875, 1.5 and 1.25 times the 16 px text at 1.3, the text at 1.5. The title is the h1 that opens the
+     document. Sizes do not change with the theme: no dark pair. */
+  --text-doc-body: 16px;
+  --text-doc-body--line-height: 24px;
+  --text-doc-title: 40px;
+  --text-doc-title--line-height: 48px;
+  --text-doc-h1: 30px;
+  --text-doc-h1--line-height: 39px;
+  --text-doc-h2: 24px;
+  --text-doc-h2--line-height: 31px;
+  --text-doc-h3: 20px;
+  --text-doc-h3--line-height: 26px;
+  --text-doc-h4: 18px;
+  --text-doc-h4--line-height: 24px;
+  /* A document's reading width: about 70 characters of its text a line. */
+  --doc-width: calc(var(--text-doc-body) * 35);
+  /* An artifact's page widths, the person's choice (as in Notion): narrow is --doc-width; standard, the
+     default, an A4 or letter sheet (210 mm at 96 dpi); wide for wide tables; full takes the whole pane. */
+  --doc-width-standard: 794px;
+  --doc-width-wide: 1024px;
+  /* Three steps (13/11/2026): regular for what is read (running text, cells, inputs, nav rows), medium for the chrome
+     that is acted on (buttons, tabs, menus, table headers, the active nav row), semibold for titles and metrics. */
+  --weight-text: 400;
+  --weight-label: 500;
+  --weight-strong: 600;
+  /* Titles and metrics (24px) draw a little tighter, as display type does (the page title had it alone). */
+  --tracking-title: -0.02em;
+  /* The site's larger steps (docs/design/site.md section 3); phones below. */
+  --text-display: 64px;
+  --text-display--line-height: 76px;
+  --text-h1: 56px;
+  --text-h1--line-height: 66px;
+  --text-h2: 40px;
+  --text-h2--line-height: 48px;
+  --text-h3: 24px;
+  --text-h3--line-height: 32px;
+  --text-h4: 18px;
+  --text-h4--line-height: 28px;
+  --text-lead: 18px;
+  --text-lead--line-height: 28px;
+  --site-content-width: 1120px;
+  --site-gutter: 24px;
+  --shadow-preview: 0 24px 60px -28px color-mix(in oklab, var(--foreground) 70%, transparent);
+}
+@media (max-width: 767px) {
+  :root {
+    --text-display: 40px;
+    --text-display--line-height: 48px;
+    --text-h1: 40px;
+    --text-h1--line-height: 48px;
+    --text-h2: 32px;
+    --text-h2--line-height: 40px;
+    --text-h4: 16px;
+    --text-h4--line-height: 26px;
+    --text-lead: 16px;
+    --text-lead--line-height: 26px;
+    --site-gutter: 20px;
+  }
+}
+
+.dark {
+  --activity-mark: var(--primary-focus-ring);
+  /* The reading tones of the docs and other text pages, in dark (the public surfaces above keep their light ones). */
+  --text-subtle: #cbd5e1;
+  --text-secondary: #94a3b8;
+  --text-disabled: #64748b;
+  --surface-subtle: #0f172a;
+  --artifact-document: #8291a8;
+  --artifact-content: #4f84ff;
+  --artifact-report: #9a76f5;
+  --artifact-table: #22b357;
+  --artifact-brief: #f5803a;
+  --artifact-skill: #26b3a8;
+  /* A resize line under the pointer or the keyboard, dragged (ResizableHandle): a step above --border on the dark canvas. */
+  --border-strong: #334155;
+  --background: #020817;
+  --foreground: #fafafa;
+  --card: #020817;
+  --card-foreground: #fafafa;
+  --popover: #020817;
+  --popover-foreground: #fafafa;
+  --secondary: #1e293b;
+  --secondary-foreground: #fafafa;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #fafafa;
+  --link: #8aa4ff; /* AA: 8,4:1 em --background escuro */
+  --destructive: #d54545; /* AA: 4,54:1 em --background escuro */
+  --warning: #fbbf24;
+  --destructive-foreground: #fafafa;
+  --border: #1e293b;
+  --input: #1e293b;
+  --chart-2: #34c88a;
+  --chart-3: #f2a33f;
+  --chart-4: #f0717e;
+  --chart-5: #b98af0;
+  --chart-6: #2cc4d1;
+  --chart-7: #f075c0;
+  --chart-8: #c98d5c;
+  --chart-9: #a3b1c4;
+  --chart-10: #b3c94a;
+  --chart-11: #e0c440;
+  --chart-12: #8f86ff;
+  --sidebar: #0b111c;
+  --sidebar-foreground: #a3acb9; /* AA: 8,2:1 on --sidebar */
+  --sidebar-accent: #1c2330;
+  --sidebar-accent-foreground: #f3f4f6;
+  --sidebar-hover: #151b26;
+  --sidebar-border: #1f2632;
+  --sidebar-raised: #1a212d;
+  --sidebar-raised-shadow: none;
+  --sidebar-ring: #a8b4c4;
+  --table-hover: #16203a;
+  --state-good: #3fb68e; /* AA: 7,9:1 em --background escuro */
+  --sentiment-neutral: #fde047; /* 15:1 em --background escuro */
+  --sentiment-neutral-foreground: #fde047;
+  /* On the dark card the full tones pass as they are: green 7,9:1, yellow 15:1, red 4,5:1. */
+  --sentiment-positive-fill: var(--state-good);
+  --sentiment-neutral-fill: var(--sentiment-neutral);
+  --sentiment-negative-fill: var(--state-bad);
+  --badge-ink: #ffffff;
+  /* Still dark, lifted off the dark canvas so the balloon keeps its edge (14,5:1 with its text). */
+  --tooltip: #1e293b;
+  --tooltip-foreground: #fafafa;
+  --highlight: #5b4d0f;
+  --highlight-foreground: #fafafa;
+  --range-selected: #1e3a8a;
+  --range-compared: #334155;
+  /* Clear hues on the dark card (red, amber, green, a brighter green), each 4.5:1 or more with --heat-foreground. */
+  --heat-low: #64262c;
+  --heat-mid: #5e4812;
+  --heat-high: #1c4d33;
+  --heat-top: #0f6b40;
+  --heat-foreground: #e5e7eb;
+  --favicon-backing: #e2e8f0;
+  --favicon-inset: 2px;
+  --source-type-corporate: #9e8cfc;
+  --source-type-editorial: #0bd8b6;
+  --source-type-press: #849dff;
+  --source-type-institutional: #ffca16;
+  --source-type-ugc: #ff8dcc;
+  --source-type-social: #ff801f;
+  --source-type-reference: #3dd68c;
+  --source-type-other: #a3acb9;
+  --source-type-homepage: #7c95ff;
+  --source-type-category: #4ccce6;
+  --source-type-product: #9e8cfc;
+  --source-type-listicle: #0bd8b6;
+  --source-type-comparison: #ffca16;
+  --source-type-profile: #d19dff;
+  --source-type-alternative: #ff9592;
+  --source-type-discussion: #ff8dcc;
+  --source-type-how-to: #3dd68c;
+  --source-type-article: #849dff;
+  --source-type-unclassified: #475569;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
+}

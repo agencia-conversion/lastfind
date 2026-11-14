@@ -1,0 +1,68 @@
+/* BarList: inset like the card header; the bar is the catalog's Progress, a little thicker to read as a chart. */
+.bar-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 4px 20px 20px;
+  list-style: none;
+}
+.bar-list > li {
+  min-width: 0;
+}
+.bar-list-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.bar-list-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-list-figure {
+  flex: none;
+  margin-left: auto;
+  padding-left: 4px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-label);
+}
+.bar-list-bar {
+  position: relative;
+  margin-top: 6px;
+}
+/* A rival's value on the same bar: a tick across it, with a wider target for the pointer. */
+.bar-list-mark {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--foreground);
+}
+.bar-list-mark::after {
+  content: '';
+  position: absolute;
+  inset: -4px -6px;
+}
+.bar-list [data-slot='progress-track'] {
+  height: 6px;
+}
+.bar-list [data-slot='progress-indicator'] {
+  background: var(--bar-color, var(--chart-1));
+}
+/* A row's detail line under the bar (Top terms: "With" and the terms in the same searches). */
+.bar-list-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}

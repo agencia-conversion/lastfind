@@ -1,0 +1,35 @@
+.fanout-layout > :not(.live-table-fill-panel) {
+  flex: none;
+}
+.fanout-insights {
+  min-height: 0;
+  overflow: auto;
+  padding: 20px;
+  display: grid;
+  gap: 20px;
+}
+.fanout-queries .fanout-query-cell {
+  max-width: 460px;
+}
+@media (max-width: 760px) {
+  .fanout-queries .fanout-query-cell {
+    max-width: none;
+  }
+  .fanout-queries .fanout-query-cell > span {
+    white-space: normal;
+  }
+  .fanout-insights {
+    padding: 16px;
+  }
+}
+@container app-content (max-width: 720px) {
+  .fanout-queries .fanout-query-cell {
+    max-width: none;
+  }
+  .fanout-queries .fanout-query-cell > span {
+    white-space: normal;
+  }
+  .fanout-insights {
+    padding: 16px;
+  }
+}

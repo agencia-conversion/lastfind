@@ -1,0 +1,129 @@
+/* The public menus (public-menu.tsx): the site header's and the language menu outside the app. Their own type and
+   light tokens (tokens.css), so they read the same over the site, the sign-in page and the docs. */
+.lf-public-menu {
+  --lf-public-blue: var(--primary);
+  --lf-public-text: var(--foreground);
+  --lf-public-muted: var(--text-subtle);
+  --lf-public-border: var(--border);
+  color: var(--lf-public-text);
+  font-family:
+    var(--font-jakarta-sans, 'Plus Jakarta Sans Variable'), 'Plus Jakarta Sans',
+    sans-serif;
+  font-size: var(--text-body);
+  /* Menu text is medium (docs/design/site.md section 3). */
+  font-weight: var(--weight-text);
+  line-height: 20px;
+  letter-spacing: 0;
+  text-align: left;
+}
+.lf-public-menu * {
+  box-sizing: border-box;
+}
+.lf-public-menu :is(a, button) {
+  cursor: pointer;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.lf-public-menu [data-disabled] {
+  cursor: wait;
+  opacity: 0.55;
+}
+.lf-public-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  background: transparent;
+  color: var(--lf-public-muted, var(--text-subtle));
+  font: inherit;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+  white-space: nowrap;
+}
+.lf-public-menu-trigger:hover,
+.lf-public-menu-trigger[data-popup-open] {
+  background: transparent;
+  color: var(--lf-public-blue, var(--primary));
+}
+/* The flag beside the language code; the chevron follows (docs/design/site.md section 4). */
+.lf-public-flag {
+  font-size: var(--text-section);
+  line-height: 1;
+}
+.lf-public-menu-positioner {
+  /* The portal owns the stacking context. Astro features do not load the
+     app utility stylesheet, so its layer must be part of this component. */
+  isolation: isolate;
+  z-index: 100;
+  outline: none;
+}
+.lf-public-menu {
+  box-sizing: border-box;
+  max-height: var(--available-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: none;
+  --tw-ring-shadow: 0 0 transparent;
+  --tw-ring-offset-shadow: 0 0 transparent;
+  max-width: min(380px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--lf-public-border);
+  border-radius: var(--radius-xl);
+  background: var(--background);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--foreground) 8%, transparent);
+  transform-origin: var(--transform-origin);
+}
+.lf-public-menu [data-slot='dropdown-menu-item'] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-body);
+  line-height: 20px;
+  color: var(--lf-public-text);
+  outline: none;
+  background: transparent;
+  white-space: normal;
+}
+.lf-public-menu [data-slot='dropdown-menu-item']:is(:hover, [data-highlighted]) {
+  background: var(--muted);
+}
+.lf-public-menu [data-slot='dropdown-menu-item'] > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--muted-foreground);
+}
+.lf-public-menu [data-slot='dropdown-menu-separator'] {
+  height: 1px;
+  margin: 8px 0;
+  background: var(--lf-public-border);
+}
+/* The language menu is just its content: a tighter frame and rows, still 40px tall to touch. */
+.lf-public-menu.lf-public-language-menu {
+  padding: 4px;
+}
+.lf-public-language-menu [data-slot='dropdown-menu-item'] {
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px;
+  white-space: nowrap;
+}
+.lf-public-language-menu [data-slot='dropdown-menu-item'] > span:nth-child(2) {
+  flex: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lf-public-menu * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

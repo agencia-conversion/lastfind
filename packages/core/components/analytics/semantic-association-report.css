@@ -1,0 +1,336 @@
+.semantic-association-report {
+  min-width: 0;
+  container-type: inline-size;
+}
+.semantic-association-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.semantic-association-content {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.semantic-association-section {
+  min-width: 0;
+  scroll-margin-top: calc(var(--live-header-height, var(--header-height)) + var(--semantic-tabs-height, 49px) + 20px);
+}
+.semantic-section-tabs {
+  position: sticky;
+  top: var(--live-header-height, var(--header-height));
+  z-index: 19;
+  margin-bottom: 20px;
+  padding: 8px 0;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+.semantic-association-method {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.semantic-association-method summary {
+  font-weight: var(--weight-strong);
+  cursor: pointer;
+}
+.semantic-association-method p {
+  color: var(--muted-foreground);
+  margin-top: 8px;
+}
+/* Radar (its legend is the catalog's ChartLegend). */
+.semantic-radar {
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  max-width: 610px;
+  margin-inline: auto;
+  padding: 0 12px 16px;
+}
+.semantic-radar-target {
+  cursor: crosshair;
+  outline: none;
+}
+.semantic-radar-focus-axis {
+  opacity: 0;
+}
+/* The attribute being compared (pointer or keyboard): its axis, dashed. */
+.semantic-radar-target[aria-describedby] .semantic-radar-focus-axis {
+  opacity: 1;
+}
+.semantic-radar-tooltip {
+  position: absolute;
+  z-index: 20;
+  width: max-content;
+  max-width: min(340px, calc(100% - 24px));
+  padding: 12px 14px;
+  border-radius: 8px;
+  /* The tooltip's dark balloon (tokens.css --tooltip), as every balloon of the app. */
+  background: var(--tooltip);
+  color: var(--tooltip-foreground);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--foreground) 10%, transparent);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+/* container-type on .semantic-radar stacks locally; lift above sibling cards while the balloon is open,
+   but stay under the fixed analytics header (z-index 20). */
+.semantic-radar-section:has([data-tooltip-open]),
+.semantic-radar[data-tooltip-open] {
+  position: relative;
+  z-index: 10;
+}
+.semantic-radar-tooltip > h3 {
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: var(--weight-strong);
+  margin-bottom: 6px;
+}
+.semantic-radar-tooltip ul {
+  display: grid;
+  gap: 6px;
+}
+.semantic-radar-tooltip li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.semantic-radar-tooltip li > i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.semantic-radar-tooltip li > span:not(.semantic-radar-value) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.semantic-radar-value {
+  font-variant-numeric: tabular-nums;
+}
+.semantic-radar svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+/* The labels sit in their own SVG over the geometry, with no viewBox and percent coordinates, so they are never scaled
+   and keep the token size at any width. The frame keeps the drawing's 540×410 box (the Overview sizes it by height). */
+.semantic-radar-frame {
+  position: relative;
+}
+.semantic-radar svg.semantic-radar-text {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.semantic-radar text {
+  font-size: var(--text-caption);
+  fill: var(--muted-foreground);
+}
+/* A ring's value stays readable where the brands' lines cross it: a halo in the card's colour under the glyphs. */
+.semantic-radar .semantic-radar-scale {
+  paint-order: stroke;
+  stroke: var(--card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.semantic-radar .semantic-radar-mobile-label {
+  font-size: var(--text-body);
+  fill: var(--foreground);
+}
+.semantic-radar-mobile-label,
+.semantic-radar-attribute-key {
+  display: none;
+}
+/* Narrow chart (under 520 px of plot): numbered labels plus a key instead of the attribute names. */
+@container (max-width: 519px) {
+  /* The rings are close together here: only 50 and 100 keep their value, so no two values touch. */
+  .semantic-radar-label,
+  .semantic-radar .semantic-radar-scale-minor {
+    display: none;
+  }
+  .semantic-radar .semantic-radar-mobile-label {
+    display: block;
+  }
+  .semantic-radar-attribute-key {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 24px;
+    padding-left: 16px;
+    list-style: decimal;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    color: var(--muted-foreground);
+  }
+  .semantic-radar-attribute-key li {
+    display: list-item;
+  }
+}
+/* Comparison table and heatmap (a matrix with row headers, not a list). */
+.semantic-association-scroll {
+  overflow-x: auto;
+  container-type: inline-size;
+}
+.semantic-association-panel.analytics-table[data-single-line] {
+  width: 100%;
+  min-width: 610px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-variant-numeric: tabular-nums;
+}
+.semantic-association-panel.analytics-table th {
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* The brand column fits a two-word name on one line. */
+.semantic-association-panel.analytics-table th:first-child {
+  width: 220px;
+  text-align: left;
+  padding-left: 20px;
+}
+.semantic-association-panel.analytics-table td {
+  padding: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.semantic-association-panel.analytics-table td button {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px;
+  border-radius: 5px;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-variant-numeric: tabular-nums;
+}
+.semantic-association-panel.analytics-table td button:hover {
+  filter: brightness(0.94);
+}
+.semantic-association-heatmap.analytics-table[data-single-line] td {
+  padding: 0;
+  position: relative;
+  /* The header row and the body rows share one height: --table-row-height, a row grows only when a cell wraps. */
+  height: var(--table-row-height);
+  background: var(--muted);
+}
+.semantic-association-heatmap.analytics-table td button {
+  /* The whole cell is the button; a wrapped "No evidence" grows its row instead of overflowing it. */
+  display: block;
+  height: 100%;
+  min-height: var(--table-row-height);
+  padding-block: 4px;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+.semantic-association-heatmap.analytics-table td button:hover {
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.semantic-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 16px 20px;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+.semantic-heatmap-band {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.semantic-heatmap-band i {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.semantic-heatmap-legend span:last-child {
+  margin-left: auto;
+}
+.semantic-association-report button {
+  cursor: pointer;
+}
+@container (max-width: 480px) {
+  .semantic-radar {
+    padding: 0 24px 16px;
+  }
+}
+@media print {
+  .semantic-section-tabs { display: none; }
+  .semantic-association-layout {
+    display: block;
+  }
+  .semantic-radar-tooltip {
+    display: none;
+  }
+}
+/* Heatmap of the report. */
+.semantic-association-panel.analytics-table th[scope='row'] .semantic-site { max-width: 100%; }
+.semantic-association-panel.analytics-table td button { font-variant-numeric: tabular-nums; }
+.semantic-association-panel.analytics-table td .semantic-no-evidence { display: inline-block; white-space: normal; }
+.semantic-scroll-hint { display: none; margin: 0; padding: 6px 20px 0; font-size: var(--text-caption); color: var(--muted-foreground); }
+@media (max-width: 760px) {
+  .semantic-scroll-hint { display: block; }
+  .semantic-association-panel.analytics-table th:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
+  .semantic-association-panel.analytics-table th[scope='row'] { background: var(--background); }
+  .semantic-association-panel.analytics-table thead th:first-child { z-index: 2; }
+  /* Columns sized so the first screen ends exactly at a column edge (brand + overall + 1 to 3 attributes, see --visible): nothing is cut mid-cell, the rest scrolls; fewer attributes than --visible fill the width. */
+  .semantic-association-panel.analytics-table[data-single-line] { width: calc(182px + var(--attributes) * (100cqw - 182px) / min(var(--attributes), var(--visible))); min-width: 0; table-layout: fixed; }
+  .semantic-association-panel.analytics-table th:first-child { width: 120px; padding-left: 10px; }
+  .semantic-association-panel.analytics-table th:nth-child(2) { width: 62px; }
+  .semantic-association-panel.analytics-table th:nth-child(n + 3) { width: calc((100cqw - 182px) / min(var(--attributes), var(--visible))); }
+  .semantic-association-panel.analytics-table th { padding: 8px 4px; }
+  .semantic-association-panel.analytics-table td button { padding: 4px 2px; font-size: var(--text-caption); }
+}
+@container app-content (max-width: 720px) {
+  .semantic-scroll-hint { display: block; }
+  .semantic-association-panel.analytics-table th:first-child { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--border); }
+  .semantic-association-panel.analytics-table th[scope='row'] { background: var(--background); }
+  .semantic-association-panel.analytics-table thead th:first-child { z-index: 2; }
+  /* Columns sized so the first screen ends exactly at a column edge (brand + overall + 1 to 3 attributes, see --visible): nothing is cut mid-cell, the rest scrolls; fewer attributes than --visible fill the width. */
+  .semantic-association-panel.analytics-table[data-single-line] { width: calc(182px + var(--attributes) * (100cqw - 182px) / min(var(--attributes), var(--visible))); min-width: 0; table-layout: fixed; }
+  .semantic-association-panel.analytics-table th:first-child { width: 120px; padding-left: 10px; }
+  .semantic-association-panel.analytics-table th:nth-child(2) { width: 62px; }
+  .semantic-association-panel.analytics-table th:nth-child(n + 3) { width: calc((100cqw - 182px) / min(var(--attributes), var(--visible))); }
+  .semantic-association-panel.analytics-table th { padding: 8px 4px; }
+  .semantic-association-panel.analytics-table td button { padding: 4px 2px; font-size: var(--text-caption); }
+}
+.semantic-association-panel.analytics-table th { overflow-wrap: normal; hyphens: manual; }
+.semantic-association-panel.analytics-table th[scope='row'] { overflow-wrap: break-word; }
+/* A brand's name in a row header wraps whole on a phone's narrow brand column (BrandName truncates in a list, never here). */
+.semantic-association-panel.analytics-table th[scope='row'] .truncate { overflow: visible; text-overflow: clip; white-space: normal; }
+/* Score by AI: one column per AI and mode, the logo over the name, which wraps, so every AI fits a wide screen without scrolling. */
+.semantic-by-ai.analytics-table[data-single-line] { min-width: 960px; }
+/* Score by AI on a phone: the brand column stays put (its name wraps, never cut) and the AIs share the rest, three to a screen,
+   each column whole with its logo over its name; a fourth and more scroll in from a column edge. */
+@media (max-width: 760px) {
+  .semantic-by-ai.analytics-table[data-single-line] { width: calc(7.5rem + var(--columns) * (100cqw - 7.5rem) / min(var(--columns), 3)); min-width: 0; table-layout: fixed; }
+  .semantic-by-ai.analytics-table th:first-child { position: sticky; left: 0; z-index: 1; width: 7.5rem; padding-inline: 8px; background: var(--card); box-shadow: 1px 0 0 var(--border); }
+  .semantic-by-ai.analytics-table thead th:first-child { z-index: 2; }
+  .semantic-by-ai.analytics-table tbody th { white-space: normal; }
+  .semantic-by-ai.analytics-table tbody th .truncate { white-space: normal; overflow-wrap: break-word; hyphens: auto; }
+  .semantic-by-ai.analytics-table thead th:not(:first-child) { padding-inline: 4px; overflow-wrap: anywhere; }
+}
+@container app-content (max-width: 720px) {
+  .semantic-by-ai.analytics-table[data-single-line] { width: calc(7.5rem + var(--columns) * (100cqw - 7.5rem) / min(var(--columns), 3)); min-width: 0; table-layout: fixed; }
+  .semantic-by-ai.analytics-table th:first-child { position: sticky; left: 0; z-index: 1; width: 7.5rem; padding-inline: 8px; background: var(--card); box-shadow: 1px 0 0 var(--border); }
+  .semantic-by-ai.analytics-table thead th:first-child { z-index: 2; }
+  .semantic-by-ai.analytics-table tbody th { white-space: normal; }
+  .semantic-by-ai.analytics-table tbody th .truncate { white-space: normal; overflow-wrap: break-word; hyphens: auto; }
+  .semantic-by-ai.analytics-table thead th:not(:first-child) { padding-inline: 4px; overflow-wrap: anywhere; }
+}
+.semantic-by-ai.analytics-table thead th:not(:first-child) { white-space: normal; padding-inline: 6px; vertical-align: top; }
+.semantic-assistant-head { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.semantic-assistant-head > span:first-child { flex-direction: column; gap: 4px; text-align: center; }

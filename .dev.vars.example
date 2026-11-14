@@ -1,0 +1,7 @@
+# The secrets the Deploy to Cloudflare button asks for (docs/install.md, one-click install). Each one becomes a secret
+# of your Worker; nothing here is read by `npm run setup`. Leave this file without values.
+APP_URL=
+OWNER_EMAIL=
+OWNER_ACCESS_KEY=
+SESSION_SECRET=
+CREDENTIALS_KEY=

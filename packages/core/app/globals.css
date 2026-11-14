@@ -1,0 +1,850 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '../components/analytics/overview-presentation.css';
+@import '../components/lastfind/link-hover.css';
+@import '../components/ui/live-label.css';
+@import './tokens.css';
+@source '../';
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-highlight: var(--highlight);
+  --color-tooltip: var(--tooltip);
+  --color-tooltip-foreground: var(--tooltip-foreground);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-chart-9: var(--chart-9);
+  --color-chart-10: var(--chart-10);
+  --color-chart-11: var(--chart-11);
+  --color-chart-12: var(--chart-12);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* Não-inline: resolve --font-sans de tokens.css em tempo de execução. */
+@theme {
+  --font-heading: var(--font-sans);
+}
+
+/* The app's one type scale (docs/design/shell.md section 2). The tokens live in tokens.css with the weights (400 to read,
+   500 for the chrome, 600 for titles and metrics); these literal copies make Tailwind's utilities (text-caption, text-body,
+   text-section, text-title, text-metric; text-xs and text-sm follow the first two) and must equal them (tests/design-rules). */
+@theme static {
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 14px;
+  --text-sm--line-height: 21px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+  --text-menu: 13px;
+  --text-menu--line-height: 20px;
+  --text-section: 16px;
+  --text-section--line-height: 24px;
+  --text-section--font-weight: var(--weight-strong);
+  --text-title: 24px;
+  --text-title--line-height: 32px;
+  --text-title--font-weight: var(--weight-strong);
+  --text-title--letter-spacing: var(--tracking-title);
+  --text-metric: 24px;
+  --text-metric--line-height: 32px;
+  --text-metric--font-weight: var(--weight-strong);
+  --text-metric--letter-spacing: var(--tracking-title);
+}
+
+/* Responsive gutters must follow the base declaration (overview-presentation is imported above). */
+@media (max-width: 1200px) {
+  :root {
+    --content-gutter: 20px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --content-gutter: 16px;
+  }
+}
+
+@source '../../../apps/selfhost';
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family:
+      var(--font-jakarta-sans), 'Plus Jakarta Sans', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  p {
+    margin: 0;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  svg {
+    flex-shrink: 0;
+  }
+  /* The one focus rule set (docs/design/shell.md section 10): the keyboard gets a 2px outline, a click leaves none, and rows
+     and menu items draw it inside their own box. Components never add their own. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  :is(
+      [data-sidebar='menu-button'],
+      [data-sidebar='menu-sub-button'],
+      [data-slot='tabs-trigger'],
+      [data-slot='dropdown-menu-item'],
+      [data-slot='select-item'],
+      tr[data-clickable],
+      .table-sort,
+      .section-row-button
+    ):focus-visible {
+    outline-offset: -2px;
+    border-radius: var(--radius-md);
+  }
+  [data-slot='sidebar'] :focus-visible {
+    outline-color: var(--sidebar-ring);
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+  /* Chrome also matches :focus-visible on a clicked control once any key is pressed (Shift, ⌘Tab back to the window): while
+     the pointer was the last input (data-input, application-styles.tsx) no ring, until Tab or an arrow key moves the focus. */
+  [data-input='pointer'] :focus-visible {
+    outline: none;
+  }
+  /* Selected text: a light blue behind it, the text keeps its own colour. */
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+}
+
+/* Shared authentication, documentation and error surfaces. */
+.lf-form {
+  display: grid;
+  gap: 12px;
+}
+.form-hint {
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.notice {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: var(--text-body);
+}
+.error-notice {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 5%, var(--background));
+}
+.page-shell {
+  max-width: 1120px;
+  margin: auto;
+  padding: 64px 24px;
+}
+/* The public CTA of the sign-in, blog and error pages: the site's `.btn` (apps/site/src/styles/base.css, docs/design/site.md
+   section 4), a pill at --action-height. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--action-height);
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 20px;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.btn-primary:is(:hover, :focus-visible):not(:disabled):not([aria-disabled='true']) {
+  background: var(--primary-hover);
+  box-shadow: var(--action-glow);
+}
+.btn-light {
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+}
+.btn-light:hover {
+  background: var(--primary-wash);
+}
+
+/* Lastfind analytics: a fresh product shell on the Conversion tokens. */
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.page-heading > div:first-child,
+.page-heading-text {
+  flex: 1;
+  min-width: 0;
+}
+.page-heading-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+.page-heading-actions:empty {
+  display: none;
+}
+
+.page-heading h1 {
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  letter-spacing: var(--tracking-title);
+  font-weight: var(--text-title--font-weight);
+  max-width: 900px;
+}
+.page-heading p {
+  font-size: var(--text-body);
+  color: var(--muted-foreground);
+  margin-top: 4px;
+  line-height: var(--text-body--line-height);
+}
+
+.analytics-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.filter-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 7px;
+}
+.filter-main [data-slot='select-trigger'],
+.filter-main .model-filter-trigger,
+.filter-main .date-range-trigger {
+  font-size: var(--text-body);
+  height: 32px;
+  border-radius: 6px;
+  gap: 6px;
+  padding: 0 10px;
+}
+.filter-main [data-slot='select-trigger'] > svg,
+.filter-main .model-filter-trigger > svg {
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+}
+
+.sources-grid {
+  grid-template-columns: minmax(0, 1.24fr) minmax(0, 1fr);
+}
+.skip-link {
+  position: fixed;
+  left: 240px;
+  top: -64px;
+  padding: 10px;
+  z-index: 100;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 5px;
+}
+.skip-link:focus {
+  top: 10px;
+}
+@media (max-width: 1250px) {
+  .sources-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+  
+  
+  
+  
+}
+@container app-content (max-width: 970px) {
+  .sources-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+  
+  
+  
+  
+}
+@media (max-width: 1000px) {
+  .sources-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  
+  
+  
+  
+  
+}
+@media (max-width: 767px) {
+  .page-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .page-heading p {
+    font-size: var(--text-body);
+  }
+  
+  .page-heading-actions {
+    margin-inline-start: 0;
+    width: 100%;
+  }
+  
+  .analytics-filters {
+    padding-bottom: 0;
+  }
+  .filter-main {
+    gap: 6px;
+  }
+  
+  
+  
+  
+  
+  
+  .skip-link {
+    left: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Menus, selects and popovers draw themselves (ui/dropdown-menu, ui/select, docs/design/shell.md section 6) and take the
+   label weight here, so a portaled menu reads like the sidebar. `.analytics-menu` only sets widths. */
+:is([data-slot='dropdown-menu-content'], [data-slot='select-content'], [data-slot='popover-content']) {
+  font-weight: var(--weight-label);
+}
+/* A chart's balloon (ui/chart.tsx ChartTooltip): above the pointer, centred on it, the arrow pointing at it, as every tooltip. */
+.chart-tooltip-anchor {
+  position: relative;
+  width: max-content;
+  max-width: var(--tooltip-room, none);
+  transform: translate(calc(-50% + var(--tooltip-shift, 0px)), calc(-100% - 12px));
+}
+.chart-tooltip-anchor > * {
+  max-width: 100%;
+}
+.chart-tooltip-anchor::after {
+  content: '';
+  position: absolute;
+  left: clamp(12px, calc(50% - var(--tooltip-shift, 0px)), calc(100% - 12px));
+  bottom: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--tooltip);
+  transform: translateX(-50%) rotate(45deg);
+}
+/* Dialogs and sheets are portaled out of `.analytics-app`: their text takes the same text weight. */
+:is([data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='alert-dialog-content']) {
+  font-weight: var(--weight-text);
+}
+.analytics-menu {
+  min-width: max(180px, var(--anchor-width));
+}
+/* A submenu fits its own options: the shared min-width above would copy the width of the item that opened it. */
+.analytics-menu[data-slot='dropdown-menu-sub-content'] {
+  min-width: 0;
+}
+/* A group caption inside a menu: the same as DropdownMenuLabel (docs/design/shell.md section 6). */
+.menu-caption {
+  padding: 4px 8px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: var(--weight-label);
+  color: var(--muted-foreground);
+}
+.workspace-switcher-menu,
+.user-menu-content {
+  width: 250px;
+}
+.model-filter-menu {
+  width: 224px;
+}
+
+.menu-user-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+.menu-user-header b {
+  font-size: var(--text-menu);
+  font-weight: var(--weight-label);
+}
+.menu-user-header span {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+/* Keep interactive affordances consistent, including shadcn portals. The sidebar's edge keeps its resize cursor (sidebar.tsx).
+   cmdk writes data-disabled="false" on every enabled option (the chart picker, "/" in the editor): only a true one is disabled. */
+:where(
+    button,
+    a[href],
+    select,
+    summary,
+    label[for],
+    input[type='checkbox'],
+    input[type='radio'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'],
+    input[type='file'],
+    input[type='range'],
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='switch'],
+    [role='slider'],
+    [data-slot='slider'],
+    [role='combobox']:not(input)
+  ):not(:disabled):not([aria-disabled='true']):not([data-disabled]:not([data-disabled='false'])):not([data-slot='sidebar-rail']):not(.agent-editor-handle) {
+  cursor: pointer;
+}
+input[type='file']:not(:disabled)::file-selector-button {
+  cursor: pointer;
+}
+/* Nav rows leave no dead strip between them (docs/design/shell.md section 10, cursor): each row's hit area reaches half the gap to
+   the next (rows 4px apart, nested and section rows 2px), so the pointer going down a list stays the hand instead of flashing
+   the arrow between two links. The extension is the link's own pseudo-element, laid over its row's `li` (a nested or section
+   row: over the row itself), so a click there opens that row. */
+[data-sidebar='menu-item'] > [data-sidebar='menu-button']::before,
+[data-sidebar='menu-sub-item'] > [data-sidebar='menu-sub-button']::before,
+.section-row-button::before {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+[data-sidebar='menu-sub-item'] > [data-sidebar='menu-sub-button']::before,
+.section-row-button::before {
+  inset: -1px 0;
+}
+.section-row-button {
+  position: relative;
+}
+:where(button, input, select, textarea, [role]):is(
+  :disabled,
+  [aria-disabled='true'],
+  [data-disabled]:not([data-disabled='false'])
+) {
+  cursor: not-allowed;
+}
+input[type='file']:disabled::file-selector-button {
+  cursor: not-allowed;
+}
+
+/* FilterTrigger `reserve`: the hidden longest label sizes the trigger (capped), the shown label fills that width and truncates. */
+.filter-trigger-label {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Digits of equal width: "Last 14 days" and "Last 28 days" take the same room. */
+  font-variant-numeric: tabular-nums;
+}
+.filter-trigger-label > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.filter-trigger-label > :first-child {
+  width: 0;
+  min-width: 100%;
+}
+.filter-trigger-reserve {
+  max-width: 10rem;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  white-space: nowrap;
+  /* Room for the leading icon (up to 18px) and its gap. */
+  padding-inline-start: 1.75rem;
+}
+
+/* Analytics range selection composes the existing shadcn calendar. */
+.date-range-trigger {
+  height: var(--control-height);
+  max-width: 100%;
+  gap: 7px;
+  padding-inline: 10px;
+  font-size: var(--text-body);
+  font-weight: var(--weight-label);
+  box-shadow: none;
+}
+.date-range-trigger > svg {
+  width: 14px;
+  height: 14px;
+}
+.date-range-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Compact range picker (Google Analytics style): presets | dates + one month, then a footer with the selection and the actions. */
+.date-range-popover {
+  /* Presets 136 + selection padding 24 + 7 × 32px days. */
+  width: auto;
+  max-width: calc(100vw - 24px);
+  max-height: min(90dvh, var(--available-height, 700px));
+  overflow-y: auto;
+  gap: 0;
+  padding: 0;
+  font-size: var(--text-menu);
+  line-height: var(--text-menu--line-height);
+}
+.date-range-body {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1fr);
+}
+.date-range-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  border-right: 1px solid var(--border);
+}
+.date-range-preset {
+  width: 100%;
+  justify-content: space-between;
+  padding: 0 8px;
+  /* A menu's items (docs/design/shell.md section 2): the menu step, as every dropdown of the header. */
+  font-size: var(--text-menu);
+  line-height: var(--text-menu--line-height);
+  font-weight: var(--weight-label);
+}
+.date-range-preset > svg {
+  width: 13px;
+  height: 13px;
+}
+.date-range-preset[aria-pressed='true'] {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+  font-weight: var(--weight-label);
+}
+.date-range-selection {
+  min-width: 0;
+  padding: 10px 12px 6px;
+}
+.date-range-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.date-range-inputs label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+.date-range-inputs input {
+  height: 32px;
+  font-size: var(--text-body);
+}
+.date-range-selection [data-slot='calendar'] {
+  margin-inline: auto;
+  padding: 0;
+  --cell-size: 32px;
+}
+
+.date-range-feedback {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+/* Compare with: label, choice and the compared days on one line; chosen dates add their inputs and which ones the calendar picks.
+   Its text never widens the popover (it wraps), so the calendar does not move while a range is picked. */
+.date-range-compare {
+  contain: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+}
+.date-range-compare label,
+.date-range-compared-note {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+.date-range-target {
+  margin: 0 auto 8px;
+}
+/* By role, whichever range the calendar is picking: the period in light blue (its first and last days in the primary), the
+   comparison in light gray (its first and last days in the muted text). */
+.date-range-selection [data-slot='calendar'] {
+  --range-band: var(--range-selected);
+  --range-other: var(--range-compared);
+  --range-end: var(--primary);
+  --range-end-foreground: var(--primary-foreground);
+}
+.date-range-selection [data-slot='calendar'].date-range-picking-compare {
+  --range-band: var(--range-compared);
+  --range-other: var(--range-selected);
+  --range-end: var(--muted-foreground);
+  --range-end-foreground: var(--background);
+}
+.date-range-selection [data-slot='calendar'] :is(.rdp-range_start, .rdp-range_end, .rdp-range_start::after, .rdp-range_end::after),
+.date-range-selection [data-slot='calendar'] [data-range-middle='true'] {
+  background: var(--range-band);
+}
+.date-range-selection [data-slot='calendar'] :is([data-range-start='true'], [data-range-end='true'], [data-selected-single='true']) {
+  background: var(--range-end);
+  color: var(--range-end-foreground);
+}
+/* The range the calendar is not picking: one band of its days (on the day buttons: cells of the collapsed grid take no
+   radius), rounded at its first and last day. A hovered day keeps it: the hover is a fill over it (ui/calendar.tsx). */
+.date-range-selection [data-slot='calendar'] .date-range-compared:not([data-selected='true'], .date-range-preview) > button {
+  border-radius: 0;
+  background: var(--range-other);
+}
+.date-range-selection [data-slot='calendar'] .date-range-compared-start:not([data-selected='true'], .date-range-preview) > button {
+  border-start-start-radius: var(--cell-radius);
+  border-end-start-radius: var(--cell-radius);
+}
+.date-range-selection [data-slot='calendar'] .date-range-compared-end:not([data-selected='true'], .date-range-preview) > button {
+  border-start-end-radius: var(--cell-radius);
+  border-end-end-radius: var(--cell-radius);
+}
+/* Picking: from the first click to the day under the pointer, drawn as the range the second click makes (one band, rounded
+   at its ends and at the ends of a week). */
+.date-range-selection [data-slot='calendar'] .date-range-preview {
+  border-radius: 0;
+  background: var(--range-band);
+}
+.date-range-selection [data-slot='calendar'] :is(.date-range-preview-start, .date-range-preview:first-child) {
+  border-start-start-radius: var(--cell-radius);
+  border-end-start-radius: var(--cell-radius);
+}
+.date-range-selection [data-slot='calendar'] :is(.date-range-preview-end, .date-range-preview:last-child) {
+  border-start-end-radius: var(--cell-radius);
+  border-end-end-radius: var(--cell-radius);
+}
+.date-range-selection [data-slot='calendar'] :is(.date-range-preview-start, .date-range-preview-end) > button {
+  background: var(--range-end);
+  color: var(--range-end-foreground);
+}
+.date-range-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--popover);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+}
+.date-range-footer > div:first-child {
+  min-width: 0;
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+.date-range-footer > div:last-child {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+.date-range-footer button {
+  height: 32px;
+  font-size: var(--text-body);
+}
+@media (max-width: 767px) {
+  .date-range-popover {
+    width: 356px;
+  }
+  .date-range-body {
+    display: block;
+  }
+  .date-range-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .date-range-selection {
+    padding: 10px 12px 6px;
+  }
+  .date-range-selection [data-slot='calendar'] {
+    --cell-size: 34px;
+  }
+}
+
+/* One control height (docs/design/shell.md section 3): every button, input, select, trigger and tab of the app and of its
+   dialogs, sheets and popovers is --control-height (--control-height-touch on phones and touch screens). Row actions
+   (`xs`, `icon-xs`) are smaller on desktop; the top-bar filters and table toolbars hold the height exactly. */
+:is(.analytics-app, [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='popover-content'])
+  :is(
+    [data-slot='button']:not([data-size='xs'], [data-size='icon-xs'], [data-slot='calendar'] *),
+    [data-slot='input'],
+    [data-slot='select-trigger'],
+    [data-slot='dropdown-menu-trigger'],
+    .date-range-trigger,
+    .model-filter-trigger,
+    .multi-filter-trigger
+  ),
+.analytics-action-menu {
+  min-height: var(--control-height);
+}
+:is(.analytics-app, [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='popover-content'])
+  [data-slot='button'][data-size='icon'],
+.analytics-action-menu {
+  min-width: var(--control-height);
+}
+.analytics-app
+  :is(.analytics-topbar .filter-main, .data-table-toolbar)
+  :is(
+    [data-slot='button'],
+    [data-slot='input'],
+    [data-slot='dropdown-menu-trigger'],
+    [data-slot='select-trigger'],
+    .model-filter-trigger,
+    .multi-filter-trigger,
+    .date-range-trigger,
+    .analytics-action-menu
+  ) {
+  height: var(--control-height);
+}
+.analytics-app [data-slot='tabs-trigger'] {
+  font-size: var(--text-body);
+  min-height: var(--control-height);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  :is(.analytics-app, [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='popover-content'])
+    :is([data-slot='button']:not([data-slot='calendar'] *), [data-slot='input'], [data-slot='select-trigger'], [data-slot='combobox-trigger'], [data-slot='dropdown-menu-trigger'], .date-range-trigger, .model-filter-trigger, .multi-filter-trigger),
+  .analytics-action-menu {
+    min-height: var(--control-height-touch);
+  }
+  :is(.analytics-app, [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='popover-content'])
+    :is([data-slot='button'], [data-slot$='-close'])[data-size^='icon'],
+  .analytics-action-menu {
+    min-width: var(--control-height-touch);
+  }
+  /* A Button rendered as a close (SheetClose, DialogClose) takes the close's slot name: same finger size. */
+  :is(.analytics-app, [data-slot='dialog-content'], [data-slot='sheet-content'], [data-slot='popover-content']) [data-slot$='-close'][data-size] {
+    min-height: var(--control-height-touch);
+  }
+  .analytics-app
+    .analytics-topbar
+    .filter-main
+    :is([data-slot='button'], [data-slot='dropdown-menu-trigger'], [data-slot='select-trigger'], .model-filter-trigger, .multi-filter-trigger, .date-range-trigger) {
+    height: var(--control-height-touch);
+  }
+}
+
+.multi-filter-trigger {
+  max-width: 280px;
+}
+.multi-filter-trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.multi-filter-menu {
+  max-height: min(420px, var(--available-height));
+  overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .metric-summary:first-child {
+    grid-column: 1 / -1;
+  }
+  .metric-summary + .metric-summary {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .metric-summary:nth-child(3) {
+    border-left: 1px solid var(--border);
+  }
+}
+
+
+/* The OpenAI mark is drawn in black (an <img> ignores currentColor): light it on dark surfaces. */
+.dark .ai-icon[src$='/openai.svg'] {
+  filter: invert(1);
+}

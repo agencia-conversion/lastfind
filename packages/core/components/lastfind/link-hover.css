@@ -1,0 +1,32 @@
+/* The one link-underline rule for the site and the app (nothing else may set
+   `text-decoration: underline`; tests/app-typography.test.mjs enforces it).
+   Links in running text of articles, docs, legal pages and answers are always
+   underlined, which helps readers who cannot rely on colour. A link in any
+   other paragraph, or a `.text-link`, underlines on hover (focus is the global outline). Navigation,
+   cards, buttons, menus, charts and tables keep their own hover state. */
+:where(.article-body, .docs-content, .legal-page, .prose-block, .live-answer)
+  a:not(.btn):not([role='button']):not([data-slot='button']):not(:is(nav, table) a),
+.analytics-app .text-link,
+:where(p, dd, blockquote)
+  a:not(.btn):not([role='button']):not([role='menuitem']):not(
+    [data-slot='button']
+  ):not(:is(nav, table, svg, [role='menu'], [data-sidebar], [data-slot='sidebar']) a):hover,
+a.text-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* In-app action written as a link ("Retry", "Back to responses"). */
+.analytics-app .text-link {
+  color: var(--primary);
+  cursor: pointer;
+}
+/* Touch targets on the public pages (40px, docs/design/site.md section 4). A link drawn shorter than 40px keeps its
+   look, and its hit area reaches 40px around it, as the sign-in page's language pill does (auth.css). */
+:is(.site-footer a, .lf-public-attribution, .feature-breadcrumb a, .astro-site a.text-link, .docs-page a.text-link, .blog-back-link, .docs-page [data-slot='breadcrumb-item'] > a) {
+  position: relative;
+}
+:is(.site-footer a, .lf-public-attribution, .feature-breadcrumb a, .astro-site a.text-link, .docs-page a.text-link, .blog-back-link, .docs-page [data-slot='breadcrumb-item'] > a)::after {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc(50% - 20px));
+}

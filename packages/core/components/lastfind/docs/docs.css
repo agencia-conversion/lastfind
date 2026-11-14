@@ -1,0 +1,435 @@
+/* Documentation layout of both editions: sidebar, reading column and "On this page". Tokens only (light and dark),
+   the site's type steps (docs/design/site.md section 3). */
+/* The site header's content box (public-header.css), so the sidebar lines up with the logo and "On this page" with
+   the header's CTA. */
+.docs-page {
+  max-width: calc(var(--site-content-width) + 2 * var(--site-gutter));
+  margin: 0 auto;
+  padding: 32px var(--site-gutter) 80px;
+  color: var(--foreground);
+}
+/* The page's title sits in the reading column, so the sidebar starts under the header. */
+.docs-hero {
+  margin-bottom: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.docs-hero h1 {
+  margin: 12px 0 12px;
+  font-size: var(--text-h2);
+  line-height: var(--text-h2--line-height);
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.docs-hero h1 em {
+  color: var(--muted-foreground);
+  font-style: normal;
+}
+.docs-hero p {
+  max-width: 620px;
+  font-size: var(--text-lead);
+  line-height: var(--text-lead--line-height);
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+.docs-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 180px;
+  gap: 40px;
+}
+.docs-layout > * {
+  min-width: 0;
+}
+.docs-sidebar,
+.docs-toc {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.docs-menu > summary {
+  display: none;
+}
+/* A group is a disclosure: its label (14/600, the page's ink) and a chevron that turns when it opens. */
+.docs-group + .docs-group {
+  margin-top: 8px;
+}
+.docs-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px 0 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 600;
+  color: var(--foreground);
+  cursor: pointer;
+  list-style: none;
+}
+.docs-group > summary::-webkit-details-marker {
+  display: none;
+}
+.docs-group > summary > svg {
+  flex: none;
+  transition: transform 150ms ease;
+}
+.docs-group[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.docs-group[open] > summary {
+  margin-bottom: 4px;
+}
+.docs-toc > p {
+  margin: 0 0 8px;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.docs-home,
+.docs-group a,
+.docs-toc a {
+  display: block;
+  padding: 4px 12px;
+  border-left: 2px solid var(--border);
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+/* The index link sits above the first group. */
+.docs-home {
+  margin-bottom: 16px;
+}
+.docs-home:hover,
+.docs-group a:hover,
+.docs-toc a:hover {
+  color: var(--foreground);
+  border-left-color: var(--muted-foreground);
+}
+.docs-home[aria-current],
+.docs-group a[aria-current],
+.docs-toc a[aria-current] {
+  color: var(--link);
+  border-left-color: var(--link);
+  font-weight: 600;
+}
+.docs-content section {
+  scroll-margin-top: 100px;
+  padding-bottom: 40px;
+  margin-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+}
+.docs-content section:last-child {
+  border-bottom: 0;
+}
+.docs-content h2,
+.docs-content h3 {
+  scroll-margin-top: 100px;
+  color: var(--foreground);
+}
+/* A section page's parts and the index's groups: h2 under the page's h1. */
+.docs-content h2 {
+  margin: 40px 0 12px;
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.docs-content > h2:first-child,
+.docs-content section > h2:first-child {
+  margin-top: 0;
+}
+.docs-content h3 {
+  margin: 32px 0 8px;
+  font-size: var(--text-h4);
+  line-height: var(--text-h4--line-height);
+  font-weight: 600;
+}
+.docs-anchor {
+  margin-left: 8px;
+  color: var(--muted-foreground);
+  opacity: 0;
+  text-decoration: none;
+}
+.docs-content :is(h2, h3):is(:hover, :focus-within) > .docs-anchor {
+  opacity: 1;
+}
+.docs-content p,
+.docs-content li,
+.docs-content td,
+.docs-content dd {
+  font-size: var(--text-section);
+  line-height: 26px;
+  font-weight: 500;
+  color: var(--text-subtle);
+}
+.docs-content p,
+.docs-content li {
+  margin-bottom: 16px;
+}
+.docs-content :is(ol, ul) {
+  margin: 0 0 16px;
+  padding-left: 24px;
+}
+.docs-content ol {
+  list-style: decimal;
+}
+.docs-content ul {
+  list-style: disc;
+}
+.docs-content li {
+  margin-bottom: 8px;
+}
+.docs-content strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.docs-content p a,
+.docs-content li a,
+.docs-content section > a {
+  color: var(--link);
+}
+/* A path in the app (Settings > Monitoring > Budget): the labels as they read on screen. */
+.docs-path {
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* Every setting of a screen: its label, then what it does. */
+.docs-content dl {
+  margin: 0 0 16px;
+  border-top: 1px solid var(--border);
+}
+.docs-content dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.docs-content dt {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 600;
+  color: var(--foreground);
+}
+.docs-content dd {
+  margin: 0;
+}
+/* The index: a group per h2, each section page with its link and what it covers. */
+.docs-content .docs-index-group {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.docs-index dt a {
+  color: var(--link);
+}
+.docs-figure {
+  margin: 24px 0;
+}
+.docs-figure a {
+  display: block;
+  border-radius: var(--radius-2xl);
+}
+.docs-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--background);
+}
+.docs-figure figcaption {
+  margin-top: 8px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.docs-code {
+  position: relative;
+  margin: 20px 0;
+}
+.docs-code pre {
+  margin: 0;
+  padding: 52px 20px 20px;
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-body);
+  line-height: 24px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.docs-code button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  cursor: pointer;
+}
+.docs-code button:hover {
+  background: var(--muted);
+}
+/* Related sections at a section's end: descriptive links to where the reader goes next. */
+.docs-related {
+  margin-top: 24px;
+}
+.docs-related > p {
+  margin: 0 0 8px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.docs-content .docs-related ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.docs-content .docs-related li {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.docs-related a {
+  color: var(--link);
+  font-weight: 600;
+}
+.docs-pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 32px;
+}
+.docs-pager a {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.docs-pager a:hover {
+  border-color: var(--primary);
+}
+.docs-pager a[rel='next'] {
+  grid-column: 2;
+  text-align: right;
+}
+.docs-pager small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.docs-pager a[rel='next'] small {
+  justify-content: flex-end;
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-group > summary > svg {
+    transition: none;
+  }
+}
+@media (max-width: 1279px) {
+  .docs-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .docs-toc {
+    display: none;
+  }
+}
+@media (max-width: 899px) {
+  .docs-page {
+    padding: 16px var(--site-gutter) 48px;
+  }
+  .docs-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .docs-sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .docs-menu > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+  .docs-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+  .docs-menu[open] > summary {
+    margin-bottom: 12px;
+  }
+  /* Touch targets of at least 40px in the collapsed menu. */
+  .docs-home,
+  .docs-group a {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+  .docs-content dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .docs-pager {
+    grid-template-columns: 1fr;
+  }
+  .docs-pager a[rel='next'] {
+    grid-column: 1;
+  }
+}
+/* The independent installation's top bar: back to the app and the language. */
+.docs-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: calc(var(--site-content-width) + 2 * var(--site-gutter));
+  margin: 0 auto;
+  padding: 16px var(--site-gutter) 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+.docs-topbar > * {
+  white-space: nowrap;
+}
+.docs-topbar > a {
+  color: var(--link);
+}

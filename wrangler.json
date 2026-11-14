@@ -1,0 +1,70 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "lastfind",
+  "main": "packages/core/worker/index.ts",
+  "compatibility_date": "2026-05-22",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "version_metadata": {
+    "binding": "WORKER_VERSION"
+  },
+  "vars": {
+    "AUTH_MODE": "owner",
+    "SELF_HOST_MONTHLY_LIMIT": "1500",
+    "GLOBAL_DAILY_RUN_LIMIT": "1000",
+    "ENABLE_PROVIDER_CALLBACKS": "true",
+    "BRAND_RESEARCH_ENABLED": "true",
+    "BRAND_RESEARCH_PROJECTS": "*",
+    "BRAND_DOMAIN_MAX_USD": "1"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "lastfind",
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "apps/selfhost/drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RAW_RESPONSES",
+      "bucket_name": "lastfind-raw"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PROJECT_STORES",
+        "class_name": "ProjectStore"
+      },
+      {
+        "name": "LASTFIND_AGENT",
+        "class_name": "LastfindAgent"
+      }
+    ]
+  },
+  "exports": {
+    "ProjectStore": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "LastfindAgent": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
+  "placement": {
+    "mode": "smart"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
+}

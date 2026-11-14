@@ -1,0 +1,163 @@
+/* The trend chart, its tooltip and the one chart legend (docs/design/shell.md section 7). */
+.trend-chart {
+  position: relative;
+  flex: 1;
+  min-height: 233px;
+  margin: 12px 8px 0;
+}
+/* A tall trend tooltip may extend below its card; keep it visible in every use. */
+.analytics-panel:has(.trend-chart) {
+  overflow: visible;
+}
+.trend-chart > .trend-chart-canvas {
+  position: absolute;
+  inset: 0;
+}
+.trend-tooltip {
+  min-width: min(10rem, 100%);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  /* The tooltip's dark balloon (tokens.css --tooltip), as every balloon of the app. */
+  background: var(--tooltip);
+  color: var(--tooltip-foreground);
+  font-size: var(--text-caption);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.trend-tooltip > p {
+  margin: 0 0 4px;
+  color: color-mix(in srgb, var(--tooltip-foreground) 70%, transparent);
+}
+.trend-tooltip > ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trend-tooltip li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.trend-tooltip li > i {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+.trend-tooltip li > .site-favicon {
+  width: 14px;
+  height: 14px;
+  font-size: var(--text-caption);
+  line-height: 14px;
+}
+.trend-tooltip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trend-tooltip-value {
+  /* The figure stays whole; the name gives up its room first. */
+  flex-shrink: 0;
+  margin-inline-start: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-label);
+}
+
+/* ChartLegend: at the card's foot, centred, a dot and the name of each series. */
+.chart-legend {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 12px 20px 16px;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+/* Each name at its whole width, wrapping to the next line when the row is full. It is cut (ellipsis, full name on hover)
+   only past the card's width or 20rem, which fits about 40 characters. */
+.chart-legend > :is(button, span) {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(100%, 20rem);
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: inherit;
+  font-size: inherit;
+}
+.chart-legend > .chart-legend-more {
+  flex: none;
+  min-width: 0;
+}
+.chart-legend > :is(button, span) > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+/* A series turned off in an interactive legend. */
+.chart-legend [aria-pressed='false'] {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+/* layout="list" (beside a donut): one row per slice, the figure at its end. A row that opens something is a button, the arrow
+   at its end; one that opens nothing keeps the arrow's place, so the figures line up. */
+.chart-legend.chart-legend-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--foreground);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.chart-legend-list .chart-legend-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--nav-row-height);
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.chart-legend-list button.chart-legend-row:hover {
+  background: var(--table-hover);
+}
+.chart-legend-list .chart-legend-row > svg {
+  color: var(--muted-foreground);
+}
+.chart-legend-list .chart-legend-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-legend-list .chart-legend-value {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .chart-legend-list .chart-legend-row {
+    min-height: var(--control-height-touch);
+  }
+}

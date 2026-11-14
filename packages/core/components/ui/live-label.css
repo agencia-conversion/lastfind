@@ -1,0 +1,29 @@
+/* LiveLabel (live-label.tsx): a wide band of the foreground text (a third of the words at full strength, fading in and out
+   over as much again) crosses the muted words, a 1.6 s sweep every 2.2 s that starts after 0.6 s, so a short step never
+   flashes (the words wait in the muted colour). The band starts and ends outside the words, so the loop never jumps. Less
+   motion: the words stand still in the line's own colour. */
+.live-label-text {
+  background-image: linear-gradient(90deg, var(--muted-foreground) 0 35%, var(--foreground) 45% 55%, var(--muted-foreground) 65% 100%);
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: live-label-sweep 2.2s ease-in-out 0.6s infinite;
+}
+@keyframes live-label-sweep {
+  0% {
+    background-position: 100% 0;
+  }
+  73%,
+  100% {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-label-text {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}

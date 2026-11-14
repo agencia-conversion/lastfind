@@ -1,0 +1,2354 @@
+{
+ "workers": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "requests": 1200000,
+         "cpuTimeUs": 4000000000
+        },
+        "dimensions": {
+         "date": "2026-10-11"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1210000,
+         "cpuTimeUs": 4050000000
+        },
+        "dimensions": {
+         "date": "2026-10-12"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1220000,
+         "cpuTimeUs": 4100000000
+        },
+        "dimensions": {
+         "date": "2026-10-13"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1230000,
+         "cpuTimeUs": 4150000000
+        },
+        "dimensions": {
+         "date": "2026-10-14"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1240000,
+         "cpuTimeUs": 4200000000
+        },
+        "dimensions": {
+         "date": "2026-10-15"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1250000,
+         "cpuTimeUs": 4250000000
+        },
+        "dimensions": {
+         "date": "2026-10-16"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1260000,
+         "cpuTimeUs": 4300000000
+        },
+        "dimensions": {
+         "date": "2026-10-17"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1270000,
+         "cpuTimeUs": 4350000000
+        },
+        "dimensions": {
+         "date": "2026-10-18"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1280000,
+         "cpuTimeUs": 4400000000
+        },
+        "dimensions": {
+         "date": "2026-10-19"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1290000,
+         "cpuTimeUs": 4450000000
+        },
+        "dimensions": {
+         "date": "2026-10-20"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1300000,
+         "cpuTimeUs": 4500000000
+        },
+        "dimensions": {
+         "date": "2026-10-21"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1310000,
+         "cpuTimeUs": 4550000000
+        },
+        "dimensions": {
+         "date": "2026-10-22"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1320000,
+         "cpuTimeUs": 4600000000
+        },
+        "dimensions": {
+         "date": "2026-10-23"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1330000,
+         "cpuTimeUs": 4650000000
+        },
+        "dimensions": {
+         "date": "2026-10-24"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1340000,
+         "cpuTimeUs": 4700000000
+        },
+        "dimensions": {
+         "date": "2026-10-25"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1350000,
+         "cpuTimeUs": 4750000000
+        },
+        "dimensions": {
+         "date": "2026-10-26"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1360000,
+         "cpuTimeUs": 4800000000
+        },
+        "dimensions": {
+         "date": "2026-10-27"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1370000,
+         "cpuTimeUs": 4850000000
+        },
+        "dimensions": {
+         "date": "2026-10-28"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1380000,
+         "cpuTimeUs": 4900000000
+        },
+        "dimensions": {
+         "date": "2026-10-29"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1390000,
+         "cpuTimeUs": 4950000000
+        },
+        "dimensions": {
+         "date": "2026-10-30"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1400000,
+         "cpuTimeUs": 5000000000
+        },
+        "dimensions": {
+         "date": "2026-10-31"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1410000,
+         "cpuTimeUs": 5050000000
+        },
+        "dimensions": {
+         "date": "2026-11-01"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1420000,
+         "cpuTimeUs": 5100000000
+        },
+        "dimensions": {
+         "date": "2026-11-02"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1430000,
+         "cpuTimeUs": 5150000000
+        },
+        "dimensions": {
+         "date": "2026-11-03"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1440000,
+         "cpuTimeUs": 5200000000
+        },
+        "dimensions": {
+         "date": "2026-11-04"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1450000,
+         "cpuTimeUs": 5250000000
+        },
+        "dimensions": {
+         "date": "2026-11-05"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1460000,
+         "cpuTimeUs": 5300000000
+        },
+        "dimensions": {
+         "date": "2026-11-06"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1470000,
+         "cpuTimeUs": 5350000000
+        },
+        "dimensions": {
+         "date": "2026-11-07"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1480000,
+         "cpuTimeUs": 5400000000
+        },
+        "dimensions": {
+         "date": "2026-11-08"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1490000,
+         "cpuTimeUs": 5450000000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "sum": {
+         "requests": 1500000,
+         "cpuTimeUs": 5500000000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "d1": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-11"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-12"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-13"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-14"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-15"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-16"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-17"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-18"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-19"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-20"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-21"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-22"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-23"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-24"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-25"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-26"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-27"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-28"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-29"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-30"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-10-31"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-01"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-02"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-03"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-04"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-05"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-06"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-07"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-08"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 900000000,
+         "rowsWritten": 2500000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "d1Storage": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "max": {
+         "databaseSizeBytes": 2400000000
+        },
+        "dimensions": {
+         "date": "2026-11-09",
+         "databaseId": "00000000-0000-4000-8000-0000000000d1"
+        }
+       },
+       {
+        "max": {
+         "databaseSizeBytes": 2500000000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "databaseId": "00000000-0000-4000-8000-0000000000d1"
+        }
+       },
+       {
+        "max": {
+         "databaseSizeBytes": 40000000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "databaseId": "00000000-0000-4000-8000-0000000000d2"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "doRequests": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-11"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-12"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-13"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-14"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-15"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-16"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-17"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-18"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-19"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-20"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-21"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-22"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-23"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-24"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-25"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-26"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-27"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-28"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-29"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-30"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-10-31"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-01"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-02"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-03"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-04"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-05"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-06"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-07"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-08"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "sum": {
+         "requests": 300000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "doDuration": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-11"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-12"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-13"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-14"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-15"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-16"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-17"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-18"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-19"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-20"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-21"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-22"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-23"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-24"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-25"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-26"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-27"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-28"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-29"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-30"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-10-31"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-01"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-02"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-03"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-04"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-05"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-06"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-07"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-08"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "sum": {
+         "activeTime": 400000000000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "doRows": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-11"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-12"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-13"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-14"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-15"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-16"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-17"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-18"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-19"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-20"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-21"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-22"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-23"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-24"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-25"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-26"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-27"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-28"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-29"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-30"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-10-31"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-01"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-02"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-03"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-04"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-05"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-06"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-07"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-08"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "sum": {
+         "rowsRead": 1000000000,
+         "rowsWritten": 2000000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "doStorage": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "max": {
+         "storedBytes": 7000000000
+        },
+        "dimensions": {
+         "date": "2026-11-09"
+        }
+       },
+       {
+        "max": {
+         "storedBytes": 7200000000
+        },
+        "dimensions": {
+         "date": "2026-11-10"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "r2Operations": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-11",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-11",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-11",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-12",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-12",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-12",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-13",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-13",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-13",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-14",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-14",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-14",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-15",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-15",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-15",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-16",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-16",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-16",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-17",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-17",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-17",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-18",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-18",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-18",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-19",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-19",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-19",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-20",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-20",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-20",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-21",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-21",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-21",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-22",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-22",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-22",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-23",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-23",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-23",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-24",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-24",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-24",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-25",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-25",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-25",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-26",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-26",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-26",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-27",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-27",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-27",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-28",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-28",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-28",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-29",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-29",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-29",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-30",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-30",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-30",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-10-31",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-10-31",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-10-31",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-01",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-01",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-01",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-02",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-02",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-02",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-03",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-03",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-03",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-04",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-04",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-04",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-05",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-05",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-05",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-06",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-06",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-06",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-07",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-07",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-07",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-08",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-08",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-08",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-09",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-09",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-09",
+         "actionType": "DeleteObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 40000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "actionType": "PutObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 90000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "actionType": "GetObject"
+        }
+       },
+       {
+        "sum": {
+         "requests": 5000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "actionType": "DeleteObject"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ },
+ "r2Storage": {
+  "data": {
+   "viewer": {
+    "accounts": [
+     {
+      "rows": [
+       {
+        "max": {
+         "payloadSize": 30000000000,
+         "metadataSize": 10000000,
+         "objectCount": 1250000
+        },
+        "dimensions": {
+         "date": "2026-11-10",
+         "bucketName": "lastfind-raw"
+        }
+       },
+       {
+        "max": {
+         "payloadSize": 29000000000,
+         "metadataSize": 10000000,
+         "objectCount": 1200000
+        },
+        "dimensions": {
+         "date": "2026-11-09",
+         "bucketName": "lastfind-raw"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "errors": null
+ }
+}

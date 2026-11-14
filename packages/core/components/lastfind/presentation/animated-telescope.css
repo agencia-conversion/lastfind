@@ -1,0 +1,16 @@
+/* AnimatedTelescope: the film's own backdrop (white, or the night sky) drops
+   into the page by blending, so the mark sits on any light or dark sky. */
+.animated-telescope {
+  display: block;
+  flex: none;
+  width: var(--telescope-size, 64px);
+  height: var(--telescope-size, 64px);
+  object-fit: contain;
+  pointer-events: none;
+}
+.animated-telescope[data-tone='light'] {
+  mix-blend-mode: multiply;
+}
+.animated-telescope[data-tone='dark'] {
+  mix-blend-mode: screen;
+}

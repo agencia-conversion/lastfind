@@ -1,0 +1,14 @@
+/* The tones live in ui/badge.tsx (`tone`); here only a button badge's pressed and touch states. */
+button.tag-badge { cursor: pointer; padding: 3px 10px; }
+button.tag-badge[aria-pressed='true'] { background: var(--primary); color: var(--primary-foreground); }
+/* `touch`: an invisible 40 px target centred on the badge; the row keeps its height and the badge its size. */
+.tag-badge[data-touch] { position: relative; overflow: visible; }
+.tag-badge[data-touch]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 40px);
+  height: 40px;
+  translate: -50% -50%;
+}

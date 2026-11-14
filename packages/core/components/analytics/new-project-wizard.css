@@ -1,0 +1,59 @@
+/* New project wizard (new-project-wizard.tsx): one column as wide as the June 2026 wizard, centred in the main content
+   (12/11/2026), steps 24px apart. */
+.new-project-wizard {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  max-width: 64rem;
+  margin-inline: auto;
+}
+.new-project-wizard > .page-heading {
+  margin-bottom: 0;
+}
+.new-project-advanced svg {
+  transition: rotate 150ms;
+}
+.new-project-advanced[data-panel-open] svg {
+  rotate: 90deg;
+}
+@media (prefers-reduced-motion: reduce) {
+  .new-project-advanced svg {
+    transition: none;
+  }
+}
+.new-project-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.new-project-review {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .new-project-review {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.new-project-review dt,
+.new-project-group > span {
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+}
+.new-project-review dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.new-project-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+.new-project-group > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

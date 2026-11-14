@@ -1,0 +1,452 @@
+@media (min-width: 640px) {
+  .analytics-table[data-compact] tbody td {
+    padding-block: 4px;
+  }
+}
+@media (min-width: 768px) {
+  .analytics-table[data-compact] tbody [data-slot='button'] {
+    min-height: 32px;
+  }
+}
+
+/* A name cell whose name is a text button (the row's own action: Settings > Projects opens the project) starts its text where the
+   column's text starts, on the table and on a phone's card: the button's padding and border sit outside the cell's line. */
+.analytics-table td[data-mobile='title'] > [data-slot='button'][data-size='default']:first-child {
+  margin-inline-start: calc(-1 * (var(--spacing) * 2.5 + 1px));
+}
+
+/* Rows stack as cards when the pane the table sits in is narrow, not the viewport: with the sidebar open,
+   a 1024 px screen leaves the table the room of a tablet. The pane is the query container.
+   It is also `app-content`: a screen lays out for the width it gets, not the window's (Ask Lastfind docked narrows it to a
+   tablet's width), so the content's layout breakpoints are container queries on it too, at the content width the old window
+   breakpoints gave with the sidebar open (window 1250 → 970px, 900 → 636px, 760 → 720px with no sidebar). */
+:is(.live-app .live-content, .ds-live) {
+  container: data-table app-content / inline-size;
+}
+/* A fit table in a tablet-wide pane: tighter cell padding, so its columns still fit before it stacks. */
+@container data-table (max-width: 1023px) {
+  .analytics-table[data-fit] :is(th, td) {
+    padding-inline: 8px;
+  }
+}
+@container data-table (max-width: 719px) {
+  /* A single-line table in a phone-wide pane (a ranking in a card) gives its secondary columns' room (the rank) to the name. */
+  .analytics-table[data-single-line]:not(.responsive-table) :is(col, th, td)[data-mobile='hide'] {
+    display: none;
+  }
+  /* Its name (a model, a brand) wraps between words instead of being cut ("Google …"): the figures keep their width. */
+  .analytics-table[data-single-line]:not(.responsive-table) td[data-mobile='title'],
+  .analytics-table[data-single-line]:not(.responsive-table) td[data-mobile='title'] :is(.truncate, .overview-fanout-query) {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* A compact figure column's header ("Share of voice") takes two lines rather than the name's room. */
+  .analytics-table[data-single-line]:not(.responsive-table) th.text-right {
+    white-space: normal;
+  }
+  /* Cards are not a grid: the wide-screen sticky header cells become plain sort chips. */
+  :is(.live-app, .ds-live) table.analytics-table.responsive-table thead th {
+    position: static;
+    background: transparent;
+    box-shadow: none;
+  }
+  :is(.live-app, .ds-live) [data-slot='table-container']:has(> .responsive-table) {
+    overflow-x: visible;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table,
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  /* A card: the name on its line (row actions at its end), then the figures two to a row, each label above its value. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  /* Row actions (the menu) sit at the end of the name's line, never among the figures; the name leaves them room. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:not(:has(td[data-mobile='check'])) td[data-mobile='actions'] {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:not(:has(td[data-mobile='check'])) tr:has(> td[data-mobile='actions']) > td[data-mobile='title'] {
+    padding-right: var(--control-height-touch);
+  }
+  /* Two actions (a skill's switch and its menu): the name keeps clear of both. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:not(:has(td[data-mobile='check'])) tr:has(> td[data-mobile='actions'] > * > :nth-child(2)) > td[data-mobile='title'] {
+    padding-right: calc(var(--control-height-touch) * 2 + 8px);
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-mobile='actions'] :is(button, [data-slot='button'])[data-size^='icon'] {
+    width: var(--control-height-touch);
+    height: var(--control-height-touch);
+    min-width: var(--control-height-touch);
+    min-height: var(--control-height-touch);
+  }
+  /* A small text action given as a figure's value ("Monitor to measure") reads on the values' line, at their size; its
+     touch area reaches past its text. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td:not([data-mobile='actions']) > [data-slot='button'][data-size='xs'] {
+    position: relative;
+    height: auto;
+    padding: 0;
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td:not([data-mobile='actions']) > [data-slot='button'][data-size='xs']::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  /* A card's row header (a th in the body) draws no line of its own: the card's line is the row's (13/11/2026: it drew a second
+     one under the card's name on AI models). */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tbody th {
+    border-top: 0;
+    border-bottom: 0;
+  }
+  /* A loading list shows three cards: a phone fits about that many, and more would make the page scroll past a list that may come
+     back shorter, or empty (13/11/2026: "some loading skeletons cause scrolling"). */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table[aria-busy='true'] tbody tr:nth-child(n + 4) {
+    display: none;
+  }
+  /* Summary row: the last card of the list, labelled like the others (not floating over the cards). */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary {
+    display: block;
+    width: 100%;
+    /* The summary card draws the line above it (its row, below): the footer's own would be a second one 1px under it. */
+    border-top: 0;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary,
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary td {
+    position: static;
+    background: transparent;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary tr {
+    background: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  /* The desktop row-height cap would clip the stacked card; the label + pager cell takes the full width. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary tr[data-summary] td {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  /* A Summary cell with no honest aggregate stays empty: no orphan label on the card. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary td:empty {
+    display: none;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tfoot.analytics-table-summary td:has(.compact-pagination) {
+    grid-column: 1 / -1;
+  }
+  /* singleLine="wide" in a phone-wide pane: cards as wide as the pane (no table floor), and a cell may take more than
+     one row's height. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:is([data-single-line], .live-fixed-columns) {
+    min-width: 0;
+  }
+  /* singleLine="wide" in a phone-wide pane: cards, so a cell may take more than one row's height. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table[data-single-line] td {
+    max-height: none;
+    overflow: visible;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    height: auto;
+    min-width: 0;
+    /* A wide table's `max-w-0` (a column that takes the rest) means nothing in a card: the cell is its grid cell. */
+    max-width: none;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    /* Words break only when one alone is wider than the card (a URL, a long domain): never a name cut mid-word ("Netf / lix").
+       `anywhere`, not `break-word`: the cell is a flex column, and only `anywhere` lets such a word shrink its line instead of
+       running over the value beside it. */
+    overflow-wrap: anywhere;
+  }
+  /* A card shows its name and its wide lines whole (shell.md section 8): a one-line cut (truncate) on a wide table wraps here. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td:is([data-mobile='title'], [data-mobile='wide']) :is(.truncate, .data-table-clip, .data-table-shrink) {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* The name is never squeezed to a stub by a badge or an action beside it ("Crunchyr / oll" beside Review domain): the
+     title's row wraps, so what does not fit beside the whole name goes to the line under it. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-mobile='title'] .flex-nowrap:has(> .truncate) {
+    flex-wrap: wrap;
+  }
+  /* A figure reads under its label, lined up with it: a table's end alignment does not carry into a card. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td :is(.text-right, .text-end) {
+    text-align: left;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td .justify-end {
+    justify-content: flex-start;
+  }
+  /* Nothing in a card is wider than the card (a long brand name truncates instead of widening the page). */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td > * {
+    max-width: 100%;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td .data-table-clip {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-shrink] > .data-table-shrink {
+    width: 100%;
+    min-width: 0;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td::before {
+    content: attr(data-label);
+    color: var(--muted-foreground);
+    font-size: var(--text-caption);
+    line-height: 16px;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td:not([data-label])::before {
+    content: none;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table :is(th, td)[data-mobile='hide'] {
+    display: none;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-mobile='title'],
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-mobile='wide'] {
+    grid-column: 1 / -1;
+  }
+  /* Selectable cards keep selection, title and actions on their first line. */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) tr {
+    grid-template-columns: 24px minmax(0, 1fr) 32px;
+    align-items: start;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td {
+    grid-column: 1 / -1;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td[data-mobile='check'] {
+    grid-column: 1;
+    grid-row: 1;
+    padding-top: 2px;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td[data-mobile='title'] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td[data-mobile='actions'] {
+    grid-column: 3;
+    grid-row: 1;
+    align-items: end;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td[data-label] {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td[data-mobile='wide'] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) td[data-mobile='title'] :is(.truncate, button) {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* Fixed-column tables: the title wraps inside the card (nowrap widened it past the screen). */
+  :is(.live-app, .ds-live) .analytics-table.responsive-table.live-fixed-columns td[data-mobile='title'] .truncate {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table:has(td[data-mobile='check']) tfoot td:has(.compact-pagination) {
+    grid-column: 1 / -1;
+  }
+
+}
+
+/* The phone sort bar (DataTable): one "Sort by" choice and its direction in place of the column headers, shown only where the
+   rows stack as cards. */
+.data-table-sort {
+  display: none;
+}
+@container data-table (max-width: 719px) {
+  :is(.live-app, .ds-live) .data-table-sort {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: var(--text-caption);
+    white-space: nowrap;
+  }
+  :is(.live-app, .ds-live) .data-table-sort > [data-slot='select-trigger'] {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* Expandable rows (DataTable `expanded`): the open row keeps its line, the detail spans every column under it. */
+:is(.live-app, .ds-live) .analytics-table tr[data-expanded='open'] > td {
+  border-bottom-color: transparent;
+}
+:is(.live-app, .ds-live) .analytics-table tr[data-detail] > td.data-table-detail {
+  height: auto;
+  padding: 4px 16px 16px;
+  white-space: normal;
+  vertical-align: top;
+  background: var(--card);
+}
+:is(.live-app, .ds-live) .analytics-table tr[data-detail]:hover > td {
+  background: var(--card);
+}
+/* A column with `maxWidth`: at most that wide, one line, cut with an ellipsis (its full text in the cell's Hint). In a stacked
+   card it is never wider than its half of the card, and wraps there (it ran over the figure beside it). */
+.data-table-clip {
+  max-width: var(--clip-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Column widths of a fit table (`widthOf` in data-table.tsx, shell.md section 8): a figure takes its header and value, never more;
+   a text column (Topic, Intent) at least 10rem, so a short label keeps one or two lines, plus its share of what the name column
+   leaves; past two lines its text ends in an ellipsis. Fixed-layout tables (in a card, or pinned while sorting) keep their widths. */
+@container data-table (min-width: 720px) {
+  .analytics-table[data-fit] tr > :is(th, td)[data-width='content'] {
+    width: 1px;
+    white-space: nowrap;
+  }
+  .analytics-table[data-fit] tr > td[data-width='text'] {
+    min-width: 10rem;
+  }
+  .analytics-table[data-fit] .data-table-text {
+    contain: inline-size;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+}
+
+/* A list screen's table is always the full-bleed pane, with or without metric cards above it (the table takes the
+   whole width of the screen; the cards keep the content gutter). */
+@media (max-width: 767px) {
+  /* Phones: a single-line table wider than its pane scrolls sideways inside it, never the page. */
+  .live-app .live-table-fill-panel [data-slot='table-container']:has(> [data-single-line]) {
+    overflow-x: auto;
+  }
+}
+/* A single-line table keeps every header on one line too (shell.md section 8): a fit table's name column gives up the width. */
+.analytics-table[data-single-line] th,
+.analytics-table[data-fit][data-single-line] th {
+  white-space: nowrap;
+}
+
+/* Editable cells (shell.md section 8, 13/11/2026): the cell is the field. The field (Input, Textarea or TagInput variant="cell")
+   fills its cell with the cell's padding, so a click anywhere in the cell edits it, and the cell takes the --muted fill when
+   hovered or edited. At rest the value keeps one line, its end faded when it runs past the cell (a textarea draws no ellipsis);
+   edited (`data-editing`, useCellEditing in ui/input.tsx), it wraps whole, the height animated in 150ms (none under reduced motion), and
+   keeps it 250ms after the edit ends, so a click on a button below (Next) lands before the row shrinks. In a stacked card the field
+   keeps the fill itself, under the card's label. */
+.analytics-table tbody td:has([data-variant='cell']) {
+  --cell-rest: var(--table-row-height);
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  cursor: text;
+}
+.analytics-table tbody td:has([data-variant='cell']):is(:hover, :focus-within) {
+  background: var(--muted);
+}
+.analytics-table [data-variant='cell'] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--cell-rest);
+  min-height: var(--cell-rest);
+  margin: 0;
+  padding: calc((var(--cell-rest) - 1lh) / 2 - 1px) 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+}
+.analytics-table [data-slot='tag-input'][data-variant='cell'] {
+  flex-wrap: nowrap;
+  padding-block: calc((var(--cell-rest) - 1.5rem) / 2 - 1px);
+}
+.analytics-table [data-slot='tag-input'][data-variant='cell'] > * {
+  flex-shrink: 0;
+}
+.analytics-table [data-variant='cell'][data-editing] {
+  height: auto;
+  white-space: pre-wrap;
+  mask-image: none;
+}
+.analytics-table [data-slot='tag-input'][data-variant='cell'][data-editing] {
+  flex-wrap: wrap;
+}
+.analytics-table [data-slot='tag-input'][data-variant='cell'][data-editing] > * {
+  flex-shrink: 1;
+}
+/* A field after an icon (a competitor's favicon): the label around both is the cell, the icon at the cell's padding. */
+.analytics-table td > label:has(> [data-variant='cell']) {
+  display: flex;
+  align-items: center;
+  padding-inline-start: 12px;
+}
+.analytics-table td > label > [data-variant='cell'] {
+  flex: 1 1 0;
+  padding-inline-start: 8px;
+}
+@container data-table (max-width: 719px) {
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td > label:has(> [data-variant='cell']) {
+    width: 100%;
+    padding-inline-start: 0;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table td > label > [data-variant='cell'] {
+    width: auto;
+    margin-inline: 0 -8px;
+  }
+}
+@container data-table (max-width: 719px) {
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tbody td:has([data-variant='cell']) {
+    --cell-rest: var(--control-height);
+    align-self: stretch;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table tbody td:has([data-variant='cell']):is(:hover, :focus-within) {
+    background: transparent;
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table [data-variant='cell'] {
+    width: calc(100% + 16px);
+    max-width: none;
+    margin-inline: -8px;
+    padding-inline: 8px;
+    border-radius: var(--radius-md);
+  }
+  :is(.live-app, .ds-live) .analytics-table.responsive-table [data-variant='cell']:is(:hover, :focus-within) {
+    background: var(--muted);
+  }
+}
+
+/* A table on its way (`DataTable loading`) never scrolls the page or its card, down or sideways (shell.md section 9): its
+   placeholder rows stay in the frame the loaded table takes, and a header longer than its column is cut with an ellipsis
+   instead of overflowing it (13/11/2026: the Overview's Brand ranking skeleton scrolled sideways by its "Share of voice"). A list
+   screen's pane on a wide screen keeps its own scroller (live-app.css), as it does loaded. */
+[data-slot='table-container']:has(> .analytics-table[aria-busy='true']) {
+  overflow: hidden;
+}
+.analytics-table[aria-busy='true'] > thead th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

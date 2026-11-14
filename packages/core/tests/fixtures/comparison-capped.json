@@ -1,0 +1,397 @@
+{
+ "note": "The shape of a production reading (13/11/2026): Netflix, Google AI Mode, product Family streaming service, 6 options x 6 attributes; 30 cells with a score and a fact, 6 with a score of 60 or more and no fact (content library: Netflix 88; family features: Hulu 66; offline downloads: Apple TV+ 76, Hulu 68, Prime Video 72, Max 77). The other scores and the facts are illustrative. `reply` is the reader's reply; `reading`, how it is read now (the six capped at 59); `stored`, the reading stored before the cap (discarded for evidence).",
+ "roster": {
+  "product": {
+   "id": "family-streaming",
+   "name": "Family streaming service"
+  },
+  "persona": {
+   "id": "parents",
+   "name": "Parents of young kids",
+   "description": "parents of young kids who want one service the whole family shares"
+  },
+  "options": [
+   {
+    "name": "Netflix",
+    "domain": "netflix.com"
+   },
+   {
+    "name": "Hulu",
+    "domain": "hulu.com"
+   },
+   {
+    "name": "Apple TV+",
+    "domain": "tv.apple.com"
+   },
+   {
+    "name": "Prime Video",
+    "domain": "primevideo.com"
+   },
+   {
+    "name": "Max",
+    "domain": "max.com"
+   },
+   {
+    "name": "Disney+",
+    "domain": "disneyplus.com"
+   }
+  ],
+  "attributes": [
+   {
+    "id": "content-library",
+    "name": "Content library"
+   },
+   {
+    "id": "family-features",
+    "name": "Family features"
+   },
+   {
+    "id": "offline-downloads",
+    "name": "Offline downloads"
+   },
+   {
+    "id": "price",
+    "name": "Price"
+   },
+   {
+    "id": "streaming-quality",
+    "name": "Streaming quality"
+   },
+   {
+    "id": "ease-of-use",
+    "name": "Ease of use"
+   }
+  ],
+  "own": "Netflix",
+  "language": "en"
+ },
+ "reading": {
+  "scores": {
+   "content-library": {
+    "Netflix": {
+     "score": 59,
+     "fact": null,
+     "capped": 88
+    },
+    "Prime Video": {
+     "score": 85,
+     "fact": "Over 20,000 titles in the US catalog, including Thursday Night Football"
+    },
+    "Max": {
+     "score": 80,
+     "fact": "Every HBO original since 1972, plus the Warner Bros. film library"
+    },
+    "Disney+": {
+     "score": 78,
+     "fact": "Pixar, Marvel, Star Wars and National Geographic under one plan"
+    },
+    "Hulu": {
+     "score": 74,
+     "fact": "Next-day episodes from ABC, NBC and FX"
+    },
+    "Apple TV+": {
+     "score": 55,
+     "fact": "About 250 originals, no licensed back catalog"
+    }
+   },
+   "family-features": {
+    "Disney+": {
+     "score": 90,
+     "fact": "Kids Profile with a Junior Mode limited to content rated TV-7FV"
+    },
+    "Netflix": {
+     "score": 84,
+     "fact": "Up to 5 profiles with maturity ratings and a PIN per profile"
+    },
+    "Prime Video": {
+     "score": 70,
+     "fact": "Amazon Kids+ profiles share the Household of 2 adults and 4 children"
+    },
+    "Hulu": {
+     "score": 59,
+     "fact": null,
+     "capped": 66
+    },
+    "Max": {
+     "score": 62,
+     "fact": "Kids profiles with an age cap from 2+ to 12+"
+    },
+    "Apple TV+": {
+     "score": 58,
+     "fact": "Family Sharing for up to 6 people"
+    }
+   },
+   "offline-downloads": {
+    "Netflix": {
+     "score": 86,
+     "fact": "Up to 100 downloads per device on the Standard and Premium plans"
+    },
+    "Disney+": {
+     "score": 82,
+     "fact": "Unlimited downloads on up to 10 devices"
+    },
+    "Max": {
+     "score": 59,
+     "fact": null,
+     "capped": 77
+    },
+    "Apple TV+": {
+     "score": 59,
+     "fact": null,
+     "capped": 76
+    },
+    "Prime Video": {
+     "score": 59,
+     "fact": null,
+     "capped": 72
+    },
+    "Hulu": {
+     "score": 59,
+     "fact": null,
+     "capped": 68
+    }
+   },
+   "price": {
+    "Prime Video": {
+     "score": 80,
+     "fact": "US$ 8.99 a month on its own, or included with Prime"
+    },
+    "Apple TV+": {
+     "score": 78,
+     "fact": "US$ 9.99 a month with no ad tier"
+    },
+    "Hulu": {
+     "score": 75,
+     "fact": "US$ 9.99 a month with ads"
+    },
+    "Disney+": {
+     "score": 72,
+     "fact": "US$ 9.99 a month with ads, Duo Basic bundle with Hulu"
+    },
+    "Max": {
+     "score": 64,
+     "fact": "US$ 16.99 a month for Ad-Free"
+    },
+    "Netflix": {
+     "score": 60,
+     "fact": "US$ 17.99 a month for Standard without ads"
+    }
+   },
+   "streaming-quality": {
+    "Netflix": {
+     "score": 88,
+     "fact": "4K HDR and Dolby Atmos on the Premium plan"
+    },
+    "Apple TV+": {
+     "score": 87,
+     "fact": "Every original in 4K Dolby Vision at no extra cost"
+    },
+    "Max": {
+     "score": 82,
+     "fact": "4K on the Ultimate Ad-Free plan"
+    },
+    "Disney+": {
+     "score": 80,
+     "fact": "4K UHD and IMAX Enhanced on Marvel titles"
+    },
+    "Prime Video": {
+     "score": 76,
+     "fact": "4K on Amazon Originals, X-Ray for cast details"
+    },
+    "Hulu": {
+     "score": 70,
+     "fact": "4K only on select FX titles"
+    }
+   },
+   "ease-of-use": {
+    "Netflix": {
+     "score": 90,
+     "fact": "Apps on over 1,000 device types, with Continue Watching on every profile"
+    },
+    "Apple TV+": {
+     "score": 84,
+     "fact": "Built into the TV app on Apple, Samsung and LG TVs"
+    },
+    "Disney+": {
+     "score": 80,
+     "fact": "GroupWatch for up to 7 accounts"
+    },
+    "Max": {
+     "score": 75,
+     "fact": "Single app since the 2023 HBO Max relaunch"
+    },
+    "Prime Video": {
+     "score": 70,
+     "fact": "Rentals and channels mixed into the same catalog since 2024"
+    },
+    "Hulu": {
+     "score": 68,
+     "fact": "Live TV guide inside the same app as Hulu + Live TV"
+    }
+   }
+  },
+  "discarded": null
+ },
+ "reply": "```json\n{\"attributes\":[{\"id\":\"a0\",\"options\":[{\"option\":\"Netflix\",\"place\":1,\"score\":88,\"fact\":\"\"},{\"option\":\"Prime Video\",\"place\":2,\"score\":85,\"fact\":\"Over 20,000 titles in the US catalog, including Thursday Night Football\"},{\"option\":\"Max\",\"place\":3,\"score\":80,\"fact\":\"Every HBO original since 1972, plus the Warner Bros. film library\"},{\"option\":\"Disney+\",\"place\":4,\"score\":78,\"fact\":\"Pixar, Marvel, Star Wars and National Geographic under one plan\"},{\"option\":\"Hulu\",\"place\":5,\"score\":74,\"fact\":\"Next-day episodes from ABC, NBC and FX\"},{\"option\":\"Apple TV+\",\"place\":6,\"score\":55,\"fact\":\"About 250 originals, no licensed back catalog\"}]},{\"id\":\"a1\",\"options\":[{\"option\":\"Disney+\",\"place\":1,\"score\":90,\"fact\":\"Kids Profile with a Junior Mode limited to content rated TV-7FV\"},{\"option\":\"Netflix\",\"place\":2,\"score\":84,\"fact\":\"Up to 5 profiles with maturity ratings and a PIN per profile\"},{\"option\":\"Prime Video\",\"place\":3,\"score\":70,\"fact\":\"Amazon Kids+ profiles share the Household of 2 adults and 4 children\"},{\"option\":\"Hulu\",\"place\":4,\"score\":66,\"fact\":\"\"},{\"option\":\"Max\",\"place\":5,\"score\":62,\"fact\":\"Kids profiles with an age cap from 2+ to 12+\"},{\"option\":\"Apple TV+\",\"place\":6,\"score\":58,\"fact\":\"Family Sharing for up to 6 people\"}]},{\"id\":\"a2\",\"options\":[{\"option\":\"Netflix\",\"place\":1,\"score\":86,\"fact\":\"Up to 100 downloads per device on the Standard and Premium plans\"},{\"option\":\"Disney+\",\"place\":2,\"score\":82,\"fact\":\"Unlimited downloads on up to 10 devices\"},{\"option\":\"Max\",\"place\":3,\"score\":77,\"fact\":\"\"},{\"option\":\"Apple TV+\",\"place\":4,\"score\":76,\"fact\":\"\"},{\"option\":\"Prime Video\",\"place\":5,\"score\":72,\"fact\":\"\"},{\"option\":\"Hulu\",\"place\":6,\"score\":68,\"fact\":\"\"}]},{\"id\":\"a3\",\"options\":[{\"option\":\"Prime Video\",\"place\":1,\"score\":80,\"fact\":\"US$ 8.99 a month on its own, or included with Prime\"},{\"option\":\"Apple TV+\",\"place\":2,\"score\":78,\"fact\":\"US$ 9.99 a month with no ad tier\"},{\"option\":\"Hulu\",\"place\":3,\"score\":75,\"fact\":\"US$ 9.99 a month with ads\"},{\"option\":\"Disney+\",\"place\":4,\"score\":72,\"fact\":\"US$ 9.99 a month with ads, Duo Basic bundle with Hulu\"},{\"option\":\"Max\",\"place\":5,\"score\":64,\"fact\":\"US$ 16.99 a month for Ad-Free\"},{\"option\":\"Netflix\",\"place\":6,\"score\":60,\"fact\":\"US$ 17.99 a month for Standard without ads\"}]},{\"id\":\"a4\",\"options\":[{\"option\":\"Netflix\",\"place\":1,\"score\":88,\"fact\":\"4K HDR and Dolby Atmos on the Premium plan\"},{\"option\":\"Apple TV+\",\"place\":2,\"score\":87,\"fact\":\"Every original in 4K Dolby Vision at no extra cost\"},{\"option\":\"Max\",\"place\":3,\"score\":82,\"fact\":\"4K on the Ultimate Ad-Free plan\"},{\"option\":\"Disney+\",\"place\":4,\"score\":80,\"fact\":\"4K UHD and IMAX Enhanced on Marvel titles\"},{\"option\":\"Prime Video\",\"place\":5,\"score\":76,\"fact\":\"4K on Amazon Originals, X-Ray for cast details\"},{\"option\":\"Hulu\",\"place\":6,\"score\":70,\"fact\":\"4K only on select FX titles\"}]},{\"id\":\"a5\",\"options\":[{\"option\":\"Netflix\",\"place\":1,\"score\":90,\"fact\":\"Apps on over 1,000 device types, with Continue Watching on every profile\"},{\"option\":\"Apple TV+\",\"place\":2,\"score\":84,\"fact\":\"Built into the TV app on Apple, Samsung and LG TVs\"},{\"option\":\"Disney+\",\"place\":3,\"score\":80,\"fact\":\"GroupWatch for up to 7 accounts\"},{\"option\":\"Max\",\"place\":4,\"score\":75,\"fact\":\"Single app since the 2023 HBO Max relaunch\"},{\"option\":\"Prime Video\",\"place\":5,\"score\":70,\"fact\":\"Rentals and channels mixed into the same catalog since 2024\"},{\"option\":\"Hulu\",\"place\":6,\"score\":68,\"fact\":\"Live TV guide inside the same app as Hulu + Live TV\"}]}]}\n```",
+ "stored": {
+  "scores": {
+   "content-library": {
+    "Netflix": {
+     "score": 88,
+     "fact": null
+    },
+    "Prime Video": {
+     "score": 85,
+     "fact": "Over 20,000 titles in the US catalog, including Thursday Night Football"
+    },
+    "Max": {
+     "score": 80,
+     "fact": "Every HBO original since 1972, plus the Warner Bros. film library"
+    },
+    "Disney+": {
+     "score": 78,
+     "fact": "Pixar, Marvel, Star Wars and National Geographic under one plan"
+    },
+    "Hulu": {
+     "score": 74,
+     "fact": "Next-day episodes from ABC, NBC and FX"
+    },
+    "Apple TV+": {
+     "score": 55,
+     "fact": "About 250 originals, no licensed back catalog"
+    }
+   },
+   "family-features": {
+    "Disney+": {
+     "score": 90,
+     "fact": "Kids Profile with a Junior Mode limited to content rated TV-7FV"
+    },
+    "Netflix": {
+     "score": 84,
+     "fact": "Up to 5 profiles with maturity ratings and a PIN per profile"
+    },
+    "Prime Video": {
+     "score": 70,
+     "fact": "Amazon Kids+ profiles share the Household of 2 adults and 4 children"
+    },
+    "Hulu": {
+     "score": 66,
+     "fact": null
+    },
+    "Max": {
+     "score": 62,
+     "fact": "Kids profiles with an age cap from 2+ to 12+"
+    },
+    "Apple TV+": {
+     "score": 58,
+     "fact": "Family Sharing for up to 6 people"
+    }
+   },
+   "offline-downloads": {
+    "Netflix": {
+     "score": 86,
+     "fact": "Up to 100 downloads per device on the Standard and Premium plans"
+    },
+    "Disney+": {
+     "score": 82,
+     "fact": "Unlimited downloads on up to 10 devices"
+    },
+    "Max": {
+     "score": 77,
+     "fact": null
+    },
+    "Apple TV+": {
+     "score": 76,
+     "fact": null
+    },
+    "Prime Video": {
+     "score": 72,
+     "fact": null
+    },
+    "Hulu": {
+     "score": 68,
+     "fact": null
+    }
+   },
+   "price": {
+    "Prime Video": {
+     "score": 80,
+     "fact": "US$ 8.99 a month on its own, or included with Prime"
+    },
+    "Apple TV+": {
+     "score": 78,
+     "fact": "US$ 9.99 a month with no ad tier"
+    },
+    "Hulu": {
+     "score": 75,
+     "fact": "US$ 9.99 a month with ads"
+    },
+    "Disney+": {
+     "score": 72,
+     "fact": "US$ 9.99 a month with ads, Duo Basic bundle with Hulu"
+    },
+    "Max": {
+     "score": 64,
+     "fact": "US$ 16.99 a month for Ad-Free"
+    },
+    "Netflix": {
+     "score": 60,
+     "fact": "US$ 17.99 a month for Standard without ads"
+    }
+   },
+   "streaming-quality": {
+    "Netflix": {
+     "score": 88,
+     "fact": "4K HDR and Dolby Atmos on the Premium plan"
+    },
+    "Apple TV+": {
+     "score": 87,
+     "fact": "Every original in 4K Dolby Vision at no extra cost"
+    },
+    "Max": {
+     "score": 82,
+     "fact": "4K on the Ultimate Ad-Free plan"
+    },
+    "Disney+": {
+     "score": 80,
+     "fact": "4K UHD and IMAX Enhanced on Marvel titles"
+    },
+    "Prime Video": {
+     "score": 76,
+     "fact": "4K on Amazon Originals, X-Ray for cast details"
+    },
+    "Hulu": {
+     "score": 70,
+     "fact": "4K only on select FX titles"
+    }
+   },
+   "ease-of-use": {
+    "Netflix": {
+     "score": 90,
+     "fact": "Apps on over 1,000 device types, with Continue Watching on every profile"
+    },
+    "Apple TV+": {
+     "score": 84,
+     "fact": "Built into the TV app on Apple, Samsung and LG TVs"
+    },
+    "Disney+": {
+     "score": 80,
+     "fact": "GroupWatch for up to 7 accounts"
+    },
+    "Max": {
+     "score": 75,
+     "fact": "Single app since the 2023 HBO Max relaunch"
+    },
+    "Prime Video": {
+     "score": 70,
+     "fact": "Rentals and channels mixed into the same catalog since 2024"
+    },
+    "Hulu": {
+     "score": 68,
+     "fact": "Live TV guide inside the same app as Hulu + Live TV"
+    }
+   }
+  },
+  "discarded": "evidence"
+ }
+}

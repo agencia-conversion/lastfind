@@ -1,0 +1,113 @@
+{
+  "name": "lastfind",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node scripts/runtime.mjs selfhost dev",
+    "build": "node scripts/runtime.mjs selfhost build",
+    "build:selfhost": "node scripts/runtime.mjs selfhost build",
+    "typecheck": "node scripts/runtime.mjs selfhost typecheck",
+    "test": "node scripts/runtime.mjs selfhost test",
+    "test:integration": "node scripts/runtime.mjs selfhost integration",
+    "lint": "oxlint packages/core apps/selfhost",
+    "verify": "npm test && npm run typecheck && npm run lint && npm run test:integration",
+    "setup": "node scripts/setup.mjs",
+    "deploy:selfhost": "node scripts/deploy-selfhost.mjs",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy --config .runtime/selfhost/dist/server/wrangler.json",
+    "storage": "node --experimental-strip-types scripts/project-storage.mjs"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.93",
+    "@ai-sdk/openai": "4.0.106",
+    "@ai-sdk/react": "4.0.162",
+    "@base-ui/react": "1.7.0",
+    "@cloudflare/computer": "0.8.0",
+    "@cloudflare/think": "0.23.0",
+    "@modelcontextprotocol/server": "2.4.0",
+    "@openrouter/ai-sdk-provider": "3.1.0",
+    "@shadcn/react": "0.3.0",
+    "@tiptap/core": "3.32.2",
+    "@tiptap/extension-code-block": "3.32.2",
+    "@tiptap/extension-table": "3.32.2",
+    "@tiptap/extensions": "3.32.2",
+    "@tiptap/markdown": "3.32.2",
+    "@tiptap/pm": "3.32.2",
+    "@tiptap/react": "3.32.2",
+    "@tiptap/starter-kit": "3.32.2",
+    "@tiptap/suggestion": "3.32.2",
+    "agents": "0.32.0",
+    "ai": "7.0.158",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
+    "date-fns": "4.1.0",
+    "drizzle-orm": "0.45.2",
+    "embla-carousel-react": "8.5.2",
+    "input-otp": "1.4.2",
+    "jose": "^6.1.0",
+    "lucide-react": "1.31.0",
+    "marked": "16.4.1",
+    "react": "19.2.8",
+    "react-day-picker": "9.8.1",
+    "react-dom": "19.2.8",
+    "react-resizable-panels": "4.5.8",
+    "react-server-dom-webpack": "19.2.8",
+    "recharts": "3.8.0",
+    "shadcn": "4.22.0",
+    "tailwind-merge": "3.6.0",
+    "tw-animate-css": "1.4.0",
+    "vinext": "1.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.66.0",
+    "@cloudflare/workers-types": "5.20261023.1",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.34",
+    "esbuild": "0.28.2",
+    "miniflare-production": "npm:miniflare@5.20261110.0-beta",
+    "oxfmt": "0.67.0",
+    "oxlint": "1.76.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "react-test-renderer": "19.2.8",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vite": "8.2.4",
+    "wrangler": "4.154.0"
+  },
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "description": "Open-source AI visibility analytics, powered by DataForSEO",
+  "cloudflare": {
+    "bindings": {
+      "APP_URL": {
+        "description": "The address of this Worker, with `https://`: `https://<worker name>.<your subdomain>.workers.dev` (your subdomain is under **Workers & Pages**, **Account details**), or your own domain once you add one."
+      },
+      "OWNER_EMAIL": {
+        "description": "Your email. It names the owner on screen; you sign in with the access key below."
+      },
+      "OWNER_ACCESS_KEY": {
+        "description": "The key you will sign in with, at least 32 characters. Generate one with `openssl rand -base64 32` or your password manager, and keep it there."
+      },
+      "SESSION_SECRET": {
+        "description": "Signs your sessions. A random value: `openssl rand -hex 32`."
+      },
+      "CREDENTIALS_KEY": {
+        "description": "Seals the provider keys you save in the setup wizard. Another random value: `openssl rand -hex 32`. Keep it: without it, saved keys must be typed again."
+      }
+    }
+  },
+  "overrides": {
+    "sharp": "0.35.5",
+    "satori": {
+      "fflate": "0.7.5"
+    }
+  }
+}

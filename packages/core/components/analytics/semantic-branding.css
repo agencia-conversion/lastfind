@@ -1,0 +1,6 @@
+.semantic-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}

@@ -1,0 +1,53 @@
+/* The Prompts filter panel: heading, the everyday rows (label left, control right), the Advanced disclosure and a sticky footer. */
+.prompt-filters-trigger .tag-badge { margin-left: 2px; }
+/* A laptop-wide pane: the status tabs, search and actions share one row, so the trigger keeps its icon and count (its name stays accessible). */
+@container data-table (min-width: 720px) and (max-width: 1199px) {
+  .prompt-filters-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.prompt-filters-popover {
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  /* A safety net only: closed, Advanced fits a 1280×800 screen without scrolling. */
+  max-height: min(85dvh, var(--available-height, 640px));
+  overflow-y: auto;
+  gap: 0;
+  padding: 0;
+  font-size: var(--text-body);
+}
+.prompt-filters-heading { display: flex; align-items: center; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.prompt-filters-heading [data-slot='popover-title'] { font-size: var(--text-body); }
+.prompt-filters-body { display: grid; gap: 10px; padding: 12px 16px; }
+.prompt-filters-row,
+.prompt-filters-range { display: grid; align-items: center; gap: 6px; min-height: 32px; }
+.prompt-filters-row { grid-template-columns: minmax(0, 1fr) auto; }
+.prompt-filters-range { grid-template-columns: minmax(0, 1fr) 76px 76px; }
+.prompt-filters-row > span,
+.prompt-filters-range > span { color: var(--muted-foreground); }
+.prompt-filters-choice > * { min-width: 52px; }
+.prompt-filters-advanced { border-top: 1px solid var(--border); padding-top: 6px; }
+.prompt-filters-advanced-trigger { width: calc(100% + 16px); margin-inline: -8px; justify-content: flex-start; gap: 6px; }
+.prompt-filters-advanced-chevron { margin-left: auto; color: var(--muted-foreground); transition: transform 150ms ease; }
+.prompt-filters-advanced-trigger[data-panel-open] .prompt-filters-advanced-chevron { transform: rotate(180deg); }
+.prompt-filters-advanced-body { display: grid; gap: 10px; padding-top: 6px; }
+.prompt-filters-created { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.prompt-filters-created legend { grid-column: 1 / -1; margin-bottom: 6px; color: var(--muted-foreground); }
+.prompt-filters-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--popover);
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-filters-advanced-chevron { transition: none; }
+}
+/* Touch: 40px targets. */
+@media (max-width: 767px) {
+  .prompt-filters-range { grid-template-columns: minmax(0, 1fr) 72px 72px; }
+  .prompt-filters-body input,
+  .prompt-filters-choice > *,
+  .prompt-filters-advanced-trigger { min-height: 40px; }
+}

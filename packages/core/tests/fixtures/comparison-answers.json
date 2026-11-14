@@ -1,0 +1,72 @@
+{
+  "roster": {
+    "product": { "id": "seo-consulting", "name": "SEO consulting" },
+    "persona": { "id": "owner", "name": "Small business owner", "description": "a small business owner with a tight budget" },
+    "options": [
+      { "name": "Northwind Digital", "domain": "northwind.example" },
+      { "name": "Acme Agency", "domain": "acme.example" },
+      { "name": "Blue Harbor", "domain": "blueharbor.example" }
+    ],
+    "attributes": [{ "id": "price", "name": "Price" }, { "id": "results", "name": "Results" }],
+    "own": "Acme Agency",
+    "language": "en"
+  },
+  "cases": [
+    {
+      "name": "scored with facts",
+      "answer": "## Price\n1. **Acme Agency**: 85/100. Monthly plans from US$ 900, no setup fee.\n2. **Blue Harbor**: 70/100. Plans start at US$ 2,500 a month.\n3. **Northwind Digital**: 55/100. Quotes only on request.\n\n## Results\n1. **Northwind Digital**: 88/100. Named in the 2026 Clutch Top SEO list.\n2. **Acme Agency**: 75/100. Case study: 3x organic traffic for Pet Shop Brasil.\n3. **Blue Harbor**: 60/100. Ranked 4th in the GEO Awards 2025.",
+      "reply": "```json\n{\"attributes\":[{\"id\":\"a0\",\"options\":[{\"option\":\"Acme Agency\",\"place\":1,\"score\":85,\"fact\":\"Monthly plans from US$ 900, no setup fee.\"},{\"option\":\"Blue Harbor\",\"place\":2,\"score\":70,\"fact\":\"Plans start at US$ 2,500 a month.\"},{\"option\":\"Northwind Digital\",\"place\":3,\"score\":55,\"fact\":\"\"}]},{\"id\":\"a1\",\"options\":[{\"option\":\"Northwind Digital (northwind.example)\",\"place\":1,\"score\":88,\"fact\":\"Named in the 2026 Clutch Top SEO list.\"},{\"option\":\"Acme Agency\",\"place\":2,\"score\":\"75\",\"fact\":\"Case study: 3x organic traffic for Pet Shop Brasil.\"},{\"option\":\"Blue Harbor\",\"place\":3,\"score\":60,\"fact\":\"Ranked 4th in the GEO Awards 2025.\"}]}]}\n```",
+      "reading": {
+        "scores": {
+          "price": {
+            "Acme Agency": { "score": 85, "fact": "Monthly plans from US$ 900, no setup fee." },
+            "Blue Harbor": { "score": 70, "fact": "Plans start at US$ 2,500 a month." },
+            "Northwind Digital": { "score": 55, "fact": null }
+          },
+          "results": {
+            "Northwind Digital": { "score": 88, "fact": "Named in the 2026 Clutch Top SEO list." },
+            "Acme Agency": { "score": 75, "fact": "Case study: 3x organic traffic for Pet Shop Brasil." },
+            "Blue Harbor": { "score": 60, "fact": "Ranked 4th in the GEO Awards 2025." }
+          }
+        },
+        "discarded": null
+      }
+    },
+    {
+      "name": "order contradicts the scores",
+      "answer": "**Price**: 1. Blue Harbor (72): plans from US$ 2,500. 2. Acme Agency (80): plans from US$ 900.",
+      "reply": "{\"attributes\":[{\"id\":\"a0\",\"options\":[{\"option\":\"Blue Harbor\",\"place\":1,\"score\":72,\"fact\":\"Plans from US$ 2,500.\"},{\"option\":\"Acme Agency\",\"place\":2,\"score\":80,\"fact\":\"Plans from US$ 900.\"}]}]}",
+      "reading": {
+        "scores": { "price": { "Blue Harbor": { "score": 72, "fact": "Plans from US$ 2,500." }, "Acme Agency": { "score": 80, "fact": "Plans from US$ 900." } } },
+        "discarded": "order"
+      }
+    },
+    {
+      "name": "a high score and no fact at all",
+      "answer": "**Results**: Acme Agency 82, very good reputation. Blue Harbor 50.",
+      "reply": "{\"attributes\":[{\"id\":\"a1\",\"options\":[{\"option\":\"Acme Agency\",\"place\":1,\"score\":82,\"fact\":\"very good reputation\"},{\"option\":\"Blue Harbor\",\"place\":2,\"score\":50,\"fact\":\"\"}]}]}",
+      "reading": {
+        "scores": { "results": { "Acme Agency": { "score": 59, "fact": null, "capped": 82 }, "Blue Harbor": { "score": 50, "fact": null } } },
+        "discarded": "evidence"
+      }
+    },
+    {
+      "name": "no score at all",
+      "answer": "It depends on your goals; all three are reputable agencies.",
+      "reply": "{\"attributes\":[{\"id\":\"a0\",\"options\":[{\"option\":\"Acme Agency\",\"place\":null,\"score\":null,\"fact\":\"\"}]}]}",
+      "reading": { "scores": {}, "discarded": "scores" }
+    },
+    {
+      "name": "a tie at the top, an option outside the roster",
+      "answer": "**Price**: Acme Agency 80 (US$ 900 a month), Northwind Digital 80 (US$ 950 a month), Other Co 99.",
+      "reply": "{\"attributes\":[{\"id\":\"a0\",\"options\":[{\"option\":\"Acme Agency\",\"place\":1,\"score\":80,\"fact\":\"US$ 900 a month\"},{\"option\":\"Northwind Digital\",\"place\":1,\"score\":80,\"fact\":\"US$ 950 a month\"},{\"option\":\"Other Co\",\"place\":1,\"score\":99,\"fact\":\"x\"}]},{\"id\":\"a1\",\"options\":[{\"option\":\"Acme Agency\",\"place\":1,\"score\":70,\"fact\":\"Case study with 3x traffic\"},{\"option\":\"Northwind Digital\",\"place\":2,\"score\":70,\"fact\":\"Clutch Top SEO 2026\"},{\"option\":\"Blue Harbor\",\"place\":3,\"score\":40,\"fact\":\"\"}]}]}",
+      "reading": {
+        "scores": {
+          "price": { "Acme Agency": { "score": 80, "fact": "US$ 900 a month" }, "Northwind Digital": { "score": 80, "fact": "US$ 950 a month" } },
+          "results": { "Acme Agency": { "score": 70, "fact": "Case study with 3x traffic" }, "Northwind Digital": { "score": 70, "fact": "Clutch Top SEO 2026" }, "Blue Harbor": { "score": 40, "fact": null } }
+        },
+        "discarded": null
+      }
+    }
+  ]
+}

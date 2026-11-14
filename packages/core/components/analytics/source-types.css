@@ -1,0 +1,215 @@
+.st-panel .st-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 12px;
+}
+.st-chart {
+  padding: 4px 20px 8px;
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+.st-donut {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  margin: 0;
+}
+.st-donut figcaption {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  pointer-events: none;
+}
+.st-donut figcaption strong {
+  font-size: var(--text-metric);
+  font-weight: var(--weight-strong);
+  line-height: var(--text-metric--line-height);
+}
+.st-donut figcaption span {
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+}
+.st-donut svg:focus,
+.st-donut .recharts-surface:focus {
+  outline: none;
+}
+.st-partial {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--muted);
+  font-size: var(--text-body);
+}
+.st-error {
+  margin: 0;
+  color: var(--destructive);
+  font-size: var(--text-body);
+}
+@media (max-width: 520px) {
+  .st-chart {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .st-chart > .chart-legend-list {
+    width: 100%;
+  }
+}
+.drill-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.drill-link:hover {
+  color: var(--primary);
+}
+.drill-link:not([href]) {
+  color: inherit;
+  cursor: default;
+}
+.st-entity {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.st-entity-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px 14px;
+}
+.st-entity-head > :first-child {
+  margin-top: 6px;
+}
+@media (max-width: 640px) {
+  .st-entity-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .st-entity-head > :nth-child(3) {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+.st-entity-title,
+.live-app .live-content .st-entity-head h2.st-entity-title {
+  margin: 0;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  overflow-wrap: anywhere;
+}
+.st-entity-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.st-entity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 8px 0 0;
+}
+.page-heading .st-entity-meta {
+  margin: 0;
+}
+.st-entity-domain {
+  color: var(--muted-foreground);
+  font-size: var(--text-body);
+}
+.st-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .st-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container app-content (max-width: 636px) {
+  .st-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.st-trend {
+  margin: 0;
+  padding: 8px 12px 12px;
+}
+.st-url {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 32ch;
+}
+/* UrlCell: the in-app link and the open-in-new-tab icon beside it. */
+.url-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  /* Table cells are nowrap: the cap makes a long title truncate (the URL stays in the tooltip).
+     vw, not %: a percentage of the cell does not count when the table sizes its columns. */
+  max-width: min(28rem, calc(100vw - 6rem));
+}
+.url-cell-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.url-cell-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.url-cell-open {
+  display: inline-flex;
+  flex: none;
+  padding: 4px;
+  color: var(--muted-foreground);
+}
+.url-cell-open:hover {
+  color: var(--foreground);
+}
+.st-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+.st-entity .st-empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--muted-foreground);
+}
+.live-app .live-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+}
+.st-list-notice {
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+/* Ownership seal: a mark beside the site type, never a type of its own. */
+.st-name-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+

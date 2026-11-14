@@ -1,0 +1,1659 @@
+/* Agent > Chat: the shell fills the pane at every width (chat, artifact); each column scrolls inside.
+   Agent > Artifacts is a normal page. Colours and type only through tokens (light and dark pairs); blue is kept for the
+   person's own question bubble and for the content the app draws in blue (charts, links in text). */
+.live-app:has(.agent-shell) > [data-slot='sidebar-inset'] {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-top: 0;
+  overflow: hidden;
+}
+/* The chat has no page header: its own bar carries the navigation toggle. */
+.live-app:has(.agent-shell) .analytics-topbar {
+  display: none;
+}
+.live-app .live-content:has(.agent-shell) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.live-app .live-content:has(.agent-shell) > section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agent-shell {
+  --agent-thread-width: calc(var(--spacing) * 192);
+  --agent-gutter: calc(var(--spacing) * 4);
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+@media (min-width: 768px) {
+  .agent-shell {
+    --agent-gutter: var(--content-gutter);
+  }
+}
+/* The panes (chat, artifact) are a resizable group; each fills its pane and scrolls inside. */
+.agent-shell-panels {
+  flex: 1;
+  min-width: 0;
+}
+.agent-shell-panels > [data-panel] > div {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.agent-shell-panels > [data-panel] > div > * {
+  flex: 1;
+  min-width: 0;
+}
+/* Expanded: the artifact takes the pane; the chat waits behind it, still connected. */
+.agent-shell[data-artifact='full'] [data-pane='thread'],
+.agent-shell[data-artifact='full'] [data-slot='resizable-handle'] {
+  display: none;
+}
+.agent-shell[data-artifact='full'] [data-pane='artifact'] {
+  flex-grow: 1 !important;
+}
+
+/* Conversations: closed until asked for, from the chat's bar or ⌘K. From 768px a popover under the button (360px, up to
+   70% of the height), on a phone a sheet from the bottom; the same list in both, its rows scrolling inside. */
+.agent-conversations-popover {
+  width: min(calc(100vw - var(--spacing) * 8), calc(var(--spacing) * 90));
+  max-height: min(70dvh, var(--available-height));
+  padding: calc(var(--spacing) * 2);
+}
+.agent-conversations {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.agent-conversations-list.section-sidebar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: auto;
+  min-height: 0;
+}
+.agent-conversations-list .section-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+}
+.agent-conversations-list .section-footer {
+  margin-top: 0;
+  padding: calc(var(--spacing) * 3) calc(var(--spacing) * 1) calc(var(--spacing) * 1);
+}
+.agent-conversations-top {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-conversations-state {
+  display: grid;
+}
+.agent-conversations-skeleton {
+  display: flex;
+  align-items: center;
+  height: var(--nav-row-height);
+  padding: 0 calc(var(--spacing) * 2);
+}
+/* Renamed in place: the field takes the row. */
+.agent-conversation-rename {
+  flex: 1;
+  min-width: 0;
+}
+/* Still answering (the thin spinner) or a new answer (the dot): in view; the menu beside it shows as the other rows' do. */
+.agent-conversations-list .section-row-actions:has(.agent-conversation-running) {
+  opacity: 1;
+}
+/* A touch screen has no hover: every row keeps its menu (Rename, Pin, Delete) in view, as section-sidebar.css does. */
+@media not (pointer: coarse) {
+  .agent-conversations-list .section-row:not(:hover, :focus-within, [data-active]) .section-row-actions [data-slot='dropdown-menu-trigger']:not([data-popup-open]) {
+    opacity: 0;
+  }
+}
+.agent-conversation-running {
+  display: inline-flex;
+  flex: none;
+}
+/* The chat's one bar: the navigation toggle, Conversations (with its shortcut where there is a keyboard), the title, New. */
+.agent-chat-bar.detail-header {
+  padding-inline: calc(var(--spacing) * 2);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .agent-chat-bar-kbd {
+    display: none;
+  }
+}
+/* On a phone the bar keeps Conversations and New with room around them: the title leaves (the thread's section still names
+   it, and Conversations lists it with rename). */
+@media (max-width: 479px) {
+  .agent-chat-bar .detail-header-title {
+    display: none;
+  }
+}
+
+/* Chat */
+.agent-thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background);
+}
+.agent-thread-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.agent-messages {
+  width: 100%;
+  max-width: var(--agent-thread-width);
+  margin-inline: auto;
+  padding: calc(var(--spacing) * 6) var(--agent-gutter);
+}
+/* Every row is laid out at its real height: a new row counted at the scroller's estimate (10rem) for a frame would make
+   the chat jump when a message is sent. */
+.agent-messages > [data-slot='message-scroller-item'] {
+  content-visibility: visible;
+}
+.agent-thread-loading {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 4);
+  width: 100%;
+  max-width: var(--agent-thread-width);
+  margin: 0 auto;
+  padding: calc(var(--spacing) * 6) var(--agent-gutter);
+}
+/* The box is as wide as the conversation above it. */
+.agent-thread-footer {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  width: 100%;
+  max-width: var(--agent-thread-width);
+  margin: 0 auto;
+  padding: calc(var(--spacing) * 2) var(--agent-gutter) calc(var(--spacing) * 4);
+  box-sizing: border-box;
+}
+
+/* Message box: flat like every other surface (1px light border, the app's radius); focus shades the border a little,
+   never dark and never blue. */
+.agent-composer [data-slot='input-group'],
+.agent-edit [data-slot='input-group'] {
+  border-color: var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  transition: border-color 150ms ease;
+}
+.agent-composer [data-slot='input-group']:focus-within,
+.agent-edit [data-slot='input-group']:focus-within {
+  border-color: color-mix(in oklab, var(--muted-foreground) 35%, var(--border));
+}
+.agent-composer[data-dragging] [data-slot='input-group'] {
+  border-style: dashed;
+  border-color: var(--muted-foreground);
+  background: var(--muted);
+}
+.agent-composer textarea {
+  field-sizing: content;
+  min-height: calc(var(--spacing) * 12);
+  max-height: calc(var(--spacing) * 48);
+  padding: calc(var(--spacing) * 3) calc(var(--spacing) * 4) calc(var(--spacing) * 1);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.agent-composer [data-align='block-start'] {
+  padding: calc(var(--spacing) * 3) calc(var(--spacing) * 3) 0;
+}
+.agent-composer [data-align='block-end'] {
+  gap: calc(var(--spacing) * 1);
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2) calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+}
+.agent-composer-notice {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-text);
+}
+
+/* The queue (as in Codex): compact rows stacked right over the box, one line each, their actions at the end. */
+.agent-queue {
+  display: grid;
+  gap: calc(var(--spacing) * 1.5);
+  min-width: 0;
+}
+.agent-queue > h3 {
+  margin: 0;
+  padding-inline: calc(var(--spacing) * 1);
+  font-weight: var(--weight-label);
+}
+.agent-queue > ul {
+  display: grid;
+  gap: calc(var(--spacing) * 1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agent-queue-item {
+  min-width: 0;
+  flex-wrap: nowrap;
+  padding-block: calc(var(--spacing) * 1);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.agent-queue-item [data-slot='item-media'] {
+  color: var(--muted-foreground);
+}
+.agent-queue-item [data-slot='item-content'] {
+  min-width: 0;
+}
+.agent-queue-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: var(--weight-text);
+}
+.agent-queue-item [data-slot='item-actions'] {
+  gap: calc(var(--spacing) * 0.5);
+  color: var(--muted-foreground);
+}
+
+/* Empty conversation: left-aligned like the app's headings, right above the box. */
+.agent-welcome {
+  display: grid;
+  justify-items: start;
+  gap: calc(var(--spacing) * 3);
+  width: 100%;
+  max-width: var(--agent-thread-width);
+  margin: auto auto 0;
+  padding: calc(var(--spacing) * 6) var(--agent-gutter) calc(var(--spacing) * 2);
+  text-align: left;
+}
+.live-app .live-content .agent-welcome > h2.text-title {
+  margin: 0;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: var(--weight-strong);
+}
+.live-app .live-content .agent-welcome > p {
+  margin: 0;
+  max-width: calc(var(--spacing) * 160);
+}
+.agent-suggestions {
+  width: 100%;
+  margin-top: calc(var(--spacing) * 2);
+}
+.agent-suggestions [data-slot='item'] {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-suggestions [data-slot='item']:hover:not(:disabled) {
+  background: var(--muted);
+}
+.agent-suggestions [data-slot='item']:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* A question: its edit button shows on hover or focus (always on touch screens). */
+.agent-question {
+  align-items: center;
+}
+.agent-question-edit {
+  color: var(--muted-foreground);
+  opacity: 0;
+}
+.agent-question:is(:hover, :focus-within) .agent-question-edit {
+  opacity: 1;
+}
+
+.agent-question-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: calc(var(--spacing) * 2);
+  min-width: 0;
+  max-width: 80%;
+}
+.agent-question-body > [data-slot='bubble'] {
+  max-width: 100%;
+}
+.agent-edit {
+  width: min(100%, calc(var(--spacing) * 160));
+  margin-left: auto;
+}
+.agent-edit textarea {
+  field-sizing: content;
+  max-height: calc(var(--spacing) * 48);
+  padding: calc(var(--spacing) * 3);
+}
+
+/* Files: images as square thumbnails with an edge (a white screenshot keeps one), the remove button on the corner; any
+   other file as a chip with its name, cut when long. */
+/* Up to four files: they wrap instead of scrolling sideways, so every one shows (the question's sit at its right). */
+.agent-files[data-slot='attachment-group'] {
+  max-width: 100%;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.agent-question-body .agent-files[data-slot='attachment-group'] {
+  justify-content: flex-end;
+}
+.agent-file {
+  max-width: calc(var(--spacing) * 56);
+}
+.agent-image {
+  width: calc(var(--spacing) * 16);
+  padding: 0;
+  border: 0;
+}
+.agent-image [data-slot='attachment-media'] {
+  width: calc(var(--spacing) * 16);
+  aspect-ratio: 1;
+  padding: 0;
+}
+.agent-image [data-slot='attachment-media'] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+.agent-image [data-slot='attachment-actions'] {
+  top: calc(var(--spacing) * -2);
+  right: calc(var(--spacing) * -2);
+}
+.agent-image-dialog img {
+  display: block;
+  max-width: 100%;
+  max-height: 80dvh;
+  margin: 0 auto;
+  border-radius: var(--radius-md);
+}
+
+/* An answer */
+.agent-answer {
+  align-items: flex-start;
+  gap: calc(var(--spacing) * 3);
+}
+.agent-answer-body {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+  flex: 1;
+  min-width: 0;
+}
+/* The steps and the chat's state lines (Trace): quiet, thin icons, still; a running one is a live label (live-label.css),
+   a failed one has the red dot (TraceErrorMark) and stays grey. */
+.agent-steps,
+.agent-status {
+  gap: calc(var(--spacing) * 1.5);
+}
+.agent-steps [data-slot='trace-icon'] > svg.lucide,
+.agent-status [data-slot='trace-icon'] > svg.lucide {
+  stroke-width: 1.5;
+}
+/* A state at rest (stopped, cut short) wraps, so a phone keeps the whole sentence; a live one stays one line. */
+.agent-status [data-slot='trace-line']:not([data-status]) [data-slot='trace-title'] {
+  white-space: normal;
+}
+/* Writing: a thin caret in the activity colour fades at the end of the words until the answer ends; with less motion it
+   stands still. Only after text (a paragraph, a heading, a list's last item), never after a chart or a table. */
+.agent-answer-body[data-writing] > .agent-markdown > .live-answer:last-child > :is(p, h1, h2, h3, h4, blockquote):last-child::after,
+.agent-answer-body[data-writing] > .agent-markdown > .live-answer:last-child > :is(ul, ol):last-child > li:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  border-radius: 1px;
+  background: var(--activity-mark);
+  animation: agent-caret-fade 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes agent-caret-fade {
+  50% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-answer-body[data-writing] .live-answer::after,
+  .agent-answer-body[data-writing] .live-answer *::after {
+    animation: none;
+  }
+}
+/* Copy, ask again and the rating: in view on the latest answer, on hover or focus elsewhere (always on touch). */
+.agent-answer-actions {
+  gap: calc(var(--spacing) * 0.5);
+  margin-left: calc(var(--spacing) * -2);
+  padding-inline: 0;
+  color: var(--muted-foreground);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.agent-answer[data-last] .agent-answer-actions,
+.agent-answer:hover .agent-answer-actions,
+.agent-answer-actions:focus-within {
+  opacity: 1;
+}
+.agent-answer-actions [aria-pressed='true'] {
+  color: var(--foreground);
+}
+.agent-artifact-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-artifact-card {
+  min-width: min(100%, calc(var(--spacing) * 72));
+}
+.agent-artifact-card [data-slot='attachment-content'] {
+  flex: 1;
+  min-width: 0;
+}
+.agent-artifact-card[data-active] {
+  background: var(--muted);
+}
+
+/* Changes to confirm: one card, a divider between changes; amber only when something is removed or rejected. */
+.agent-confirm {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+  padding: calc(var(--spacing) * 4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.agent-confirm > header {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--spacing) * 2.5);
+}
+.agent-confirm > header > svg {
+  flex: none;
+  width: calc(var(--spacing) * 5);
+  height: calc(var(--spacing) * 5);
+  margin-top: calc(var(--spacing) * 0.5);
+  color: var(--muted-foreground);
+}
+.agent-confirm[data-destructive] > header > svg {
+  color: var(--warning);
+}
+.agent-confirm-call {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  padding-top: calc(var(--spacing) * 3);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-body);
+}
+.agent-confirm-call dl {
+  display: grid;
+  gap: calc(var(--spacing) * 1.5);
+  margin: 0;
+}
+.agent-confirm-call dl > div {
+  display: grid;
+  grid-template-columns: minmax(calc(var(--spacing) * 24), auto) minmax(0, 1fr);
+  gap: calc(var(--spacing) * 3);
+}
+.agent-confirm-call dt {
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  line-height: var(--text-body--line-height);
+}
+.agent-confirm-call dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-confirm-call dd ul {
+  margin: 0;
+  padding-left: calc(var(--spacing) * 4);
+  list-style: disc;
+}
+@media (max-width: 639px) {
+  .agent-confirm-call dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: calc(var(--spacing) * 0.5);
+  }
+}
+.agent-confirm > footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: calc(var(--spacing) * 2);
+}
+
+/* Answer and artifact text: the app's answer Markdown, also outside the app shell (a sheet, the public page). */
+.agent-markdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--spacing) * 4);
+  min-width: 0;
+  font-size: var(--text-body);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.agent-markdown [data-slot='table-container'] {
+  overflow-x: auto;
+}
+.agent-markdown .live-answer > * + *,
+.agent-markdown .live-answer li > * + * {
+  margin-top: 0.75em;
+}
+.agent-markdown .live-answer :is(ul, ol) {
+  padding-left: 1.5em;
+}
+.agent-markdown .live-answer ul {
+  list-style: disc;
+}
+.agent-markdown .live-answer ol {
+  list-style: decimal;
+}
+/* An artifact (AgentMarkdown document, and its editor, the only ones with Markdown heading tags; a data block's own titles
+   are not its children): Notion's document scale (tokens.css), the opening h1 as the page title, then h1 > h2 > h3 > h4, more
+   room above a heading than below it, and the text at reading width (shell.md section 2). Data blocks and tables keep the
+   app's sizes. */
+.agent-markdown[data-document]:not(.agent-editor),
+.agent-editor-content {
+  width: 100%;
+  max-width: var(--artifact-width, var(--doc-width));
+  margin-inline: auto;
+}
+/* An artifact's width, the person's pick (More > Width, ArtifactWidth): Standard, an A4 sheet, by default and on the shared
+   link; the page's body grows with it. A phone has no pick: every width is wider than its screen. */
+.agent-artifact,
+.agent-shared {
+  --artifact-width: var(--doc-width-standard);
+}
+.agent-artifact[data-width='narrow'] {
+  --artifact-width: var(--doc-width);
+}
+.agent-artifact[data-width='wide'] {
+  --artifact-width: var(--doc-width-wide);
+}
+.agent-artifact[data-width='full'] {
+  --artifact-width: 100%;
+}
+:is(.agent-artifact, .agent-shared) .agent-artifact-scroll > .detail-body {
+  max-width: calc(var(--artifact-width) + var(--content-gutter) * 2);
+}
+/* Bold the writer set is bold in a document, in the app as on its own page (elsewhere in the app b and strong are medium). */
+.agent-markdown[data-document] .live-answer :is(b, strong) {
+  font-weight: var(--weight-strong);
+}
+.agent-markdown[data-document] .live-answer > :is(p, ul, ol, blockquote) {
+  font-size: var(--text-doc-body);
+  line-height: var(--text-doc-body--line-height);
+}
+.agent-markdown .live-answer > :is(h1, h2, h3, h4) {
+  margin-top: var(--doc-space);
+  color: var(--foreground);
+  font-weight: var(--weight-strong);
+  text-wrap: pretty;
+}
+.agent-markdown .live-answer > h1 {
+  --doc-space: calc(var(--spacing) * 8);
+  font-size: var(--text-doc-h1);
+  line-height: var(--text-doc-h1--line-height);
+  letter-spacing: -0.01em;
+}
+.agent-markdown .live-answer > h2 {
+  --doc-space: calc(var(--spacing) * 6);
+  font-size: var(--text-doc-h2);
+  line-height: var(--text-doc-h2--line-height);
+  letter-spacing: -0.01em;
+}
+.agent-markdown .live-answer > h3 {
+  --doc-space: calc(var(--spacing) * 4);
+  font-size: var(--text-doc-h3);
+  line-height: var(--text-doc-h3--line-height);
+}
+.agent-markdown .live-answer > h4 {
+  --doc-space: calc(var(--spacing) * 3);
+  font-size: var(--text-doc-h4);
+  line-height: var(--text-doc-h4--line-height);
+}
+/* The h1 that opens a document is its title, Notion's page title: the biggest step, alone at the top. */
+.agent-markdown[data-document] > .live-answer:first-child > h1:first-child,
+.agent-editor-content > h1:first-child {
+  font-size: var(--text-doc-title);
+  line-height: var(--text-doc-title--line-height);
+  letter-spacing: -0.02em;
+}
+.agent-markdown .live-answer > h1:first-child + * {
+  margin-top: calc(var(--spacing) * 4);
+}
+/* After a data block, or opening a shared page's section (both 16px apart already), a heading takes the rest of its room. */
+.agent-markdown[data-document] > * + .live-answer > :is(h1, h2, h3, h4):first-child,
+.agent-shared-section + .agent-shared-section .agent-markdown > .live-answer:first-child > :is(h1, h2, h3, h4):first-child {
+  margin-top: calc(var(--doc-space) - var(--spacing) * 4);
+}
+.agent-markdown .live-answer > :is(h1, h2) + * {
+  margin-top: calc(var(--spacing) * 3);
+}
+.agent-markdown .live-answer > :is(h3, h4) + * {
+  margin-top: calc(var(--spacing) * 2);
+}
+.agent-markdown .live-answer > :first-child {
+  margin-top: 0;
+}
+.agent-markdown .live-answer [data-slot='table'] :is(th, td) {
+  white-space: normal;
+}
+/* A link in a table cell is not underlined (link-hover.css): its weight says it opens a screen. */
+.agent-markdown .live-answer [data-slot='table'] a {
+  color: var(--foreground);
+  font-weight: var(--weight-label);
+}
+
+/* Charts and key figures: the app's panel (SectionCard), chart and metric pieces. */
+.agent-markdown .analytics-panel {
+  margin: 0;
+}
+.agent-chart figure {
+  margin: 0;
+  padding: 0 calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+}
+.agent-chart .trend-chart {
+  min-height: calc(var(--spacing) * 60);
+  margin: 0;
+}
+.agent-chart .chart-legend {
+  padding: calc(var(--spacing) * 2) 0 calc(var(--spacing) * 1);
+}
+.agent-chart-bars {
+  width: 100%;
+  min-height: calc(var(--spacing) * 24);
+}
+/* Ranked rows (Sources' presence bars), also on the public page, which has no app shell. */
+.agent-frequency {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+}
+/* Wider than the Sources rows (`.live-app .live-frequency`): a value carries its unit (87,5 %). */
+.live-app .live-frequency.agent-frequency > div,
+.agent-frequency > div {
+  display: grid;
+  grid-template-columns: calc(var(--spacing) * 36) minmax(0, 1fr) calc(var(--spacing) * 14);
+  align-items: center;
+  gap: calc(var(--spacing) * 2.5);
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+.agent-frequency-label {
+  display: flex;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: var(--text-body);
+}
+.agent-frequency i {
+  display: block;
+  height: 7px;
+  min-width: 2px;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+}
+.agent-frequency b {
+  white-space: nowrap;
+  text-align: right;
+  color: var(--foreground);
+  font-weight: var(--weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+.agent-chart-donut {
+  display: grid;
+  grid-template-columns: calc(var(--spacing) * 40) minmax(0, 1fr);
+  align-items: center;
+  gap: calc(var(--spacing) * 6);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) calc(var(--spacing) * 3);
+}
+.agent-chart-ring {
+  width: calc(var(--spacing) * 40);
+  height: calc(var(--spacing) * 40);
+}
+.agent-chart-legend {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-body);
+}
+.agent-chart-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-chart-legend i {
+  width: calc(var(--spacing) * 2.5);
+  height: calc(var(--spacing) * 2.5);
+  border-radius: 9999px;
+}
+.agent-chart-legend span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-chart-pending {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+  padding: calc(var(--spacing) * 4);
+}
+@media (max-width: 639px) {
+  .agent-chart-donut {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .agent-chart-legend {
+    width: 100%;
+  }
+  .agent-frequency > div {
+    grid-template-columns: calc(var(--spacing) * 26) minmax(0, 1fr) calc(var(--spacing) * 12);
+  }
+}
+/* Cards side by side keep one-line labels (rule 8): the rest goes in the note under the value. */
+.agent-markdown .metric-strip {
+  margin: 0;
+}
+/* Key figures follow the width they get, not the screen's (an artifact beside the chat is narrow on a wide screen): in
+   pairs below 40rem, as the Overview's on a phone. */
+.agent-markdown {
+  container-type: inline-size;
+}
+@container (max-width: 40rem) {
+  .agent-markdown .metric-strip.metric-strip-pairs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-markdown .metric-strip.metric-strip-pairs .metric-summary {
+    grid-column: auto;
+    border-left: 0;
+    border-top: 0;
+  }
+  .agent-markdown .metric-strip.metric-strip-pairs .metric-summary:nth-child(even) {
+    border-left: 1px solid var(--border);
+  }
+  .agent-markdown .metric-strip.metric-strip-pairs .metric-summary:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+  .agent-markdown .metric-strip.metric-strip-pairs .metric-summary:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.agent-markdown .metric-label > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The artifact, beside the chat or in a sheet: a header as tall as the app's top bar, sharing inside it. */
+.agent-shell-artifact {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--card);
+}
+.agent-artifact {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.agent-share {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+  width: min(calc(100vw - var(--spacing) * 8), calc(var(--spacing) * 96));
+}
+.agent-artifact-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: calc(var(--spacing) * 5) calc(var(--spacing) * 6) calc(var(--spacing) * 8);
+}
+.agent-sheet[data-side='right'] {
+  width: 100%;
+  max-width: calc(var(--spacing) * 176);
+  gap: 0;
+  padding: 0;
+}
+.agent-sheet-list[data-side='bottom'] {
+  max-height: 85dvh;
+  gap: 0;
+  padding: 0 calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+.agent-sheet-list > [data-slot='sheet-header'] {
+  padding-inline: calc(var(--spacing) * 2);
+}
+
+/* Agent > Artifacts */
+.agent-artifacts {
+  display: grid;
+  gap: calc(var(--spacing) * 4);
+}
+.agent-artifact-open {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  max-width: min(100%, calc(var(--spacing) * 128));
+  color: var(--foreground);
+  font-weight: var(--weight-label);
+}
+.agent-unavailable,
+.agent-artifacts-empty {
+  margin: calc(var(--spacing) * 10) auto;
+}
+
+/* An artifact on its page (the main content, or its own address): two headers, the page's (the title and the actions)
+   and the document's (a content's tabs and, for members, the formatting); the document at reading width, the page
+   scrolls; the chat beside it from top to bottom on wide screens (in a sheet on narrower ones). */
+.agent-artifacts[data-open] {
+  display: block;
+}
+.agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-artifact-body {
+  overflow: visible;
+  padding: 0;
+}
+/* When it was last edited: the header's caption, its full date in a tooltip (a button only to reach it by keyboard). */
+.agent-edited {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.agent-edited[data-failed] {
+  color: var(--destructive);
+}
+
+/* The title at the header's size (DetailHeader: body, label weight), the field that renames it too. */
+.agent-artifact-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.agent-artifact-logo {
+  display: inline-flex;
+  margin-right: calc(var(--spacing) * 2);
+}
+.agent-artifact-bars:empty {
+  display: none;
+}
+.agent-artifact-bars .agent-editor-bars {
+  display: grid;
+  gap: calc(var(--spacing) * 1);
+}
+.agent-artifact-title:has(input) {
+  overflow: visible;
+}
+.agent-artifact-title [data-slot='input'] {
+  text-overflow: ellipsis;
+}
+.agent-artifact .detail-body {
+  padding-top: calc(var(--spacing) * 4);
+}
+/* A disabled tool (nothing to undo) just rests: no "not allowed" sign. */
+.agent-artifact-bars button:disabled {
+  cursor: default;
+}
+.agent-artifact-subheader {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 4);
+  min-width: 0;
+}
+.agent-artifact-subheader .agent-artifact-bars {
+  flex: 1;
+  min-width: 0;
+}
+/* The disabled bar holds the place until the editor's own bar arrives in the same row (editor-toolbar.tsx). */
+.agent-artifact-bars:has(> .agent-editor-toolbar:not([data-placeholder])) > .agent-editor-toolbar[data-placeholder] {
+  display: none;
+}
+.agent-artifact-bars .agent-editor-toolbar {
+  position: static;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  scrollbar-width: none;
+}
+/* Agent > Brain: the files in a second sidebar (SectionSidebar, white), from the top of the page to its bottom, beside the
+   open file. */
+.agent-brain.section-layout {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0;
+}
+.agent-brain > .section-sidebar {
+  top: 0;
+  height: 100dvh;
+}
+.agent-brain > .section-sidebar > .detail-header {
+  margin: calc(var(--spacing) * -2) calc(var(--spacing) * -2) 0;
+  padding-inline: calc(var(--spacing) * 2);
+  background: none;
+}
+/* Phones: the file's header carries the navigation toggle and the file's name says where it is (as the chat's phone bar). */
+@media (max-width: 767px) {
+  .agent-brain > .section-sidebar > .detail-header {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .agent-brain.section-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-brain > .section-sidebar.section-sidebar[data-narrow] {
+    position: static;
+    height: auto;
+    padding: calc(var(--spacing) * 2) var(--content-gutter);
+    border-bottom: 1px solid var(--border);
+  }
+}
+/* Phones: an artifact's header keeps the whole width for its title and caption; its actions take a row under them. */
+@media (max-width: 767px) {
+  .agent-artifact .detail-header,
+  .agent-shared .detail-header {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'leading title' 'actions actions' 'below below';
+    grid-template-rows: var(--header-height-touch);
+  }
+  .agent-artifact .detail-header-actions {
+    justify-content: flex-end;
+    min-width: 0;
+    margin: 0 calc(var(--content-gutter) * -1);
+    padding: 0 var(--content-gutter) calc(var(--spacing) * 1);
+    overflow-x: auto;
+  }
+}
+/* An artifact on its page fills the screen and scrolls inside: the document beside a content's tabs, the chat beside both. */
+.agent-artifact:is([data-place='page'], [data-place='standalone']) {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+}
+.agent-artifact-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+.agent-artifact-docs {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.agent-artifact-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+/* With a content's tabs beside the document, the whole pane scrolls: its scrollbar at the page's right edge, the tabs
+   column sticky beside the text (never a scrollbar between the two). */
+@media (min-width: 901px) {
+  .agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-artifact-docs {
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+  .agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-artifact-scroll {
+    overflow: visible;
+  }
+  .agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-tabs-rail.section-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100%;
+  }
+}
+/* A content's tabs on a wide screen (TabsRail floating, shell.md section 5): a panel over the page's right edge, in view
+   while the text scrolls, in a gutter the document keeps for it whether it is open or folded, so the text never moves.
+   The anchor takes no width; the panel hangs from it. */
+@media (min-width: 1024px) {
+  .agent-artifact-docs[data-tabs='floating'] > .agent-artifact-scroll {
+    padding-right: calc(var(--spacing) * 56);
+  }
+  .agent-tabs-float {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    flex: 0 0 0;
+    width: 0;
+    align-self: flex-start;
+  }
+  .agent-artifact-docs[data-tabs='floating'] > .agent-tabs-float > .agent-tabs-rail.section-sidebar {
+    position: absolute;
+    top: calc(var(--spacing) * 3);
+    right: var(--content-gutter);
+    height: auto;
+  }
+  .agent-artifact-docs[data-tabs='floating'] > .agent-tabs-float > .agent-tabs-rail.section-sidebar[data-collapsed] {
+    padding: 0;
+  }
+}
+/* A document's tabs: on the right (TabsRail), its head the group label and the fold toggle. */
+.agent-tabs-rail.section-sidebar {
+  flex: none;
+  align-self: stretch;
+  overflow-y: auto;
+}
+/* Folded: no rail, only the round button with the list, floating at the document's top right (Google Docs' outline). */
+.agent-tabs-rail.section-sidebar[data-collapsed] {
+  width: auto;
+  background: none;
+  border: 0;
+  padding: calc(var(--spacing) * 3);
+}
+.agent-tabs-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 2);
+  min-height: var(--control-height);
+}
+.agent-tabs-rail-head > .section-group-label {
+  padding-bottom: 0;
+}
+@media (max-width: 900px) {
+  .agent-artifact-docs {
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+  }
+  .agent-artifact-docs > .agent-tabs-rail.section-sidebar[data-narrow] {
+    flex: none;
+  }
+  .agent-tabs-rail.section-sidebar {
+    padding: calc(var(--spacing) * 2) var(--content-gutter);
+    border-bottom: 1px solid var(--border);
+  }
+  .agent-tabs-rail-head {
+    display: none;
+  }
+}
+.agent-artifact-chat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-block: calc(var(--spacing) * 3);
+}
+.agent-artifact-chat .agent-thread-body {
+  flex: 1;
+  min-height: 0;
+}
+.agent-artifact-chat .agent-messages {
+  padding-inline: calc(var(--spacing) * 4);
+}
+/* In the narrow screens' sheet, the first message starts below the sheet's close button, never under it. */
+.agent-sheet .agent-artifact-chat .agent-messages {
+  padding-top: calc(var(--spacing) * 14);
+}
+.live-app .live-content .agent-artifact-chat-welcome > h2.text-section {
+  margin: 0;
+}
+.agent-artifact-chat-welcome {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+  margin-top: auto;
+  padding: calc(var(--spacing) * 6) calc(var(--spacing) * 4) calc(var(--spacing) * 2);
+}
+.agent-artifact-chat .agent-thread-footer {
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3) calc(var(--spacing) * 1);
+}
+/* The agent at work: a banner over the document, in view while it scrolls (what it does, read-only, Stop); the text stays
+   on screen as it was, locked; what it changed lights up for a moment when it lands (shell.md section 4). */
+.agent-artifact-note {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: calc(var(--spacing) * 3) calc(var(--spacing) * 5) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+}
+.agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-artifact-note {
+  margin: 0 0 calc(var(--spacing) * 4);
+}
+.agent-artifact-note-step {
+  color: var(--foreground);
+  font-weight: var(--weight-label);
+}
+.agent-artifact-body {
+  position: relative;
+  isolation: isolate;
+}
+.agent-artifact-body[data-locked] .agent-editor {
+  cursor: default;
+}
+.agent-artifact-changed {
+  position: absolute;
+  z-index: -1;
+  border-radius: var(--radius-md);
+  background: var(--range-selected);
+  box-shadow:
+    0 0 0 calc(var(--spacing) * 2) var(--range-selected),
+    calc(var(--spacing) * -2) 0 0 calc(var(--spacing) * 0.5) var(--primary);
+  pointer-events: none;
+  animation: agent-changed 4s ease-out forwards;
+}
+@keyframes agent-changed {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-artifact-changed {
+    animation: none;
+  }
+}
+.agent-artifact-settings {
+  display: grid;
+  gap: calc(var(--spacing) * 3);
+  width: min(calc(100vw - var(--spacing) * 8), calc(var(--spacing) * 88));
+}
+
+/* The editor: its toolbar stays on top while the document scrolls; the text reads as in the reader (live-answer). */
+.agent-editor {
+  display: grid;
+  gap: calc(var(--spacing) * 4);
+}
+.agent-editor-toolbar {
+  position: sticky;
+  top: calc(var(--spacing) * -5);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 1.5) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+.agent-artifact:is([data-place='page'], [data-place='standalone']) .agent-editor-toolbar {
+  top: 0;
+  background: var(--background);
+}
+/* A document, not a field: the caret shows where the focus is, as in any text editor (above the app's focus ring). */
+.agent-editor-content {
+  min-height: calc(var(--spacing) * 40);
+  outline: none;
+  box-shadow: none;
+}
+.agent-editor-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.agent-editor-content table:not([data-slot]) {
+  width: 100%;
+  border-collapse: collapse;
+}
+.agent-editor-content :is(th, td):not([data-slot]) {
+  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.agent-editor-content th:not([data-slot]) {
+  background: var(--muted);
+  font-weight: var(--weight-label);
+  text-align: left;
+}
+.agent-editor-content .selectedCell {
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+}
+/* A data block keeps room around it: selected, a soft edge with that room inside (the text column does not move); its
+   handle shows on the left on hover, and the drop line marks where it lands. */
+.agent-editor-block {
+  position: relative;
+  margin: calc(var(--spacing) * 2) calc(var(--spacing) * -3);
+  padding: calc(var(--spacing) * 3);
+  border-radius: var(--radius-xl);
+  user-select: none;
+  transition: background-color 120ms ease;
+}
+/* Selected: a fill, never a ring (shell.md section 10). */
+.agent-editor-block[data-selected] {
+  background: var(--table-hover);
+}
+.agent-editor-handle {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: none;
+  touch-action: none;
+  top: calc(var(--spacing) * 3);
+  left: calc(var(--spacing) * -5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 8);
+  border-radius: var(--radius-sm);
+  color: var(--muted-foreground);
+  cursor: move;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.agent-editor-handle svg {
+  width: calc(var(--spacing) * 4);
+  height: calc(var(--spacing) * 4);
+}
+.agent-editor-handle:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.agent-editor-block:is(:hover, :focus-within, [data-selected]) .agent-editor-handle {
+  opacity: 1;
+}
+.agent-editor-dropcursor,
+.agent-editor-dropline {
+  border-radius: var(--radius-sm);
+  background: var(--muted-foreground);
+}
+.agent-editor-dropline {
+  position: fixed;
+  z-index: 70;
+  height: 3px;
+  pointer-events: none;
+}
+:root[data-dragging='block'],
+:root[data-dragging='block'] * {
+  cursor: move !important;
+  user-select: none;
+}
+/* "/" in the text: the commands at the caret, as the app's menus look. */
+.agent-slash-host {
+  z-index: 60;
+}
+.agent-slash {
+  width: calc(var(--spacing) * 72);
+  max-height: calc(var(--spacing) * 88);
+}
+.agent-slash [cmdk-list] {
+  max-height: calc(var(--spacing) * 84);
+  overflow-y: auto;
+}
+.agent-editor-insert {
+  min-width: calc(var(--spacing) * 64);
+}
+.agent-editor-link {
+  width: min(calc(100vw - var(--spacing) * 8), calc(var(--spacing) * 88));
+}
+/* The selected passage: out of the flow, over the box's top edge, so neither the box nor the conversation moves. */
+.agent-composer {
+  position: relative;
+}
+.agent-composer-quote {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--spacing) * 2);
+  left: 0;
+  z-index: 1;
+}
+
+
+/* A data block bound to the project: its figures, then when they are from and (editing) whether it updates by itself. */
+.agent-live {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-live-title {
+  font-weight: var(--weight-label);
+}
+.agent-live-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  cursor: pointer;
+}
+
+/* A shared artifact's public page: the detail page at the window's width, the sections sidebar on the right, in view while
+   the document scrolls. */
+@media (min-width: 901px) {
+  .agent-shared .agent-artifact-docs {
+    align-items: flex-start;
+  }
+  .agent-shared .agent-tabs-rail.section-sidebar {
+    position: sticky;
+    top: var(--header-height);
+    height: calc(100dvh - var(--header-height));
+  }
+}
+.agent-shared .detail-body {
+  display: grid;
+  gap: calc(var(--spacing) * 4);
+}
+@media (max-width: 900px) {
+  .agent-shared .agent-tabs-rail.section-sidebar {
+    top: var(--header-height-touch);
+    z-index: 4;
+    height: auto;
+    background: var(--background);
+  }
+}
+
+/* Touch screens: every control of the chat is at least 40px, and what shows on hover is always there. */
+@media (hover: none) {
+  .agent-question-edit,
+  .agent-answer-actions {
+    opacity: 1;
+  }
+}
+@media (pointer: coarse) {
+  .agent-shell :is([data-slot='button'], [data-slot='input-group-button']),
+  .agent-share :is([data-slot='button'], [data-slot='input-group-button']) {
+    min-width: calc(var(--spacing) * 10);
+    min-height: calc(var(--spacing) * 10);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-composer [data-slot='input-group'],
+  .agent-answer-actions {
+    transition: none;
+  }
+}
+
+/* Agent > Contents: the Create content menu, and the wizard on its page (its steps, the formats as cards, the actions). */
+.agent-create-menu {
+  min-width: calc(var(--spacing) * 72);
+}
+.agent-create-note {
+  padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2) calc(var(--spacing) * 1.5);
+}
+.agent-wizard-form {
+  display: grid;
+  gap: calc(var(--spacing) * 6);
+  max-width: calc(var(--spacing) * 160);
+}
+.agent-wizard-formats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--spacing) * 64), 1fr));
+  gap: calc(var(--spacing) * 3);
+}
+.agent-wizard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--spacing) * 2);
+}
+
+/* A step of the trace in detail (agent-step-detail.tsx): what it found, then what it read, scrolling inside the dialog. */
+.agent-step-detail {
+  max-height: min(calc(100dvh - var(--spacing) * 8), calc(var(--spacing) * 160));
+  overflow-y: auto;
+}
+.agent-step-detail-body {
+  display: grid;
+  gap: calc(var(--spacing) * 4);
+  min-width: 0;
+}
+.agent-step-detail-body h3 {
+  margin-bottom: calc(var(--spacing) * 1);
+}
+.agent-step-facts {
+  display: grid;
+  gap: calc(var(--spacing) * 2);
+}
+.agent-step-facts dd {
+  overflow-wrap: anywhere;
+}
+.agent-step-item {
+  font-weight: var(--weight-text);
+  overflow-wrap: anywhere;
+}
+
+/* A content's Overview: the publication fields, then the table against the top 3. */
+.agent-overview {
+  display: grid;
+  gap: calc(var(--spacing) * 6);
+}
+.agent-overview-count {
+  white-space: nowrap;
+}
+.agent-overview-count[data-over] {
+  color: var(--destructive);
+}
+.agent-overview-grid tr[data-state='group'] > * {
+  background: var(--muted);
+}
+.agent-overview-grid tr[data-state='item'] th[scope='row'] {
+  padding-left: calc(var(--spacing) * 6);
+  color: var(--muted-foreground);
+}
+.agent-overview-site-head {
+  display: inline-grid;
+  justify-items: end;
+}
+.agent-overview-site {
+  display: block;
+  max-width: calc(var(--spacing) * 20);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-text);
+}
+
+/* A chat column is narrower than a page: a figure keeps its unit on its line and its change goes under it, never "64.2" over "%". */
+.agent-markdown .metric-number {
+  flex-wrap: wrap;
+  white-space: nowrap;
+}
+
+/* Ask Lastfind (docs/design/shell.md section 4): a pill at the bottom right of every project screen, over the content's
+   own bottom room (`.live-content` keeps 64px under the last row), and the panel it opens (AskPanel, an artifact's chat
+   too): floating at the bottom right, or docked as the right sidebar, where the page narrows for it and stays usable. On a
+   phone floating is a sheet at the bottom and docked takes the whole height. */
+.agent-ask-cta {
+  height: calc(var(--spacing) * 10);
+  padding-inline: calc(var(--spacing) * 4);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+}
+.agent-ask-cta[data-floating] {
+  position: fixed;
+  right: calc(var(--spacing) * 4);
+  bottom: calc(var(--spacing) * 4);
+  z-index: 40;
+  /* Open, the panel takes its place: it fades out under the panel's 180ms, and back in when the panel collapses. */
+  transition:
+    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
+    scale 180ms cubic-bezier(0.2, 0, 0, 1),
+    visibility 180ms;
+}
+.agent-ask-cta[data-popup-open] {
+  visibility: hidden;
+  opacity: 0;
+  scale: 0.9;
+}
+@media (max-width: 639px) {
+  .agent-ask-cta[data-floating] {
+    width: calc(var(--spacing) * 10);
+    padding-inline: 0;
+  }
+}
+/* Toasts rise above it; a screen that fills the height (a table screen) keeps the same room under its last row. */
+body[data-ask-floating] [data-slot='toast-viewport'] {
+  bottom: calc(var(--spacing) * 16);
+}
+body[data-ask-floating] .live-app .live-content:has(.live-table-fill-panel) {
+  padding-bottom: calc(var(--spacing) * 16);
+}
+/* Motion (shell.md section 4): opening and closing are 180ms of opacity and transform only, pinned from the right edge and
+   floating out of the button's corner; floating and pinned trade places in one view transition of the same length (the page
+   lays out once for its new width, under the snapshot; the panel's snapshot glides). Less motion: globals.css stops the
+   transitions and morphAskPanel skips the view transition. */
+.agent-ask[data-slot='sheet-content'] {
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  overflow: hidden;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+.agent-ask[data-slot='sheet-content'][data-open] {
+  view-transition-name: ask-panel;
+}
+::view-transition-group(ask-panel),
+::view-transition-old(ask-panel),
+::view-transition-new(ask-panel) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+/* The page takes its new width at once (no cross-fade of two layouts); only the panel moves. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+/* Floating: a card over the page's bottom right (a sheet at the bottom on a phone). */
+.agent-ask[data-slot='sheet-content'][data-mode='floating'] {
+  inset: auto calc(var(--spacing) * 2) calc(var(--spacing) * 2);
+  width: auto;
+  height: min(75dvh, calc(var(--spacing) * 160));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  transform-origin: bottom right;
+}
+.agent-ask[data-slot='sheet-content'][data-mode='floating']:is([data-starting-style], [data-ending-style]) {
+  translate: 0 calc(var(--spacing) * 4);
+  scale: 0.96;
+}
+@media (min-width: 768px) {
+  /* Pinned or floating, the same width: the bar holds the same four icons, and the move between the two is a slide. */
+  .agent-ask[data-slot='sheet-content'][data-mode='floating'] {
+    inset: auto calc(var(--spacing) * 4) calc(var(--spacing) * 4) auto;
+    width: calc(var(--spacing) * 108);
+    height: min(calc(100dvh - var(--spacing) * 8), calc(var(--spacing) * 160));
+  }
+  /* Docked: the right sidebar, the whole height beside the page, which narrows for it. */
+  .agent-ask[data-slot='sheet-content'][data-mode='docked'] {
+    width: calc(var(--spacing) * 108);
+    box-shadow: none;
+  }
+  body[data-ask-docked] :is(.live-app > [data-slot='sidebar-inset'], .agent-artifact[data-place='standalone']) {
+    margin-right: calc(var(--spacing) * 108);
+  }
+  /* The top bar is fixed to the window: it ends at the panel too, and the filters that no longer fit fold into Filters. */
+  body[data-ask-docked] .live-app .analytics-topbar {
+    right: calc(var(--spacing) * 108);
+  }
+}
+/* Docked and floating alike, the bar is the app's one header (shell.md section 4): the same height token as the top bar beside
+   it, its hairline inside that height, so the two bottom lines meet. Its title is kept on a phone (it names the panel). */
+.agent-ask-bar.detail-header {
+  flex: none;
+  padding-inline: calc(var(--spacing) * 4) calc(var(--spacing) * 2);
+}
+/* The name is never cut: Beta beside it gives way first (it wraps to the line the header hides). */
+.agent-ask-bar .detail-header-title > :first-child {
+  flex: none;
+}
+/* New chat keeps its plus and its name on a phone, the word itself only from 480px. */
+@media (max-width: 479px) {
+  .agent-ask-new {
+    display: none;
+  }
+}
+.agent-ask-chat {
+  flex: 1;
+}
+/* Empty, the panel reads from the top, as Ahrefs': the greeting and the ideas under the bar, the message box at the bottom. */
+.agent-ask .agent-artifact-chat-welcome {
+  margin-top: 0;
+}
+.agent-ask-welcome .agent-suggestions {
+  margin-top: calc(var(--spacing) * 1);
+}
+/* Ahrefs' quiet rows: a chevron, the question, at least a touch target tall; a long one takes two lines. */
+.agent-ask-ideas[data-slot='item-group'] {
+  gap: 0;
+}
+.agent-ask-ideas [data-slot='item'] {
+  min-height: calc(var(--spacing) * 10);
+  color: var(--foreground);
+}
+.agent-ask-ideas [data-slot='item-media'] {
+  color: var(--muted-foreground);
+}
+.agent-ask-ideas [data-slot='item-title'] {
+  font-size: var(--text-body);
+  font-weight: var(--weight-text);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.agent-ask-history {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: calc(var(--spacing) * 2);
+}
+/* The catalog's still samples of the panel (/design-system#ask-lastfind): its two frames, without the Sheet around them. */
+.agent-ask-sample {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, calc(var(--spacing) * 108));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--popover);
+  box-shadow: var(--shadow-lg);
+}
+.agent-ask-sample[data-mode='docked'] {
+  border-radius: 0;
+  box-shadow: none;
+}
+.agent-ask-sample .agent-artifact-chat-welcome {
+  margin-top: 0;
+}
